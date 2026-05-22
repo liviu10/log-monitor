@@ -1,17 +1,18 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Utilities;
 
 /**
- * Class Validation
+ * Clasa Validation
  *
- * Provides a flexible validation engine for data received through requests.
- * Supports basic rules such as 'required', 'string', 'int', 'email', 'date', 'array', 'min', 'max', 'in', and 'regex'.
- * Allows customization of field names for generating more user-friendly error messages.
+ * Motor extensibil pentru validarea datelor intrate.
+ * Mesajele generate intern folosesc in mod exclusiv chei in engleza pasate catre __().
  *
- * @category Utility
+ * @category Utilitare
  * @package  App\Utilities
- * @version  1.1
+ * @version  1.4
  * @since    PHP 8.4
  * @author   Voica Liviu
  * @license  Proprietar
@@ -20,25 +21,24 @@ class Validation
 {
     use ValidateEmail;
 
-    /** @var array Array with collected validation errors. */
+    /** @var array Erorile stranse in timpul procesului curent de validare. */
     private array $errors = [];
 
     /**
-     * Constructor of the Validation class.
-     * We use Constructor Property Promotion to map the field names.
+     * Constructor clasa. Promoveaza proprietatile transmise.
      *
-     * @param array $fieldNames Array of the form ['field_name' => 'Label'].
+     * @param array $fieldNames Aliasuri pentru campuri folosite in randarea mesajelor.
      */
     public function __construct(
         private array $fieldNames = []
     ) {}
 
     /**
-     * Validates a set of data (payload) based on specified rules.
+     * Ruleaza setul de reguli peste payload-ul primit ca argument.
      *
-     * @param array $rules   The validation rules.
-     * @param array $payload The data to validate.
-     * @return array Array with errors (empty if validation succeeded).
+     * @param array $rules Regulile de validare (ex: ['email' => ['required', 'email']]).
+     * @param array $payload Datele primite din cererea HTTP.
+     * @return array Vectorul final cu erori structurate pe campuri.
      */
     public function validate(array $rules, array $payload): array
     {
@@ -56,7 +56,9 @@ class Validation
             }
 
             foreach ($constraints as $rule) {
-                if ($rule === 'required') continue;
+                if ($rule === 'required') {
+                    continue;
+                }
 
                 if ($rule === 'email') {
                     if (!empty($this->validateEmail((string)$value))) {
@@ -73,7 +75,12 @@ class Validation
     }
 
     /**
-     * Applies a specific validation rule to a value.
+     * Aplica o regula specifica utilizand potrivirea exhaustiva prin expresia match.
+     *
+     * @param string $field Numele campului verificat.
+     * @param string $rule Regula de validat.
+     * @param mixed $value Valoarea supusa verificarii.
+     * @return void
      */
     private function applyRule(string $field, string $rule, mixed $value): void
     {
@@ -85,7 +92,7 @@ class Validation
             str_starts_with($rule, 'min:') => $this->checkMin($rule, $value),
             str_starts_with($rule, 'max:') => $this->checkMax($rule, $value),
             str_starts_with($rule, 'in:') => in_array((string)$value, explode(',', substr($rule, 3)), true),
-            str_starts_with($rule, 'regex:') => preg_match(substr($rule, 6), (string)$value),
+            str_starts_with($rule, 'regex:') => (preg_match(substr($rule, 6), (string)$value) === 1),
             default => true,
         };
 
@@ -94,38 +101,56 @@ class Validation
         }
     }
 
+    /**
+     * Verifica daca o valoare respecta limita minima setata.
+     *
+     * @param string $rule Regula continand valoarea de minim (ex: min:3).
+     * @param mixed $value Valoarea inspectata.
+     * @return bool True daca valoarea este mai mare sau egala cu minimul impus.
+     */
     private function checkMin(string $rule, mixed $value): bool
     {
         $min = (int)substr($rule, 4);
-        $checkValue = is_array($value) ? count($value) : (is_numeric($value) ? $value : mb_strlen((string)$value));
+        $checkValue = is_array($value) ? count($value) : (is_numeric($value) ? (float)$value : mb_strlen((string)$value));
         return $checkValue >= $min;
     }
 
+    /**
+     * Verifica daca o valoare se incadreaza sub limita maxima declarata.
+     *
+     * @param string $rule Regula continand valoarea de maxim (ex: max:10).
+     * @param mixed $value Valoarea inspectata.
+     * @return bool True daca valoarea este mai mica sau egala cu maximul impus.
+     */
     private function checkMax(string $rule, mixed $value): bool
     {
         $max = (int)substr($rule, 4);
-        $checkValue = is_numeric($value) ? $value : mb_strlen((string)$value);
+        $checkValue = is_numeric($value) ? (float)$value : mb_strlen((string)$value);
         return $checkValue <= $max;
     }
 
     /**
-     * Generates human-readable error messages in Romanian for a failed rule.
+     * Intoarce textul tradus corespunzator erorilor gasite folosind chei in engleza.
+     *
+     * @param string $field Denumirea tehnica a campului.
+     * @param string $rule Regula incalcata.
+     * @return string Mesajul de eroare interpretat si returnat fara diacritice.
      */
     public function messages(string $field, string $rule): string
     {
         $label = __($this->fieldNames[$field] ?? ucfirst($field));
 
         return match (true) {
-            $rule === 'required' => __('The field :field is required.', ['field' => $label]),
-            $rule === 'email' => __('The field :field is not a valid email address.', ['field' => $label]),
-            $rule === 'int' => __('The field :field must be an integer.', ['field' => $label]),
-            $rule === 'date' => __('The field :field is not a valid date.', ['field' => $label]),
-            $rule === 'array' => __('The field :field must be a list.', ['field' => $label]),
-            str_starts_with($rule, 'in:') => __('The selection for :field is invalid.', ['field' => $label]),
-            str_starts_with($rule, 'min:') => __('The field :field is below the minimum limit of :min.', ['field' => $label, 'min' => substr($rule, 4)]),
-            str_starts_with($rule, 'max:') => __('The field :field exceeds the maximum limit of :max.', ['field' => $label, 'max' => substr($rule, 4)]),
-            str_starts_with($rule, 'regex:') => __('The field :field does not have a valid format.', ['field' => $label]),
-            default => __('The field :field is invalid.', ['field' => $label]),
+            $rule === 'required' => __('The :field field is required.', ['field' => $label]),
+            $rule === 'email' => __('The :field field must be a valid email address.', ['field' => $label]),
+            $rule === 'int' => __('The :field field must be an integer.', ['field' => $label]),
+            $rule === 'date' => __('The :field field is not a valid date.', ['field' => $label]),
+            $rule === 'array' => __('The :field field must be an array.', ['field' => $label]),
+            str_starts_with($rule, 'in:') => __('The selected :field is invalid.', ['field' => $label]),
+            str_starts_with($rule, 'min:') => __('The :field field must be at least :min.', ['field' => $label, 'min' => substr($rule, 4)]),
+            str_starts_with($rule, 'max:') => __('The :field field must not be greater than :max.', ['field' => $label, 'max' => substr($rule, 4)]),
+            str_starts_with($rule, 'regex:') => __('The :field field format is invalid.', ['field' => $label]),
+            default => __('The :field field is invalid.', ['field' => $label]),
         };
     }
 }

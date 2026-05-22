@@ -7,30 +7,31 @@ namespace App\Utilities;
 use PDO;
 use PDOException;
 use PDOStatement;
+use RuntimeException;
 
 /**
- * MySQLWrapper Class
+ * Clasa MySQLWrapper
  *
- * Provides a simplified and secure interface for interacting with a MySQL database using PDO.
- * Implements the Singleton pattern to ensure a single active connection throughout the script's execution.
- * Includes methods for CRUD (Create, Read, Update, Delete) operations and connection error handling.
+ * Implementeaza un sablon Singleton securizat peste PDO.
+ * Operatiile genereaza exceptii detaliate trimise exclusiv catre cURL.
+ * Toate mesajele text destinate exceptiilor folosesc functia __().
  *
- * @category Utility
+ * @category Utilitare
  * @package  App\Utilities
- * @version  1.2
+ * @version  1.7
  * @since    PHP 8.4
  * @author   Voica Liviu
  * @license  Proprietar
  */
 class MySQLWrapper
 {
-    /** @var MySQLWrapper|null Singleton instance of the class. */
+    /** @var MySQLWrapper|null Instanta Singleton a clasei. */
     private static ?self $instance = null;
 
-    /** @var PDO|null Database connection resource. */
+    /** @var PDO|null Obiectul conexiunii active PDO. */
     private ?PDO $connection = null;
 
-    /** @var array<int, int|bool> Default options for PDO configuration. */
+    /** @var array Configurari standard de securitate si comportament pentru PDO. */
     private array $options = [
         PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
@@ -38,15 +39,14 @@ class MySQLWrapper
     ];
 
     /**
-     * MySQLWrapper class constructor.
-     * Using Constructor Property Promotion for all configuration parameters.
+     * Constructor privat pentru restrictionarea instantierii directe.
      *
-     * @param string $host    Database host.
-     * @param string $db      Database name.
-     * @param string $user    Database username.
-     * @param string $pass    Database password.
-     * @param string $port    Port (default 3306).
-     * @param string $charset Charset (default utf8mb4).
+     * @param string $host Gazda bazei de date.
+     * @param string $db Numele bazei de date.
+     * @param string $user Utilizatorul bazei de date.
+     * @param string $pass Parola de acces.
+     * @param string $port Portul de comunicare.
+     * @param string $charset Setul de caractere utilizat.
      */
     public function __construct(
         private readonly string $host,
@@ -60,8 +60,9 @@ class MySQLWrapper
     }
 
     /**
-     * Returns the unique instance of the MySQLWrapper class (Singleton).
-     * Creates an instance using environment variables if it doesn't exist.
+     * Returneaza instanta unica a clasei wrapper.
+     *
+     * @return self Instanta unica.
      */
     public static function getInstance(): self
     {
@@ -75,7 +76,10 @@ class MySQLWrapper
     }
 
     /**
-     * Establishes a database connection using the configured settings.
+     * Initializeaza conexiunea nativa PDO si trimite erorile direct catre cURL.
+     *
+     * @throws RuntimeException Daca initializarea conexiunii esueaza.
+     * @return void
      */
     public function connect(): void
     {
@@ -83,9 +87,8 @@ class MySQLWrapper
 
         try {
             $this->connection = new PDO($dsn, $this->user, $this->pass, $this->options);
-        } catch (\Throwable $e) {
-            // Send log via cURL (if DB connection is down, LogViaCurl has recursion protection)
-            LogViaCurl::send('ERROR', 'Database connection error', [
+        } catch (PDOException $e) {
+            LogViaCurl::send('ERROR', 'Database connection initial failure', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
                 'exception_message' => $e->getMessage(),
@@ -93,23 +96,32 @@ class MySQLWrapper
                 'exception_line' => $e->getLine(),
                 'exception_trace' => $e->getTraceAsString(),
                 'db_host' => $this->host,
-                'db_name' => $this->db
+                'db_name' => $this->db,
+                'identifier' => 'MySQLWrapper_Connection_Failure'
             ]);
             
-            $this->connection = null;
+            throw new RuntimeException(__('Database connection failed.'), 500, $e);
         }
     }
 
     /**
-     * Returns the active PDO object.
+     * Returneaza conexiunea activa sau arunca o exceptie daca aceasta nu exista.
+     *
+     * @throws RuntimeException Daca proprietatea de conexiune este nula.
+     * @return PDO Obiectul PDO valid.
      */
-    public function getConnection(): ?PDO
+    public function getConnection(): PDO
     {
+        if ($this->connection === null) {
+            throw new RuntimeException(__('No active database connection found.'));
+        }
         return $this->connection;
     }
 
     /**
-     * Closes the database connection by setting the resource to null.
+     * Intrerupe conexiunea curenta cu baza de date.
+     *
+     * @return void
      */
     public function disconnect(): void
     {
@@ -117,87 +129,79 @@ class MySQLWrapper
     }
 
     /**
-     * Executes a secure SQL query using prepared statements.
+     * Executa o interogare SQL securizata si trimite detaliile tehnice complete prin cURL in caz de eroare.
      *
-     * @param string $sql    SQL query.
-     * @param array  $params Parameters for binding.
-     * @return PDOStatement|false The statement object or false if an error occurs.
+     * @param string $sql Comanda SQL de executat.
+     * @param array $params Parametrii asociati marcajelor de substitutie.
+     * @throws RuntimeException Cand executia intampina erori de sintaxa sau retea.
+     * @return PDOStatement Obiectul rezultat in urma executiei cu succes.
      */
-    public function query(string $sql, array $params = []): PDOStatement|false
+    public function query(string $sql, array $params = []): PDOStatement
     {
-        if ($this->connection === null) {
-            return false;
-        }
+        $conn = $this->getConnection();
 
         try {
-            $stmt = $this->connection->prepare($sql);
+            $stmt = $conn->prepare($sql);
             $stmt->execute($params);
             return $stmt;
-        } catch (\Throwable $e) {
-            LogViaCurl::send('ERROR', 'Eroare la executarea interogarii SQL', [
+        } catch (PDOException $e) {
+            LogViaCurl::send('ERROR', 'Query execution failure event', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
                 'exception_message' => $e->getMessage(),
                 'exception_file' => $e->getFile(),
                 'exception_line' => $e->getLine(),
                 'exception_trace' => $e->getTraceAsString(),
-                'sql' => $sql,
-                'sql_params' => $params
+                'sql_statement' => $sql,
+                'sql_parameters' => $params,
+                'identifier' => 'MySQLWrapper_Query_Failure'
             ]);
 
-            return false;
+            throw new RuntimeException(__('Internal query execution error.'), 500, $e);
         }
     }
 
     /**
-     * Inserts a new record into a table.
+     * Insereaza o inregistrare noua intr-o tabela specificata.
      *
-     * @param string $table Table name.
-     * @param array  $data  Associative array of data (column => value).
-     * @return string|int|bool Inserted ID, true (for tables without auto-increment), or false.
+     * @param string $table Numele tabelei vizate.
+     * @param array $data Setul de date in format coloana => valoare.
+     * @return string|int ID-ul ultimei inregistrari inserate sau numarul de randuri afectate.
      */
-    public function create(string $table, array $data): string|int|bool
+    public function create(string $table, array $data): string|int
     {
         if (empty($data)) {
-            return false;
+            throw new RuntimeException(__('Cannot insert empty data into table :table.', ['table' => $table]));
         }
 
         $escapedColumns = array_map(fn($col) => "`{$col}`", array_keys($data));
         $columns = implode(', ', $escapedColumns);
         $placeholders = implode(', ', array_fill(0, count($data), '?'));
 
-        $sql = "INSERT INTO {$table} ({$columns}) VALUES ({$placeholders})";
-
+        $sql = "INSERT INTO `{$table}` ({$columns}) VALUES ({$placeholders})";
         $stmt = $this->query($sql, array_values($data));
 
-        if ($stmt === false || $this->connection === null) {
-            return false;
-        }
-
-        $lastId = $this->connection->lastInsertId();
+        $lastId = $this->getConnection()->lastInsertId();
         if ($lastId && $lastId !== '0') {
             return $lastId;
         }
 
-        return $stmt->rowCount() > 0;
+        return $stmt->rowCount();
     }
 
     /**
-     * Reads data from a table with optional filters.
+     * Interogheaza baza de date si returneaza toate potrivirile gasite.
      *
-     * @param string $table      Table name.
-     * @param array  $conditions WHERE conditions (column => value).
-     * @param array  $columns    Columns to retrieve.
-     * @param string $logic      Logic between conditions (AND/OR).
-     * @return array|false Array of results or false in case of error.
+     * @param string $table Numele tabelei.
+     * @param array $conditions Conditii de filtrare de tip coloana => valoare.
+     * @param array $columns Lista coloanelor selectate.
+     * @param string $logic Operatorul logic folosit intre filtre (AND/OR).
+     * @return array Tablou multidimensional cu rezultatele gasite.
      */
-    public function read(string $table, array $conditions = [], array $columns = ['*'], string $logic = 'AND'): array|false
+    public function read(string $table, array $conditions = [], array $columns = ['*'], string $logic = 'AND'): array
     {
-        $escapedSelectColumns = array_map(function($col) {
-            return $col === '*' ? '*' : "`{$col}`";
-        }, $columns);
-
-        $sql = "SELECT " . implode(', ', $escapedSelectColumns) . " FROM {$table}";
+        $escapedSelectColumns = array_map(fn($col) => $col === '*' ? '*' : "`{$col}`", $columns);
+        $sql = "SELECT " . implode(', ', $escapedSelectColumns) . " FROM `{$table}`";
         $params = [];
 
         if (!empty($conditions)) {
@@ -211,23 +215,22 @@ class MySQLWrapper
         }
 
         $stmt = $this->query($sql, $params);
-
-        return $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : false;
+        return $stmt->fetchAll();
     }
 
     /**
-     * Updates records in a table.
+     * Modifica inregistrarile dintr-o tabela in baza unor criterii clare.
      *
-     * @param string $table      Table name.
-     * @param array  $data       New data (column => value).
-     * @param array  $conditions WHERE conditions.
-     * @param string $logic      Logic between conditions.
-     * @return int|false Number of affected rows or false.
+     * @param string $table Tabela afectata.
+     * @param array $data Noile informatii care trebuiesc salvate.
+     * @param array $conditions Conditiile de determinare a randurilor modificate.
+     * @param string $logic Legatura logica dintre filtre.
+     * @return int Numarul total de randuri modificate de operatie.
      */
-    public function update(string $table, array $data, array $conditions, string $logic = 'AND'): int|false
+    public function update(string $table, array $data, array $conditions, string $logic = 'AND'): int
     {
         if (empty($data) || empty($conditions)) {
-            return false;
+            throw new RuntimeException(__('Update operations require both data and condition constraints.'));
         }
 
         $setClauses = [];
@@ -236,7 +239,7 @@ class MySQLWrapper
             $setClauses[] = "`{$key}` = ?";
             $params[] = $value;
         }
-        $sql = "UPDATE {$table} SET " . implode(', ', $setClauses);
+        $sql = "UPDATE `{$table}` SET " . implode(', ', $setClauses);
 
         $whereClauses = [];
         foreach ($conditions as $key => $value) {
@@ -246,25 +249,24 @@ class MySQLWrapper
         $sql .= " WHERE " . implode(" {$logic} ", $whereClauses);
 
         $stmt = $this->query($sql, $params);
-        
-        return $stmt ? $stmt->rowCount() : false;
+        return $stmt->rowCount();
     }
 
     /**
-     * Deletes records from a table based on certain conditions.
+     * Sterge inregistrari din tabela protejand operatia contra stergerilor globale accidentale.
      *
-     * @param string $table      Table name.
-     * @param array  $conditions WHERE conditions.
-     * @param string $logic      Logic between conditions.
-     * @return int|false Number of affected rows or false.
+     * @param string $table Tabela vizata.
+     * @param array $conditions Conditii obligatorii de stergere randuri.
+     * @param string $logic Operatorul de legatura pentru clauza WHERE.
+     * @return int Numarul randurilor sterse definitiv.
      */
-    public function delete(string $table, array $conditions, string $logic = 'AND'): int|false
+    public function delete(string $table, array $conditions, string $logic = 'AND'): int
     {
         if (empty($conditions)) {
-            return false;
+            throw new RuntimeException(__('Unconditional delete operations are prohibited for security reasons.'));
         }
 
-        $sql = "DELETE FROM {$table} WHERE ";
+        $sql = "DELETE FROM `{$table}` WHERE ";
         $clauses = [];
         $params = [];
         foreach ($conditions as $key => $value) {
@@ -274,7 +276,6 @@ class MySQLWrapper
         $sql .= implode(" {$logic} ", $clauses);
 
         $stmt = $this->query($sql, $params);
-
-        return $stmt ? $stmt->rowCount() : false;
+        return $stmt->rowCount();
     }
 }

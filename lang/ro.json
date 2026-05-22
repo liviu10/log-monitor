@@ -179,5 +179,19 @@
     "HTTP method not allowed for authentication.": "Metoda HTTP nepermisa pentru autentificare.",
     "Invalid user action.": "Actiune utilizator nevalida.",
     "HTTP method not allowed for user management.": "Metoda HTTP nepermisa pentru managementul utilizatorilor.",
-    "Critical: Configuration file (.env) is missing. Application cannot initialize.": "Critical: Configuration file (.env) is missing. Application cannot initialize."
+    "Critical: Configuration file (.env) is missing. Application cannot initialize.": "Critical: Configuration file (.env) is missing. Application cannot initialize.",
+    "Authentication Warning": "Atentionare autentificare",
+    "Database connection failed.": "Conexiunea la baza de date a esuat.",
+    "No active database connection found.": "Lipsa conexiune activa la baza de date.",
+    "Internal query execution error.": "Eroare la executarea interogarii interne.",
+    "Cannot insert empty data into table :table.": "Nu se pot insera date goale in tabela :table.",
+    "Update operations require both data and condition constraints.": "Operatia de update necesita atat date cat si conditii structurate.",
+    "Unconditional delete operations are prohibited for security reasons.": "Stergerea fara conditii este interzisa din motive de securitate.",
+    "Notification system is disabled in this runtime environment.": "Trimiterea de notificari este oprita in acest mediu de rulare.",
+    "The recipient field is required.": "Campul destinatar este obligatoriu.",
+    "The message body field is required.": "Campul mesajului este obligatoriu.",
+    "The provided attachment file is inaccessible or invalid.": "Atasamentul furnizat este inaccesibil sau invalid.",
+    "A critical error occurred while sending the notification.": "Eroare critica la expedierea notificarii.",
+    "The :field field must be at least :min.": "Campul :field este sub limita minima de :min.",
+    "The :field field must not be greater than :max.": "Campul :field depaseste limita maxima de :max."
 }

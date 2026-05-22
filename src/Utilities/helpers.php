@@ -1,13 +1,16 @@
 <?php
+
+declare(strict_types=1);
+
 /**
- * Helper Functions File
+ * Fisier cu Functii Ajutatoare Globale
  *
- * Contains global utility functions and basic application settings, including session management, 
- * debug functions, URL construction, authentication management, and flash toast messages.
+ * Contine functii utilitare globale si configurari de baza pentru sesiune si securitate.
+ * Toate cheile de traducere folosesc limba engleza pentru consistenta.
  *
- * @category Utility
+ * @category Utilitare
  * @package  App\Utilities
- * @version  1.2
+ * @version  2.2
  * @since    PHP 8.4
  * @author   Voica Liviu
  * @license  Proprietar
@@ -15,24 +18,29 @@
 
 use Symfony\Component\VarDumper\VarDumper;
 
-/**
- * Starts the session if not already started.
- * Sets the session lifetime and session cookie parameters to 24 hours.
- */
+// Validare si pornire securizata a sesiunii
 if (session_id() === '') {
-    ini_set('session.gc_maxlifetime', '86400'); // Sets session lifetime to 24 hours
-    session_set_cookie_params(86400); // Sets session cookie lifetime to 24 hours
-    session_start(); // Starts the session
+    ini_set('session.gc_maxlifetime', '86400');
+    session_set_cookie_params([
+        'lifetime' => 86400,
+        'path' => '/',
+        'domain' => '',
+        'secure' => true,
+        'httponly' => true,
+        'samesite' => 'Lax'
+    ]);
+    session_start();
 }
 
-/** @const string The default administrator role. */
+/** @const string ROLE_ADMIN Identificatorul pentru rolul de administrator. */
 define('ROLE_ADMIN', 'admin');
 
 /**
- * Displays the given variables and stops script execution (Debug & Die).
- * Uses Symfony's VarDumper for better variable visualization.
- * 
- * @param mixed ...$args One or more variables to display.
+ * Afiseaza variabilele primite si opreste executia scriptului (Dump and Die).
+ * Utilizeaza componenta VarDumper din Symfony pentru o vizualizare clara.
+ *
+ * @param mixed ...$args Una sau mai multe variabile care vor fi inspectate.
+ * @return never Opreste definitiv executia programului.
  */
 if (!function_exists('dd')) {
     function dd(mixed ...$args): never
@@ -45,36 +53,47 @@ if (!function_exists('dd')) {
 }
 
 /**
- * Constructs the base URL of the application dynamically.
- * Automatically detects the protocol, server, and subfolder where the project is installed.
- * 
- * @return string The base URL of the application.
+ * Construieste URL-ul de baza al aplicatiei in mod dinamic.
+ * Detecteaza automat protocolul securizat, serverul si subdirectorul de instalare.
+ *
+ * @return string URL-ul complet de baza al aplicatiei.
  */
 if (!function_exists('constructUrl')) {
     function constructUrl(): string
     {
-        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        $host = filter_var($_SERVER['HTTP_HOST'] ?? 'localhost', FILTER_SET_COOKIE);
         $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? ''));
         $basePath = rtrim($scriptDir, '/\\');
-        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || ($_SERVER['SERVER_PORT'] ?? '') == 443) ? "https" : "http";
+        
+        $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || 
+                   (($_SERVER['SERVER_PORT'] ?? '') === 443) ||
+                   (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+                   
+        $protocol = $isHttps ? "https" : "http";
         
         return "{$protocol}://{$host}{$basePath}";
     }
 }
 
 /**
- * Checks if the user is authenticated in the system.
- * Manages the logout process if the 'action=logout' parameter is present.
- * 
- * @return bool Returns true if the user has a valid session, otherwise redirects to login.
+ * Verifica starea de autentificare si gestioneaza procesul de delogare.
+ * Aplica principiul Fail Fast si regenereaza sesiunea pentru a preveni Session Fixation.
+ *
+ * @return bool Returneaza true daca utilizatorul are o sesiune valida.
  */
 if (!function_exists('checkAuthUser')) {
     function checkAuthUser(): bool
     {
-        // Logout handling
+        // Tratare actiune de delogare
         if (isset($_GET['action']) && $_GET['action'] === 'logout') {
             unset($_SESSION['auth.user']);
             session_destroy();
+            
+            if (session_status() === PHP_SESSION_NONE) {
+                session_start();
+            }
+            session_regenerate_id(true);
+            
             header('Location: login.php');
             exit;
         }
@@ -89,25 +108,22 @@ if (!function_exists('checkAuthUser')) {
             return true;
         }
 
-        if (!isset($_SESSION['auth.user']) || empty($_SESSION['auth.user'])) {
-            setFlash(
-                'warning', 
-                __('Atentionare autentificare'), 
-                __('Trebuie sa te autentifici pentru a accesa aceasta pagina.')
-            );
+        // Setare mesaj flash cu chei exclusiv in limba engleza
+        setFlash(
+            'warning', 
+            __('Authentication Warning'), 
+            __('You must log in to access this page.')
+        );
 
-            header('Location: login.php');
-            exit;
-        }
-        
-        return true;
+        header('Location: login.php');
+        exit;
     }
 }
 
 /**
- * Returns the authenticated user's data from the session.
- * 
- * @return array|null Array with user data or null if not logged in.
+ * Returneaza datele utilizatorului autentificat din sesiunea curenta.
+ *
+ * @return array|null Tablou cu datele utilizatorului sau null daca nu este autentificat.
  */
 if (!function_exists('getCurrentAuthUser')) {
     function getCurrentAuthUser(): ?array
@@ -118,17 +134,24 @@ if (!function_exists('getCurrentAuthUser')) {
 }
 
 /**
- * Formats a date from SQL format (YYYY-MM-DD) to European format (d.m.Y).
+ * Formateaza o data din formatul specific SQL in formatul european standard.
+ *
+ * @param string $dateString Data in format text (ex: Y-m-d).
+ * @return string Data formatata ca zi.luna.an.
  */
 if (!function_exists('formatDate')) {
     function formatDate(string $dateString): string
     {
-        return date('d.m.Y', strtotime($dateString) ?: time());
+        $timestamp = strtotime($dateString);
+        return date('d.m.Y', $timestamp ?: time());
     }
 }
 
 /**
- * Checks if the current user has a specific permission (Mockup).
+ * Verifica daca utilizatorul curent are o anumita permisiune (Mockup).
+ *
+ * @param string $permission Identificatorul permisiunii verificate.
+ * @return bool True daca permisiunea este acordata.
  */
 if (!function_exists('can')) {
     function can(string $permission): bool
@@ -138,7 +161,9 @@ if (!function_exists('can')) {
 }
 
 /**
- * Generates a unique CSRF token for the current session.
+ * Genereaza un token CSRF criptografic si il salveaza in sesiune.
+ *
+ * @return string Token-ul generat in format hexazecimal.
  */
 if (!function_exists('generateCsrfToken')) {
     function generateCsrfToken(): string
@@ -151,7 +176,10 @@ if (!function_exists('generateCsrfToken')) {
 }
 
 /**
- * Verifies if a received CSRF token matches the one in the session.
+ * Verifica validitatea unui token CSRF folosind o comparatie imuna la atacuri de sincronizare.
+ *
+ * @param string|null $token Token-ul primit pentru verificare.
+ * @return bool True daca token-ul coincide cu cel din sesiune.
  */
 if (!function_exists('verifyCsrfToken')) {
     function verifyCsrfToken(?string $token): bool
@@ -164,7 +192,14 @@ if (!function_exists('verifyCsrfToken')) {
 }
 
 /**
- * Sets a flash message (temporary notification) in the session to be displayed as a toast.
+ * Inregistreaza un mesaj temporar (flash) in sesiunea aplicatiei.
+ *
+ * @param string $type Tipul mesajului (ex: success, error, warning).
+ * @param string $title Titlul notificarii.
+ * @param string $message Textul descriptiv al notificarii.
+ * @param int $toastDelay Timpul de afisare in milisecunde.
+ * @param string $redirectUrl URL optional pentru redirectionare.
+ * @return void
  */
 if (!function_exists('setFlash')) {
     function setFlash(string $type, string $title, string $message, int $toastDelay = 10000, string $redirectUrl = ''): void
@@ -180,7 +215,9 @@ if (!function_exists('setFlash')) {
 }
 
 /**
- * Retrieves the flash message from the session and deletes it immediately (single consumption).
+ * Extrage si sterge mesajul flash existent in sesiune (consum unic).
+ *
+ * @return array|null Datele mesajului flash sau null daca nu exista.
  */
 if (!function_exists('getFlash')) {
     function getFlash(): ?array
@@ -197,20 +234,26 @@ if (!function_exists('getFlash')) {
 }
 
 /**
- * Returns the current language code (e.g., 'ro', 'en').
+ * Returneaza codul pentru limba activa in aplicatie.
+ *
+ * @return string Codul de limba (implicit 'en').
  */
 if (!function_exists('getLang')) {
     function getLang(): string
     {
         if (!isset($_SESSION['app_lang'])) {
-            $_SESSION['app_lang'] = 'ro';
+            $_SESSION['app_lang'] = 'en';
         }
-        return $_SESSION['app_lang'];
+        return (string)$_SESSION['app_lang'];
     }
 }
 
 /**
- * Translates a key into the current language.
+ * Traduce o cheie text si inlocuieste parametrii dinamici intr-un mod securizat contra XSS.
+ *
+ * @param string $key Cheia de traducere (definita obligatoriu in engleza).
+ * @param array $replacements Vector asociativ cu parametrii de inlocuit.
+ * @return string Textul final tradus si igienizat.
  */
 if (!function_exists('__')) {
     function __(string $key, array $replacements = []): string
@@ -222,7 +265,12 @@ if (!function_exists('__')) {
             $path = __DIR__ . "/../../lang/{$lang}.json";
 
             if (file_exists($path)) {
-                $translations = json_decode(file_get_contents($path), true) ?: [];
+                $content = file_get_contents($path);
+                if ($content !== false && json_validate($content)) {
+                    $translations = json_decode($content, true) ?: [];
+                } else {
+                    $translations = [];
+                }
             } else {
                 $translations = [];
             }
@@ -231,7 +279,8 @@ if (!function_exists('__')) {
         $text = $translations[$key] ?? $key;
 
         foreach ($replacements as $placeholder => $value) {
-            $text = str_replace(':' . $placeholder, $value, $text);
+            $safeValue = htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
+            $text = str_replace(':' . $placeholder, $safeValue, $text);
         }
 
         return $text;

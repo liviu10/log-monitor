@@ -179,5 +179,19 @@
     "HTTP method not allowed for authentication.": "HTTP method not allowed for authentication.",
     "Invalid user action.": "Invalid user action.",
     "HTTP method not allowed for user management.": "HTTP method not allowed for user management.",
-    "Critical: Configuration file (.env) is missing. Application cannot initialize.": "Critical: Configuration file (.env) is missing. Application cannot initialize."
+    "Critical: Configuration file (.env) is missing. Application cannot initialize.": "Critical: Configuration file (.env) is missing. Application cannot initialize.",
+    "Authentication Warning": "Authentication Warning",
+    "Database connection failed.": "Database connection failed.",
+    "No active database connection found.": "No active database connection found.",
+    "Internal query execution error.": "Internal query execution error.",
+    "Cannot insert empty data into table :table.": "Cannot insert empty data into table :table.",
+    "Update operations require both data and condition constraints.": "Update operations require both data and condition constraints.",
+    "Unconditional delete operations are prohibited for security reasons.": "Unconditional delete operations are prohibited for security reasons.",
+    "Notification system is disabled in this runtime environment.": "Notification system is disabled in this runtime environment.",
+    "The recipient field is required.": "The recipient field is required.",
+    "The message body field is required.": "The message body field is required.",
+    "The provided attachment file is inaccessible or invalid.": "The provided attachment file is inaccessible or invalid.",
+    "A critical error occurred while sending the notification.": "A critical error occurred while sending the notification.",
+    "The :field field must be at least :min.": "The :field field must be at least :min.",
+    "The :field field must not be greater than :max.": "The :field field must not be greater than :max."
 }
