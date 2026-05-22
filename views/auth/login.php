@@ -10,7 +10,7 @@
         <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow">
             <li>
                 <a class="dropdown-item d-flex align-items-center justify-content-between <?= getLang() === 'ro' ? 'active font-weight-bold' : '' ?>" href="change-lang.php?lang=ro">
-                    Română <?= getLang() === 'ro' ? '✓' : '' ?>
+                    Romana <?= getLang() === 'ro' ? '✓' : '' ?>
                 </a>
             </li>
             <li>

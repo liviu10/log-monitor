@@ -22,7 +22,7 @@
                             <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow">
                                 <li>
                                     <a class="dropdown-item d-flex align-items-center justify-content-between <?= getLang() === 'ro' ? 'active font-weight-bold' : '' ?>" href="change-lang.php?lang=ro">
-                                        Română <?= getLang() === 'ro' ? '✓' : '' ?>
+                                        Romana <?= getLang() === 'ro' ? '✓' : '' ?>
                                     </a>
                                 </li>
                                 <li>
@@ -177,7 +177,7 @@
                 
                 <!-- Modal Body -->
                 <div class="card-body p-4 overflow-auto" style="max-height: 70vh;">
-                    <!-- 1. Adăugare Multiplă (Pending list) -->
+                    <!-- 1. Adaugare Multipla (Pending list) -->
                     <div class="mb-4 p-3 rounded" style="background-color: #0f172a; border: 1px solid rgba(51, 65, 85, 0.5);">
                         <h5 class="h6 mb-3 text-secondary text-uppercase fw-bold small" x-text="window.__('Add New Settings (Multi-Save)')"></h5>
                         
@@ -232,7 +232,7 @@
                         </template>
                     </div>
                     
-                    <!-- 2. Setări Active (Editare Multiplă în tabel) -->
+                    <!-- 2. Setari Active (Editare Multipla in tabel) -->
                     <div>
                         <div class="d-flex align-items-center justify-content-between mb-3">
                             <h5 class="h6 mb-0 text-secondary text-uppercase fw-bold small" x-text="window.__('Active Settings')"></h5>
