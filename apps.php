@@ -8,8 +8,9 @@ $controller = new AppController();
 
 match ($_SERVER['REQUEST_METHOD']) {
     'POST' => match ($_GET['action'] ?? null) {
-        'delete' => $controller->delete(),
-        default => $controller->store(),
+        'delete' => $controller->delete($_POST),
+        'update' => $controller->update($_POST, $_GET),
+        default => $controller->store($_POST),
     },
     default => $controller->index(),
 };

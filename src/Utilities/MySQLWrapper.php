@@ -83,8 +83,19 @@ class MySQLWrapper
 
         try {
             $this->connection = new PDO($dsn, $this->user, $this->pass, $this->options);
-        } catch (PDOException $e) {
-            error_log("Eroare de conectare la baza de date: " . $e->getMessage());
+        } catch (\Throwable $e) {
+            // Trimitem log-ul prin cURL (dacă conexiunea la DB e căzută, LogViaCurl are protecție la recursivitate)
+            LogViaCurl::send('ERROR', 'Eroare de conectare la baza de date', [
+                'location' => __METHOD__,
+                'line' => __LINE__,
+                'exception_message' => $e->getMessage(),
+                'exception_file' => $e->getFile(),
+                'exception_line' => $e->getLine(),
+                'exception_trace' => $e->getTraceAsString(),
+                'db_host' => $this->host,
+                'db_name' => $this->db
+            ]);
+            
             $this->connection = null;
         }
     }
@@ -122,8 +133,18 @@ class MySQLWrapper
             $stmt = $this->connection->prepare($sql);
             $stmt->execute($params);
             return $stmt;
-        } catch (PDOException $e) {
-            error_log("Eroare la executarea interogarii SQL: " . $e->getMessage() . " | SQL: " . $sql);
+        } catch (\Throwable $e) {
+            LogViaCurl::send('ERROR', 'Eroare la executarea interogarii SQL', [
+                'location' => __METHOD__,
+                'line' => __LINE__,
+                'exception_message' => $e->getMessage(),
+                'exception_file' => $e->getFile(),
+                'exception_line' => $e->getLine(),
+                'exception_trace' => $e->getTraceAsString(),
+                'sql' => $sql,
+                'sql_params' => $params
+            ]);
+
             return false;
         }
     }

@@ -41,11 +41,11 @@ class UserController extends BaseController
      * Proceseaza crearea unui nou cont de administrator.
      * Valideaza complexitatea minima a parolei si unicitatea numelui de utilizator.
      */
-    public function store(): never
+    public function store(array $data): never
     {
         $this->checkAuth();
         
-        $payload = $_POST;
+        $payload = $data;
         $validator = new Validation([
             'username' => 'utilizator',
             'password' => 'parola',
@@ -72,11 +72,11 @@ class UserController extends BaseController
      * Sterge un utilizator din sistem.
      * Include o verificare de securitate pentru a impiedica un administrator sa isi stearga propriul cont.
      */
-    public function delete(): never
+    public function delete(array $data): never
     {
         $this->checkAuth();
         
-        $id = $_POST['id'] ?? null;
+        $id = $data['id'] ?? null;
         if ($id) {
             // Nu lasam utilizatorul sa se stearga pe sine din sesiune
             if ((int)$id === (int)($_SESSION['auth.user']['id'] ?? 0)) {

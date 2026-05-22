@@ -111,4 +111,86 @@ class LogController extends BaseController
 
         $this->jsonResponse(['error' => 'Failed to store log'], 500);
     }
+
+    /**
+     * Purgeaza si arhiveaza logurile mai vechi de un numar de zile.
+     *
+     * @param int    $days       Numarul de zile pentru retentie.
+     * @param string $backupPath Calea absoluta a fisierului de backup.
+     * @return array{
+     *   status: string,
+     *   message: string,
+     *   archived_count: int,
+     *   deleted_count: int|false
+     * }
+     */
+    public function purge(int $days, string $backupPath): array
+    {
+        $cutoffDate = date('Y-m-d H:i:s', strtotime("-{$days} days"));
+        $logModel = new Log();
+
+        $totalToArchive = $logModel->countBeforeDate($cutoffDate);
+
+        if ($totalToArchive === 0) {
+            return [
+                'status' => 'success',
+                'message' => 'Nu exista loguri vechi de arhivat.',
+                'archived_count' => 0,
+                'deleted_count' => 0
+            ];
+        }
+
+        // Cream directorul de backup daca nu exista
+        $dir = dirname($backupPath);
+        if (!is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+
+        $fileHandle = fopen($backupPath, 'w');
+        if (!$fileHandle) {
+            throw new \RuntimeException("Nu s-a putut crea fisierul de backup la calea: {$backupPath}");
+        }
+
+        fwrite($fileHandle, "LOG MONITOR BACKUP - GENERATED AT " . date('Y-m-d H:i:s') . "\n");
+        fwrite($fileHandle, str_repeat("=", 80) . "\n\n");
+
+        $offset = 0;
+        $chunkSize = 1000;
+
+        while ($offset < $totalToArchive) {
+            $rows = $logModel->getBeforeDate($cutoffDate, $chunkSize, $offset);
+
+            foreach ($rows as $row) {
+                $line = sprintf(
+                    "[%s] [%s] [%s]: %s | Context: %s\n",
+                    $row['created_at'],
+                    $row['app_name'],
+                    $row['level'],
+                    $row['message'],
+                    $row['context'] ?? '{}'
+                );
+                fwrite($fileHandle, $line);
+            }
+
+            $offset += count($rows);
+            if (empty($rows)) {
+                break;
+            }
+        }
+
+        fclose($fileHandle);
+
+        // Stergem logurile vechi din baza de date
+        $deletedCount = $logModel->deleteBeforeDate($cutoffDate);
+
+        // Optimizam tabela logs
+        $logModel->optimize();
+
+        return [
+            'status' => 'success',
+            'message' => 'Procesul de arhivare si curatare s-a finalizat cu succes.',
+            'archived_count' => $offset,
+            'deleted_count' => $deletedCount
+        ];
+    }
 }

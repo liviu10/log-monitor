@@ -25,7 +25,7 @@ class DashboardController extends BaseController
     /**
      * Afiseaza pagina principala a dashboard-ului cu lista de loguri filtrate.
      */
-    public function index(): void
+    public function index(array $queryParams = []): void
     {
         $this->checkAuth();
 
@@ -34,13 +34,13 @@ class DashboardController extends BaseController
 
         // Preluarea filtrelor din query string
         $filters = [
-            'app_id' => $_GET['app_id'] ?? null,
-            'level' => $_GET['level'] ?? null,
-            'search' => $_GET['search'] ?? null,
+            'app_id' => $queryParams['app_id'] ?? null,
+            'level' => $queryParams['level'] ?? null,
+            'search' => $queryParams['search'] ?? null,
         ];
 
         // Configurare paginare
-        $page = (int)($_GET['page'] ?? 1);
+        $page = (int)($queryParams['page'] ?? 1);
         $limit = 50;
         $offset = ($page - 1) * $limit;
 

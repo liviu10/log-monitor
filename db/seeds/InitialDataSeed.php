@@ -6,11 +6,9 @@ class InitialDataSeed extends AbstractSeed
 {
     public function run(): void
     {
-        $db = \App\Utilities\MySQLWrapper::getInstance();
-
-        // 1. Initial Admin User (Folosim INSERT IGNORE sau verificam existenta)
+        // 1. Initial Admin User
         $users = $this->table('users');
-        $exists = $this->fetchAll("SELECT * FROM users WHERE username = 'admin' LIMIT 1");
+        $exists = $this->fetchRow("SELECT 1 FROM users WHERE username = 'admin' LIMIT 1");
         
         if (empty($exists)) {
             $users->insert([
@@ -22,9 +20,10 @@ class InitialDataSeed extends AbstractSeed
             ])->saveData();
         }
 
-        // 2. Curatam datele vechi de test pentru a evita duplicatele la ID-uri
+        // 2. Clean old test data to avoid duplicates
         $this->execute('SET FOREIGN_KEY_CHECKS=0;');
         $this->execute('TRUNCATE TABLE logs');
+        $this->execute('TRUNCATE TABLE app_settings');
         $this->execute('TRUNCATE TABLE apps');
         $this->execute('SET FOREIGN_KEY_CHECKS=1;');
 
@@ -39,8 +38,25 @@ class InitialDataSeed extends AbstractSeed
                 'created_at' => date('Y-m-d H:i:s'),
             ]
         ])->saveData();
+        
+        // 4. Initial App Settings
+        $appSettings = $this->table('app_settings');
+        $appSettings->insert([
+            [
+                'app_id' => $appId,
+                'key' => 'notification_levels',
+                'value' => 'EMERGENCY,ALERT,CRITICAL,ERROR,WARNING',
+                'created_at' => date('Y-m-d H:i:s'),
+            ],
+            [
+                'app_id' => $appId,
+                'key' => 'notification_channel',
+                'value' => 'email',
+                'created_at' => date('Y-m-d H:i:s'),
+            ]
+        ])->saveData();
 
-        // 4. Initial Logs
+        // 5. Initial Logs
         $logs = $this->table('logs');
         $logs->insert([
             [

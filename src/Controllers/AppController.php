@@ -40,11 +40,11 @@ class AppController extends BaseController
      * Proceseaza adaugarea unei noi aplicatii in sistem.
      * Genereaza automat o cheie API securizata de 64 de caractere.
      */
-    public function store(): never
+    public function store(array $postData): never
     {
         $this->checkAuth();
         
-        $payload = $_POST;
+        $payload = $postData;
         $validator = new Validation(['name' => 'nume aplicatie']);
         
         $errors = $validator->validate([
@@ -66,13 +66,56 @@ class AppController extends BaseController
     }
 
     /**
-     * Sterge o aplicatie din sistem pe baza ID-ului furnizat prin POST.
+     * Proceseaza actualizarea numelui unei aplicatii sau regenerarea cheii API.
      */
-    public function delete(): never
+    public function update(array $postData, array $getData = []): never
     {
         $this->checkAuth();
         
-        $id = $_POST['id'] ?? null;
+        $id = $postData['id'] ?? null;
+        if (!$id) {
+            setFlash('danger', 'Eroare', 'ID aplicatie lipsa.');
+            $this->redirect('apps.php');
+        }
+
+        $appModel = new App();
+
+        // Regenerare cheie API daca sub_action=regenerate-key
+        if (isset($getData['sub_action']) && $getData['sub_action'] === 'regenerate-key') {
+            $newApiKey = bin2hex(random_bytes(32));
+            $appModel->update((int)$id, ['api_key' => $newApiKey]);
+            setFlash('success', 'Succes', 'Cheia API a fost regenerata cu succes.');
+            $this->redirect('apps.php');
+        }
+
+        $payload = $postData;
+        $validator = new Validation(['name' => 'nume aplicatie']);
+        
+        $errors = $validator->validate([
+            'name' => ['required', 'string', 'min:3'],
+        ], $payload);
+
+        if (!empty($errors)) {
+            $_SESSION['errors'] = $errors;
+            $this->redirect('apps.php');
+        }
+
+        $appModel->update((int)$id, [
+            'name' => trim($payload['name'])
+        ]);
+        
+        setFlash('success', 'Succes', 'Aplicatia a fost actualizata cu succes.');
+        $this->redirect('apps.php');
+    }
+
+    /**
+     * Sterge o aplicatie din sistem pe baza ID-ului furnizat prin POST.
+     */
+    public function delete(array $postData): never
+    {
+        $this->checkAuth();
+        
+        $id = $postData['id'] ?? null;
         if ($id) {
             $appModel = new App();
             $appModel->delete((int)$id);

@@ -37,9 +37,9 @@ class AuthController extends BaseController
      * Proceseaza tentativa de autentificare a unui utilizator.
      * Valideaza datele de intrare si verifica parola folosind password_verify.
      */
-    public function login(): never
+    public function login(array $data): never
     {
-        $payload = $_POST;
+        $payload = $data;
         
         $validator = new Validation([
             'username' => 'utilizator',

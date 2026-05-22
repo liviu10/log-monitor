@@ -123,4 +123,62 @@ class Log
         $stmt = $this->db->query($sql, $params);
         return $stmt ? (int)$stmt->fetchColumn() : 0;
     }
+
+    /**
+     * Numara totalul de loguri create inainte de o anumita data.
+     *
+     * @param string $date Data limita (cutoff date).
+     * @return int Numarul total de loguri.
+     */
+    public function countBeforeDate(string $date): int
+    {
+        $sql = "SELECT COUNT(*) FROM logs WHERE created_at < ?";
+        $stmt = $this->db->query($sql, [$date]);
+        return $stmt ? (int)$stmt->fetchColumn() : 0;
+    }
+
+    /**
+     * Recupereaza logurile create inainte de o anumita data, paginat.
+     *
+     * @param string $date   Data limita.
+     * @param int    $limit  Numarul de loguri per chunk.
+     * @param int    $offset Punctul de start.
+     * @return array Tablou de loguri cu numele aplicatiei asociate.
+     */
+    public function getBeforeDate(string $date, int $limit, int $offset): array
+    {
+        $sql = "SELECT l.*, a.name as app_name 
+                FROM logs l 
+                JOIN apps a ON l.app_id = a.id 
+                WHERE l.created_at < ? 
+                ORDER BY l.created_at ASC 
+                LIMIT {$limit} OFFSET {$offset}";
+        
+        $stmt = $this->db->query($sql, [$date]);
+        return $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+    }
+
+    /**
+     * Sterge logurile create inainte de o anumita data.
+     *
+     * @param string $date Data limita.
+     * @return int|false Numarul de inregistrari sterse sau false in caz de eroare.
+     */
+    public function deleteBeforeDate(string $date): int|false
+    {
+        $sql = "DELETE FROM logs WHERE created_at < ?";
+        $stmt = $this->db->query($sql, [$date]);
+        return $stmt ? $stmt->rowCount() : false;
+    }
+
+    /**
+     * Optimizeaza tabela logs pentru a elibera spatiul de stocare.
+     *
+     * @return bool True in caz de succes, false altfel.
+     */
+    public function optimize(): bool
+    {
+        $stmt = $this->db->query("OPTIMIZE TABLE logs");
+        return $stmt !== false;
+    }
 }

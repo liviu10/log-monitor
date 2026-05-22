@@ -76,6 +76,18 @@ class App
     }
 
     /**
+     * Actualizeaza datele unei aplicatii in sistem.
+     *
+     * @param int   $id   ID-ul aplicatiei de actualizat.
+     * @param array $data Tablou de date de actualizat (ex: ['name' => 'Noul Nume']).
+     * @return bool True in caz de succes, false altfel.
+     */
+    public function update(int $id, array $data): bool
+    {
+        return $this->db->update('apps', $data, ['id' => $id]) !== false;
+    }
+
+    /**
      * Sterge o aplicatie din sistem pe baza ID-ului.
      *
      * @param int $id ID-ul aplicatiei de sters.
