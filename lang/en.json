@@ -193,5 +193,14 @@
     "The provided attachment file is inaccessible or invalid.": "The provided attachment file is inaccessible or invalid.",
     "A critical error occurred while sending the notification.": "A critical error occurred while sending the notification.",
     "The :field field must be at least :min.": "The :field field must be at least :min.",
-    "The :field field must not be greater than :max.": "The :field field must not be greater than :max."
+    "The :field field must not be greater than :max.": "The :field field must not be greater than :max.",
+    "API key regenerated successfully.": "API key regenerated successfully.",
+    "Failed to create application.": "Failed to create application.",
+    "Failed to update application.": "Failed to update application.",
+    "Failed to delete application.": "Failed to delete application.",
+    "Internal server error.": "Internal server error.",
+    "Critical error loading dashboard data. Please try again later.": "Critical error loading dashboard data. Please try again later.",
+    "Failed to create user. Possible duplicate username.": "Failed to create user. Possible duplicate username.",
+    "Failed to delete user from database.": "Failed to delete user from database.",
+    "Unable to retrieve administrators list.": "Unable to retrieve administrators list."
 }

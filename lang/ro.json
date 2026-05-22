@@ -193,5 +193,14 @@
     "The provided attachment file is inaccessible or invalid.": "Atasamentul furnizat este inaccesibil sau invalid.",
     "A critical error occurred while sending the notification.": "Eroare critica la expedierea notificarii.",
     "The :field field must be at least :min.": "Campul :field este sub limita minima de :min.",
-    "The :field field must not be greater than :max.": "Campul :field depaseste limita maxima de :max."
+    "The :field field must not be greater than :max.": "Campul :field depaseste limita maxima de :max.",
+    "API key regenerated successfully.": "Cheia API a fost regenerata cu succes.",
+    "Failed to create application.": "Nu s-a putut crea aplicatia.",
+    "Failed to update application.": "Nu s-a putut actualiza aplicatia.",
+    "Failed to delete application.": "Nu s-a putut sterge aplicatia.",
+    "Internal server error.": "Eroare interna de server.",
+    "Critical error loading dashboard data. Please try again later.": "Eroare critica la incarcarea datelor din panoul de control. Te rugam sa incerci mai tarziu.",
+    "Failed to create user. Possible duplicate username.": "Nu s-a putut crea utilizatorul. Este posibil ca numele de utilizator sa fie deja existent.",
+    "Failed to delete user from database.": "Nu s-a putut sterge utilizatorul din baza de date.",
+    "Unable to retrieve administrators list.": "Nu s-a putut prelua lista de administratori."
 }

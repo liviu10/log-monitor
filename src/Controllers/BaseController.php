@@ -5,15 +5,15 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 /**
- * BaseController Class
+ * Clasa BaseController
  *
- * Serves as the base class for all controllers in the application.
- * Provides utility methods for managing JSON responses, rendering views, redirections, and authentication checking.
- * Also includes setting security headers for all protected requests.
+ * Serveste ca clasa de baza pentru toate controllerele din aplicatie.
+ * Ofera metode utilitare pentru gestionarea raspunsurilor JSON, randarea vizualizarilor,
+ * redirectionari si verificarea autentificarii, inclusiv aplicarea headerelor de securitate.
  *
  * @category Controller
  * @package  App\Controllers
- * @version  1.1
+ * @version  1.2
  * @since    PHP 8.4
  * @author   Voica Liviu
  * @license  Proprietary
@@ -21,35 +21,35 @@ namespace App\Controllers;
 class BaseController
 {
     /**
-     * Sends a response in JSON format to the client.
+     * Trimite un raspuns in format JSON catre client si opreste executia.
      *
-     * @param array $data   Data to be JSON encoded.
-     * @param int   $status HTTP status code (default 200).
+     * @param array $data   Datele care vor fi codificate in format JSON.
+     * @param int   $status Codul de stare HTTP (implicit 200).
      */
     protected function jsonResponse(array $data, int $status = 200): never
     {
-        header('Content-Type: application/json');
+        header('Content-Type: application/json; charset=utf-8');
         http_response_code($status);
-        echo json_encode($data);
+        echo json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
         exit;
     }
 
     /**
-     * Render a view file and extract the provided data.
+     * Randeaza un fisier de vizualizare si extrage datele furnizate.
      *
-     * @param string $view Name/Path of the view file.
-     * @param array  $data Data to be available in the view.
+     * @param string $view Numele sau calea fisierului de vizualizare.
+     * @param array  $data Datele care vor fi disponibile in vizualizare.
      */
     protected function render(string $view, array $data = []): void
     {
-        extract($data);
+        extract($data, EXTR_SKIP);
         require_once __DIR__ . '/../../views/' . $view . '.php';
     }
 
     /**
-     * Redirect the user to a specified URL and stop execution.
+     * Redirectioneaza utilizatorul catre un URL specificat si opreste executia.
      *
-     * @param string $url Destination URL.
+     * @param string $url URL-ul de destinatie.
      */
     protected function redirect(string $url): never
     {
@@ -58,17 +58,17 @@ class BaseController
     }
 
     /**
-     * Checks if the user is authenticated and applies security headers.
+     * Verifica daca utilizatorul este autentificat si aplica headerele de securitate OWASP.
      *
-     * @return array|null User data if authenticated.
+     * @return array|null Datele utilizatorului daca este autentificat.
      */
     protected function checkAuth(): ?array
     {
-        // Adding security headers for each authenticated request
         header('X-Frame-Options: DENY');
         header('X-Content-Type-Options: nosniff');
         header('X-XSS-Protection: 1; mode=block');
         header('Referrer-Policy: strict-origin-when-cross-origin');
+        header('Content-Security-Policy: default-src \'self\'; frame-ancestors \'none\';');
         
         checkAuthUser();
         return getCurrentAuthUser();

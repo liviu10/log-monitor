@@ -6,16 +6,17 @@ namespace App\Controllers;
 
 use App\Models\AppSetting;
 use App\Utilities\Validation;
+use App\Utilities\LogViaCurl;
 
 /**
- * AppSettingController Class
+ * Clasa AppSettingController
  *
- * Manages application settings in the administration panel.
- * Allows listing, creating, updating, and deleting settings (individually or in bulk).
+ * Gestioneaza setarile aplicatiilor in panoul de administrare.
+ * Permite listarea, crearea, actualizarea si stergerea setarilor (individual sau in masa).
  *
  * @category Controller
  * @package  App\Controllers
- * @version  1.2
+ * @version  1.3
  * @since    PHP 8.4
  * @author   Voica Liviu
  * @license  Proprietary
@@ -23,7 +24,7 @@ use App\Utilities\Validation;
 class AppSettingController extends BaseController
 {
     /**
-     * Returns all settings for a specific application as a JSON response.
+     * Returneaza toate setarile pentru o aplicatie specifica sub forma de raspuns JSON.
      */
     public function index(array $getData): void
     {
@@ -44,7 +45,7 @@ class AppSettingController extends BaseController
     }
 
     /**
-     * Adds a new setting or multiple settings simultaneously for an application.
+     * Adauga o setare noua sau mai multe setari simultan pentru o aplicatie.
      */
     public function store(array $postData): void
     {
@@ -57,7 +58,6 @@ class AppSettingController extends BaseController
 
         $appSettingModel = new AppSetting();
 
-        // Support for bulk save (sending array in 'settings' field)
         if (isset($postData['settings']) && is_array($postData['settings'])) {
             $saved = 0;
             $errors = [];
@@ -75,11 +75,26 @@ class AppSettingController extends BaseController
                     continue;
                 }
 
-                $success = $appSettingModel->saveSetting($appId, $key, $value);
-                if ($success) {
-                    $saved++;
-                } else {
-                    $errors[] = __("Setting ':key': Error saving.", ['key' => $key]);
+                try {
+                    $success = $appSettingModel->saveSetting($appId, $key, $value);
+                    if ($success) {
+                        $saved++;
+                    } else {
+                        $errors[] = __("Setting ':key': Error saving.", ['key' => $key]);
+                    }
+                } catch (\Throwable $e) {
+                    LogViaCurl::send('ERROR', 'Bulk setting storage exception', [
+                        'location' => __METHOD__,
+                        'line' => __LINE__,
+                        'exception_message' => $e->getMessage(),
+                        'exception_file' => $e->getFile(),
+                        'exception_line' => $e->getLine(),
+                        'exception_trace' => $e->getTraceAsString(),
+                        'app_id' => $appId,
+                        'setting_key' => $key,
+                        'identifier' => 'AppSettingController_BulkStore_Exception'
+                    ]);
+                    $errors[] = __("Setting ':key': Critical error occurred.", ['key' => $key]);
                 }
             }
 
@@ -99,7 +114,6 @@ class AppSettingController extends BaseController
             return;
         }
 
-        // Classic behavior for saving a single setting
         $validator = new Validation([
             'app_id' => __('Application ID'),
             'key' => __('Setting key'),
@@ -137,23 +151,37 @@ class AppSettingController extends BaseController
             return;
         }
 
-        $success = $appSettingModel->saveSetting($appId, $key, $value);
-
-        if ($success) {
-            $this->jsonResponse([
-                'success' => true,
-                'message' => __('Setting saved successfully.')
+        try {
+            $success = $appSettingModel->saveSetting($appId, $key, $value);
+            if ($success) {
+                $this->jsonResponse([
+                    'success' => true,
+                    'message' => __('Setting saved successfully.')
+                ]);
+            } else {
+                $this->jsonResponse([
+                    'success' => false,
+                    'message' => __('Error saving setting in the database.')
+                ], 500);
+            }
+        } catch (\Throwable $e) {
+            LogViaCurl::send('ERROR', 'Single setting storage exception', [
+                'location' => __METHOD__,
+                'line' => __LINE__,
+                'exception_message' => $e->getMessage(),
+                'exception_file' => $e->getFile(),
+                'exception_line' => $e->getLine(),
+                'exception_trace' => $e->getTraceAsString(),
+                'app_id' => $appId,
+                'setting_key' => $key,
+                'identifier' => 'AppSettingController_Store_Exception'
             ]);
-        } else {
-            $this->jsonResponse([
-                'success' => false,
-                'message' => __('Error saving setting in the database.')
-            ], 500);
+            $this->jsonResponse(['success' => false, 'message' => __('Internal server error.')], 500);
         }
     }
 
     /**
-     * Updates an existing setting or multiple settings simultaneously.
+     * Actualizeaza o setare existenta sau mai multe setari simultan.
      */
     public function update(array $postData): void
     {
@@ -161,12 +189,11 @@ class AppSettingController extends BaseController
 
         $appId = isset($postData['app_id']) ? (int)$postData['app_id'] : 0;
         if ($appId <= 0) {
-            $this->jsonResponse(['success' => false, 'message' => __('ID aplicatie invalid.')], 400);
+            $this->jsonResponse(['success' => false, 'message' => __('Invalid application ID.')], 400);
         }
 
         $appSettingModel = new AppSetting();
 
-        // Support for bulk update (sending array in 'settings' field)
         if (isset($postData['settings']) && is_array($postData['settings'])) {
             $updated = 0;
             $errors = [];
@@ -185,14 +212,29 @@ class AppSettingController extends BaseController
                     continue;
                 }
 
-                $success = $appSettingModel->updateSetting($appId, $oldKey, [
-                    'key' => $key,
-                    'value' => $value
-                ]);
-                if ($success) {
-                    $updated++;
-                } else {
-                    $errors[] = __("Setting ':key': Error updating (check if the new key is not already in use).", ['key' => $key]);
+                try {
+                    $success = $appSettingModel->updateSetting($appId, $oldKey, [
+                        'key' => $key,
+                        'value' => $value
+                    ]);
+                    if ($success) {
+                        $updated++;
+                    } else {
+                        $errors[] = __("Setting ':key': Error updating (check if the new key is not already in use).", ['key' => $key]);
+                    }
+                } catch (\Throwable $e) {
+                    LogViaCurl::send('ERROR', 'Bulk setting update exception', [
+                        'location' => __METHOD__,
+                        'line' => __LINE__,
+                        'exception_message' => $e->getMessage(),
+                        'exception_file' => $e->getFile(),
+                        'exception_line' => $e->getLine(),
+                        'exception_trace' => $e->getTraceAsString(),
+                        'app_id' => $appId,
+                        'setting_key' => $key,
+                        'identifier' => 'AppSettingController_BulkUpdate_Exception'
+                    ]);
+                    $errors[] = __("Setting ':key': Critical error occurred during update.", ['key' => $key]);
                 }
             }
 
@@ -212,7 +254,6 @@ class AppSettingController extends BaseController
             return;
         }
 
-        // Classic behavior for updating a single setting
         $validator = new Validation([
             'app_id' => __('Application ID'),
             'key' => __('Setting key'),
@@ -245,26 +286,41 @@ class AppSettingController extends BaseController
         $value = trim($postData['value']);
         $oldKey = trim($postData['old_key']);
 
-        $success = $appSettingModel->updateSetting($appId, $oldKey, [
-            'key' => $key,
-            'value' => $value
-        ]);
-
-        if ($success) {
-            $this->jsonResponse([
-                'success' => true,
-                'message' => __('Setting updated successfully.')
+        try {
+            $success = $appSettingModel->updateSetting($appId, $oldKey, [
+                'key' => $key,
+                'value' => $value
             ]);
-        } else {
-            $this->jsonResponse([
-                'success' => false,
-                'message' => __('Error updating setting. Verify if the new key does not exist already.')
-            ], 400);
+
+            if ($success) {
+                $this->jsonResponse([
+                    'success' => true,
+                    'message' => __('Setting updated successfully.')
+                ]);
+            } else {
+                $this->jsonResponse([
+                    'success' => false,
+                    'message' => __('Error updating setting. Verify if the new key does not exist already.')
+                ], 400);
+            }
+        } catch (\Throwable $e) {
+            LogViaCurl::send('ERROR', 'Single setting update exception', [
+                'location' => __METHOD__,
+                'line' => __LINE__,
+                'exception_message' => $e->getMessage(),
+                'exception_file' => $e->getFile(),
+                'exception_line' => $e->getLine(),
+                'exception_trace' => $e->getTraceAsString(),
+                'app_id' => $appId,
+                'setting_key' => $key,
+                'identifier' => 'AppSettingController_Update_Exception'
+            ]);
+            $this->jsonResponse(['success' => false, 'message' => __('Internal server error.')], 500);
         }
     }
 
     /**
-     * Deletes a setting of an application.
+     * Sterge o setare a unei aplicatii.
      */
     public function delete(array $postData): void
     {
@@ -281,19 +337,34 @@ class AppSettingController extends BaseController
             return;
         }
 
-        $appSettingModel = new AppSetting();
-        $success = $appSettingModel->deleteSetting($appId, $key);
+        try {
+            $appSettingModel = new AppSetting();
+            $success = $appSettingModel->deleteSetting($appId, $key);
 
-        if ($success) {
-            $this->jsonResponse([
-                'success' => true,
-                'message' => __('Setting deleted successfully.')
+            if ($success) {
+                $this->jsonResponse([
+                    'success' => true,
+                    'message' => __('Setting deleted successfully.')
+                ]);
+            } else {
+                $this->jsonResponse([
+                    'success' => false,
+                    'message' => __('Setting could not be deleted.')
+                ], 500);
+            }
+        } catch (\Throwable $e) {
+            LogViaCurl::send('ERROR', 'Setting deletion exception', [
+                'location' => __METHOD__,
+                'line' => __LINE__,
+                'exception_message' => $e->getMessage(),
+                'exception_file' => $e->getFile(),
+                'exception_line' => $e->getLine(),
+                'exception_trace' => $e->getTraceAsString(),
+                'app_id' => $appId,
+                'setting_key' => $key,
+                'identifier' => 'AppSettingController_Delete_Exception'
             ]);
-        } else {
-            $this->jsonResponse([
-                'success' => false,
-                'message' => __('Setting could not be deleted.')
-            ], 500);
+            $this->jsonResponse(['success' => false, 'message' => __('Internal server error.')], 500);
         }
     }
 }

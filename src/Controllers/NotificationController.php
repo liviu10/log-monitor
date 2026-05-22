@@ -9,14 +9,14 @@ use App\Utilities\SendNotification;
 use App\Utilities\LogViaCurl;
 
 /**
- * NotificationController Class
+ * Clasa NotificationController
  *
- * Responsible for managing and sending automated alerts 
- * through various channels (email, Teams via email, etc.) based on application settings.
+ * Responsabila pentru gestionarea si trimiterea de alerte automate
+ * prin diverse canale alternative configurate din aplicatie (E-mail, Teams etc.).
  *
  * @category Controller
  * @package  App\Controllers
- * @version  1.5
+ * @version  1.6
  * @since    PHP 8.4
  * @author   Voica Liviu
  * @license  Proprietary
@@ -24,12 +24,11 @@ use App\Utilities\LogViaCurl;
 class NotificationController extends BaseController
 {
     /**
-     * Sends an alert based on the application's settings and the log details.
-     * Supports multiple channels (e.g. "email,teams" or single channel).
+     * Trimite o alerta pe baza setarilor aplicatiei si a datelor din log.
+     * Suporta utilizarea de canale multiple (ex: "email,teams").
      *
-     * @param array $app        Application data (id, name, etc.).
-     * @param array $logPayload Current log data (level, message, context).
-     * @return void
+     * @param array $app        Datele aplicatiei procesate.
+     * @param array $logPayload Datele continutului din logul generat.
      */
     public function sendAlert(array $app, array $logPayload): void
     {
@@ -42,47 +41,45 @@ class NotificationController extends BaseController
                 $settings[$row['key']] = $row['value'];
             }
 
-            // Reading active channels (supports comma-separated, e.g., "email,teams")
             $channels = array_map('trim', explode(',', strtolower($settings['notification_channel'] ?? '')));
             $levelsRaw = $settings['notification_levels'] ?? '';
             $levels = array_map('trim', explode(',', strtolower($levelsRaw)));
             $currentLevel = strtolower($logPayload['level']);
 
-            // If the current level is not in the notification list, stop
             if (!in_array($currentLevel, $levels, true)) {
                 return;
             }
 
-            // Mapping Outlook priorities (1 = High, 3 = Normal, 5 = Low) based on log level
+            // Tratare exhaustiva a prioritatilor folosind structura moderna match din PHP 8.x
             $priority = match ($currentLevel) {
                 'emergency', 'alert', 'critical', 'error' => 1,
-                'warning', 'notice' => 3,
-                'info', 'debug' => 5,
-                default => 3
+                'warning', 'notice'                        => 3,
+                'info', 'debug'                            => 5,
+                default                                    => 3
             };
 
             $contextStr = '';
             if (!empty($logPayload['context'])) {
-                $contextStr = json_encode($logPayload['context'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+                $contextStr = json_encode($logPayload['context'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
             }
 
-            // 1. Email channel (alert to monitoring email addresses)
+            $subject = sprintf("[%s] Log Alert %s - %s", strtoupper($logPayload['level']), $app['name'], APP_NAME);
+            
+            $emailMessage = "A fost inregistrat un log de nivel mare:\n\n"
+                . "Aplicatie: " . $app['name'] . "\n"
+                . "Nivel: " . strtoupper($logPayload['level']) . "\n"
+                . "Mesaj: " . $logPayload['message'] . "\n"
+                . "Data: " . date('Y-m-d H:i:s') . "\n";
+
+            if ($contextStr !== '') {
+                $emailMessage .= "Context:\n" . $contextStr . "\n";
+            }
+
+            // 1. Canal comunicare Email standard
             if (in_array('email', $channels, true)) {
                 $emailRecipient = $settings['notification_email'] ?? null;
                 if (!empty($emailRecipient)) {
                     $notifier = new SendNotification();
-                    $subject = sprintf("[%s] Log Alert %s - %s", strtoupper($logPayload['level']), $app['name'], APP_NAME);
-
-                    $emailMessage = "A fost inregistrat un log de nivel mare:\n\n"
-                        . "Aplicatie: " . $app['name'] . "\n"
-                        . "Nivel: " . strtoupper($logPayload['level']) . "\n"
-                        . "Mesaj: " . $logPayload['message'] . "\n"
-                        . "Data: " . date('Y-m-d H:i:s') . "\n";
-
-                    if ($contextStr !== '') {
-                        $emailMessage .= "Context:\n" . $contextStr . "\n";
-                    }
-
                     $notifier->handle([
                         'to' => $emailRecipient,
                         'message' => $emailMessage,
@@ -92,23 +89,11 @@ class NotificationController extends BaseController
                 }
             }
 
-            // 2. Microsoft Teams channel (by sending a direct email to the Teams channel address)
+            // 2. Canal comunicare Microsoft Teams direct pe adresa canalului dedicat
             if (in_array('teams', $channels, true)) {
                 $teamsEmail = $settings['notification_teams_email'] ?? null;
                 if (!empty($teamsEmail)) {
                     $notifier = new SendNotification();
-                    $subject = sprintf("[%s] Log Alert %s - %s", strtoupper($logPayload['level']), $app['name'], APP_NAME);
-
-                    $emailMessage = "A fost inregistrat un log de nivel mare:\n\n"
-                        . "Aplicatie: " . $app['name'] . "\n"
-                        . "Nivel: " . strtoupper($logPayload['level']) . "\n"
-                        . "Mesaj: " . $logPayload['message'] . "\n"
-                        . "Data: " . date('Y-m-d H:i:s') . "\n";
-
-                    if ($contextStr !== '') {
-                        $emailMessage .= "Context:\n" . $contextStr . "\n";
-                    }
-
                     $notifier->handle([
                         'to' => $teamsEmail,
                         'message' => $emailMessage,
