@@ -1,50 +1,50 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Enums;
 
 /**
  * LogLevel Enum
- * 
- * Defines the log levels allowed in the system, according to the RFC 5424 standard.
- * We use a Native Backed Enum (string) for strict typing and automatic validation.
+ * * Defineste nivelurile de logare permise in sistem, conform standardului RFC 5424.
+ * Se utilizeaza un Native Backed Enum (string) pentru tipizare stricta si validare automata.
  *
  * @category Enum
  * @package  App\Enums
- * @version  1.2
+ * @version  1.3
  * @since    PHP 8.4
  * @author   Voica Liviu
  * @license  Proprietar
  */
 enum LogLevel: string
 {
-    /** System is unusable. */
+    /** Sistemul este inutilizabil. */
     case EMERGENCY = 'EMERGENCY';
 
-    /** Must take immediate action. */
+    /** Trebuie actionat imediat. */
     case ALERT = 'ALERT';
 
-    /** Critical conditions. */
+    /** Conditii critice. */
     case CRITICAL = 'CRITICAL';
 
-    /** Error conditions. */
+    /** Conditii de eroare. */
     case ERROR = 'ERROR';
 
-    /** Warning conditions. */
+    /** Conditii de avertisment. */
     case WARNING = 'WARNING';
 
-    /** Normal but significant condition. */
+    /** Conditie normala, dar semnificativa. */
     case NOTICE = 'NOTICE';
 
-    /** Informational messages. */
+    /** Mesaje informationale. */
     case INFO = 'INFO';
 
-    /** Debug messages. */
+    /** Mesaje de depanare (debug). */
     case DEBUG = 'DEBUG';
 
     /**
-     * Returns all raw (string) values of the log levels.
-     * 
-     * @return array<int, string>
+     * Returneaza toate valorile brute (string) ale nivelurilor de logare.
+     * * @return array<int, string>
      */
     public static function all(): array
     {
@@ -52,13 +52,13 @@ enum LogLevel: string
     }
 
     /**
-     * Checks if a given string is a valid log level.
-     * 
-     * @param string $level The level to check.
+     * Verifica daca un string dat este un nivel de logare valid.
+     * Implementeaza filozofia Fail Fast prin procesarea defensiva a inputului.
+     * * @param string $level Nivelul care trebuie verificat.
      * @return bool
      */
     public static function isValid(string $level): bool
     {
-        return self::tryFrom(strtoupper($level)) !== null;
+        return self::tryFrom(strtoupper(trim($level))) !== null;
     }
 }

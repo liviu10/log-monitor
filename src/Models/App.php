@@ -1,19 +1,25 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
+use RuntimeException;
+use InvalidArgumentException;
+use PDOException;
 use App\Utilities\MySQLWrapper;
+use App\Utilities\LogViaCurl;
 
 /**
  * App Class
  *
- * Manages application entities that can send logs to the system.
- * Provides methods to identify an application via API key, retrieve all applications, 
- * create new applications, and delete existing ones.
+ * Gestioneaza entitatile de tip aplicatie care pot trimite loguri in sistem.
+ * Ofera metode pentru identificarea aplicatiei via API key, recuperare,
+ * creare, actualizare si stergere securizata.
  *
  * @category Model
  * @package  App\Models
- * @version  1.1
+ * @version  1.3
  * @since    PHP 8.4
  * @author   Voica Liviu
  * @license  Proprietar
@@ -21,10 +27,9 @@ use App\Utilities\MySQLWrapper;
 class App
 {
     /**
-     * App class constructor.
-     * Using Constructor Property Promotion to inject the database dependency.
-     * 
-     * @param MySQLWrapper $db The database wrapper instance.
+     * Constructorul clasei App.
+     * Utilizeaza Constructor Property Promotion pentru injectarea dependintei bazei de date.
+     * * @param MySQLWrapper $db Instanta wrapper-ului de baza de date.
      */
     public function __construct(
         protected MySQLWrapper $db = new MySQLWrapper(
@@ -34,67 +39,189 @@ class App
             pass: 'password'
         )
     ) {
-        // If using Singleton, we can overwrite here or let promotion handle the default instance
         $this->db = MySQLWrapper::getInstance();
     }
 
     /**
-     * Finds an application in the database using the unique API key.
+     * Gaseste o aplicatie in baza de date folosind cheia unica API.
      *
-     * @param string $apiKey The API key to search for.
-     * @return array|null Application data or null if not found.
+     * @param string $apiKey Cheia API pentru cautare.
+     * @return array Aplicatia gasita.
+     * @throws InvalidArgumentException Daca cheia este goala.
+     * @throws RuntimeException Daca aplicatia nu este gasita.
      */
-    public function findByApiKey(string $apiKey): ?array
+    public function findByApiKey(string $apiKey): array
     {
-        $results = $this->db->read('apps', ['api_key' => $apiKey]);
-        return $results ? $results[0] : null;
+        $trimmedKey = trim($apiKey);
+        if ($trimmedKey === '') {
+            throw new InvalidArgumentException(__('API key cannot be empty'));
+        }
+
+        try {
+            $results = $this->db->read('apps', ['api_key' => $trimmedKey]);
+            if (empty($results)) {
+                throw new RuntimeException(__('Application not found for the provided API key'));
+            }
+            return $results[0];
+        } catch (PDOException $e) {
+            LogViaCurl::send('ERROR', 'Query execution failure event', [
+                'location' => __METHOD__,
+                'line' => __LINE__,
+                'exception_message' => $e->getMessage(),
+                'exception_file' => $e->getFile(),
+                'exception_line' => $e->getLine(),
+                'exception_trace' => $e->getTraceAsString(),
+                'sql_statement' => 'SELECT FROM apps WHERE api_key = ?',
+                'sql_parameters' => [$trimmedKey],
+                'identifier' => 'MySQLWrapper_Query_Failure'
+            ]);
+            throw new RuntimeException(__('Database error during application lookup'), 0, $e);
+        }
     }
 
     /**
-     * Retrieves all registered applications.
+     * Recupereaza toate aplicatiile inregistrate.
      *
-     * @return array Array containing all applications.
+     * @return array Lista de aplicatii.
      */
     public function getAll(): array
     {
-        return $this->db->read('apps', [], ['*']) ?: [];
+        try {
+            return $this->db->read('apps', [], ['*']) ?: [];
+        } catch (PDOException $e) {
+            LogViaCurl::send('ERROR', 'Query execution failure event', [
+                'location' => __METHOD__,
+                'line' => __LINE__,
+                'exception_message' => $e->getMessage(),
+                'exception_file' => $e->getFile(),
+                'exception_line' => $e->getLine(),
+                'exception_trace' => $e->getTraceAsString(),
+                'sql_statement' => 'SELECT ALL FROM apps',
+                'sql_parameters' => [],
+                'identifier' => 'MySQLWrapper_Query_Failure'
+            ]);
+            return [];
+        }
     }
 
     /**
-     * Registers a new application in the system.
+     * Inregistreaza o aplicatie noua in sistem.
      *
-     * @param string $name   The name of the application.
-     * @param string $apiKey The API key generated for the application.
-     * @return int|bool The ID of the new record or false on failure.
+     * @param string $name   Numele aplicatiei.
+     * @param string $apiKey Cheia API generata.
+     * @return int ID-ul noii inregistrari.
+     * @throws InvalidArgumentException Daca datele furnizate sunt invalide.
+     * @throws RuntimeException Daca salvarea a esuat.
      */
-    public function create(string $name, string $apiKey): int|bool
+    public function create(string $name, string $apiKey): int
     {
-        return $this->db->create('apps', [
-            'name' => $name,
-            'api_key' => $apiKey,
-        ]);
+        $trimmedName = trim($name);
+        $trimmedKey = trim($apiKey);
+
+        if ($trimmedName === '' || $trimmedKey === '') {
+            throw new InvalidArgumentException(__('Application name and API key cannot be empty'));
+        }
+
+        $sql = 'INSERT INTO apps (name, api_key)';
+        $params = ['name' => $trimmedName, 'api_key' => $trimmedKey];
+
+        try {
+            $result = $this->db->create('apps', $params);
+            if ($result === false) {
+                throw new RuntimeException(__('Failed to create application record'));
+            }
+            return (int)$result;
+        } catch (PDOException $e) {
+            LogViaCurl::send('ERROR', 'Query execution failure event', [
+                'location' => __METHOD__,
+                'line' => __LINE__,
+                'exception_message' => $e->getMessage(),
+                'exception_file' => $e->getFile(),
+                'exception_line' => $e->getLine(),
+                'exception_trace' => $e->getTraceAsString(),
+                'sql_statement' => $sql,
+                'sql_parameters' => $params,
+                'identifier' => 'MySQLWrapper_Query_Failure'
+            ]);
+            throw new RuntimeException(__('Database error during application creation'), 0, $e);
+        }
     }
 
     /**
-     * Updates an application's data in the system.
+     * Actualizeaza datele unei aplicatii.
      *
-     * @param int   $id   The ID of the application to update.
-     * @param array $data Array of data to update (e.g., ['name' => 'New Name']).
-     * @return bool True on success, false otherwise.
+     * @param int   $id   ID-ul aplicatiei.
+     * @param array $data Datele pentru actualizare.
+     * @return void
+     * @throws InvalidArgumentException Daca datele sunt goale.
+     * @throws RuntimeException Daca actualizarea a esuat.
      */
-    public function update(int $id, array $data): bool
+    public function update(int $id, array $data): void
     {
-        return $this->db->update('apps', $data, ['id' => $id]) !== false;
+        if ($id <= 0) {
+            throw new InvalidArgumentException(__('Invalid application ID'));
+        }
+        if (empty($data)) {
+            throw new InvalidArgumentException(__('Update data cannot be empty'));
+        }
+
+        $sql = 'UPDATE apps SET ... WHERE id = ?';
+        try {
+            $result = $this->db->update('apps', $data, ['id' => $id]);
+            if ($result === false) {
+                throw new RuntimeException(__('Failed to update application'));
+            }
+        } catch (PDOException $e) {
+            LogViaCurl::send('ERROR', 'Query execution failure event', [
+                'location' => __METHOD__,
+                'line' => __LINE__,
+                'exception_message' => $e->getMessage(),
+                'exception_file' => $e->getFile(),
+                'exception_line' => $e->getLine(),
+                'exception_trace' => $e->getTraceAsString(),
+                'sql_statement' => $sql,
+                'sql_parameters' => array_merge($data, ['id' => $id]),
+                'identifier' => 'MySQLWrapper_Query_Failure'
+            ]);
+            throw new RuntimeException(__('Database error during application update'), 0, $e);
+        }
     }
 
     /**
-     * Deletes an application from the system based on its ID.
+     * Sterge o aplicatie din sistem pe baza ID-ului.
      *
-     * @param int $id The ID of the application to delete.
-     * @return bool True on success, false otherwise.
+     * @param int $id ID-ul aplicatiei.
+     * @return void
+     * @throws InvalidArgumentException Daca ID-ul este invalid.
+     * @throws RuntimeException Daca stergerea a esuat.
      */
-    public function delete(int $id): bool
+    public function delete(int $id): void
     {
-        return (bool)$this->db->delete('apps', ['id' => $id]);
+        if ($id <= 0) {
+            throw new InvalidArgumentException(__('Invalid application ID for deletion'));
+        }
+
+        $sql = 'DELETE FROM apps WHERE id = ?';
+        $params = ['id' => $id];
+
+        try {
+            $result = $this->db->delete('apps', $params);
+            if (!$result) {
+                throw new RuntimeException(__('Application deletion failed or record does not exist'));
+            }
+        } catch (PDOException $e) {
+            LogViaCurl::send('ERROR', 'Query execution failure event', [
+                'location' => __METHOD__,
+                'line' => __LINE__,
+                'exception_message' => $e->getMessage(),
+                'exception_file' => $e->getFile(),
+                'exception_line' => $e->getLine(),
+                'exception_trace' => $e->getTraceAsString(),
+                'sql_statement' => $sql,
+                'sql_parameters' => $params,
+                'identifier' => 'MySQLWrapper_Query_Failure'
+            ]);
+            throw new RuntimeException(__('Database error during application deletion'), 0, $e);
+        }
     }
 }
