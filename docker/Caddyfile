@@ -1,0 +1,26 @@
+{
+	# Global options
+	frankenphp
+	order php_server before file_server
+}
+
+:80 {
+	# Set the root directory
+	root * /var/www/html
+
+	# Enable compression
+	encode zstd gzip
+
+	# Protect sensitive files
+	@forbidden {
+		path .env*
+		path /phinx.php
+		path /composer.json
+		path /composer.lock
+		path /docker/*
+	}
+	respond @forbidden "Access Denied" 403
+
+	# Execute PHP files
+	php_server
+}

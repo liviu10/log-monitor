@@ -1,0 +1,5 @@
+# Ruleaza scriptul de curatare a logurilor in fiecare noapte la ora 03:00
+# Format: min ora zi_luna luna zi_saptamana comanda
+0 3 * * * /usr/local/bin/php /var/www/html/bin/purge-logs.php 30 >> /var/www/html/storage/logs/cron.log 2>&1
+
+# Linie goala obligatorie la finalul fisierului de cron

@@ -1,0 +1,10 @@
+.git
+.gitignore
+.env
+phinx.php
+README.md
+todo.txt
+.data/
+node_modules/
+vendor/
+storage/backups/

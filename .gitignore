@@ -1,0 +1,24 @@
+# Dependencies
+/vendor/
+
+# Environment
+.env
+
+# Docker/Podman
+.data/
+docker-compose.override.yml
+
+# Logs
+*.log
+/storage/logs/
+/storage/backups/
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

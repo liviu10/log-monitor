@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: log-monitor-app
+    restart: always
+    ports:
+      - "8080:80"
+    volumes:
+      - ..:/var/www/html:Z
+    env_file:
+      - ../.env
+    environment:
+      - TZ=${TZ:-Europe/Bucharest}
+    depends_on:
+      - db
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/login.php"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  db:
+    image: docker.io/library/mariadb:latest
+    container_name: log-monitor-db
+    restart: always
+    ports:
+      - "33061:3306"
+    env_file:
+      - ../.env
+    environment:
+      - MYSQL_DATABASE=${DB_DATABASE:-log_monitor}
+      - MYSQL_USER=${DB_USERNAME:-user}
+      - MYSQL_PASSWORD=${DB_PASSWORD:-password}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-rootpassword}
+      - TZ=${TZ:-Europe/Bucharest}
+    volumes:
+      - db_data:/var/lib/mysql:Z
+      - ./my.cnf:/etc/mysql/conf.d/my.cnf:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  db_data:
