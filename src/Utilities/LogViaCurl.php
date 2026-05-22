@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Utilities;
 
 /**
- * Clasa LogViaCurl
+ * LogViaCurl Class
  *
- * Oferă funcționalitate utilitară pentru trimiterea logurilor către endpoint-ul API log.php prin cURL.
- * Aceasta poate fi apelată global în cadrul proiectului.
+ * Provides utility functionality for sending logs to the log.php API endpoint via cURL.
+ * Can be called globally within the project.
  *
  * @category Utility
  * @package  App\Utilities
@@ -19,20 +19,20 @@ namespace App\Utilities;
  */
 class LogViaCurl
 {
-    /** @var bool Flag pentru prevenirea recursivității infinite la logarea erorilor din fazele DB. */
+    /** @var bool Flag to prevent infinite recursion when logging DB errors. */
     private static bool $isLogging = false;
 
     /**
-     * Trimite un log către log.php prin cURL.
+     * Sends a log to log.php via cURL.
      *
-     * @param string $level   Nivelul de logare (ex: 'INFO', 'ERROR', 'DEBUG').
-     * @param string $message Mesajul de log.
-     * @param array  $context Informații suplimentare de context (opțional).
-     * @return bool True dacă logul a fost trimis și înregistrat cu succes, false altfel.
+     * @param string $level   Log level (e.g., 'INFO', 'ERROR', 'DEBUG').
+     * @param string $message Log message.
+     * @param array  $context Additional context information (optional).
+     * @return bool True if the log was sent and recorded successfully, false otherwise.
      */
     public static function send(string $level, string $message, array $context = []): bool
     {
-        // Protecție recursivitate infinită
+        // Infinite recursion protection
         if (self::$isLogging) {
             return false;
         }
@@ -45,7 +45,7 @@ class LogViaCurl
                 return false;
             }
 
-            // Determinăm URL-ul serverului de logare din env sau fallback local
+            // Determine logging server URL from env or local fallback
             $url = $_ENV['LOG_SERVER_URL'] ?? 'http://127.0.0.1/log.php';
 
             $payload = json_encode([
@@ -80,9 +80,9 @@ class LogViaCurl
     }
 
     /**
-     * Obține o cheie API validă din baza de date pentru utilizare în request-ul cURL.
+     * Gets a valid API key from the database for use in the cURL request.
      *
-     * @return string Cheia API sau un șir gol în caz de eroare.
+     * @return string The API key or an empty string if an error occurs.
      */
     private static function getApiKey(): string
     {
@@ -91,9 +91,9 @@ class LogViaCurl
             $apps = $db->read('apps', []);
             return !empty($apps) ? (string)$apps[0]['api_key'] : '';
         } catch (\Throwable $e) {
-            // Fallback în error_log-ul sistemului dacă baza de date este căzută total
+            // Fallback to system error_log if the database is completely down
             error_log(json_encode([
-                'error' => 'Eroare la preluarea cheii API pentru cURL',
+                'error' => 'Error retrieving API key for cURL',
                 'location' => __METHOD__,
                 'line' => __LINE__,
                 'exception_message' => $e->getMessage(),

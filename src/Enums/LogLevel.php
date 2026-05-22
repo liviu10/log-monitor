@@ -3,10 +3,10 @@
 namespace App\Enums;
 
 /**
- * Enum LogLevel
+ * LogLevel Enum
  * 
- * Definește nivelurile de logare permise în sistem, conform standardului RFC 5424.
- * Utilizăm un Native Backed Enum (string) pentru o tipizare strictă și validare automată.
+ * Defines the log levels allowed in the system, according to the RFC 5424 standard.
+ * We use a Native Backed Enum (string) for strict typing and automatic validation.
  *
  * @category Enum
  * @package  App\Enums
@@ -17,32 +17,32 @@ namespace App\Enums;
  */
 enum LogLevel: string
 {
-    /** Sistemul este inutilizabil. */
+    /** System is unusable. */
     case EMERGENCY = 'EMERGENCY';
 
-    /** Trebuie luată o măsură imediată. */
+    /** Must take immediate action. */
     case ALERT = 'ALERT';
 
-    /** Condiții critice. */
+    /** Critical conditions. */
     case CRITICAL = 'CRITICAL';
 
-    /** Condiții de eroare. */
+    /** Error conditions. */
     case ERROR = 'ERROR';
 
-    /** Condiții de avertizare. */
+    /** Warning conditions. */
     case WARNING = 'WARNING';
 
-    /** Condiție normală, dar semnificativă. */
+    /** Normal but significant condition. */
     case NOTICE = 'NOTICE';
 
-    /** Mesaje informative. */
+    /** Informational messages. */
     case INFO = 'INFO';
 
-    /** Mesaje de depanare (debug). */
+    /** Debug messages. */
     case DEBUG = 'DEBUG';
 
     /**
-     * Returnează toate valorile brute (string) ale nivelurilor de logare.
+     * Returns all raw (string) values of the log levels.
      * 
      * @return array<int, string>
      */
@@ -52,9 +52,9 @@ enum LogLevel: string
     }
 
     /**
-     * Verifică dacă un anumit șir de caractere este un nivel de logare valid.
+     * Checks if a given string is a valid log level.
      * 
-     * @param string $level Nivelul de verificat.
+     * @param string $level The level to check.
      * @return bool
      */
     public static function isValid(string $level): bool

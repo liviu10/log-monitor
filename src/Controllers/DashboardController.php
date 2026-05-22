@@ -7,11 +7,11 @@ use App\Models\App;
 use App\Enums\LogLevel;
 
 /**
- * Clasa DashboardController
+ * DashboardController Class
  *
- * Responsabila pentru afisarea si gestionarea paginii principale a panoului de control (Dashboard).
- * Se ocupa de preluarea filtrelor de cautare, gestionarea paginarii si recuperarea datelor necesare 
- * pentru vizualizarea logurilor sistemului intr-un mod organizat.
+ * Responsible for displaying and managing the main page of the control panel (Dashboard).
+ * Handles the retrieval of search filters, management of pagination, and recovery of the necessary data 
+ * for viewing system logs in an organized manner.
  *
  * @category Controller
  * @package  App\Controllers
@@ -23,7 +23,7 @@ use App\Enums\LogLevel;
 class DashboardController extends BaseController
 {
     /**
-     * Afiseaza pagina principala a dashboard-ului cu lista de loguri filtrate.
+     * Displays the main dashboard page with the filtered logs list.
      */
     public function index(array $queryParams = []): void
     {
@@ -32,19 +32,19 @@ class DashboardController extends BaseController
         $logModel = new Log();
         $appModel = new App();
 
-        // Preluarea filtrelor din query string
+        // Retrieve filters from query string
         $filters = [
             'app_id' => $queryParams['app_id'] ?? null,
             'level' => $queryParams['level'] ?? null,
             'search' => $queryParams['search'] ?? null,
         ];
 
-        // Configurare paginare
+        // Pagination configuration
         $page = (int)($queryParams['page'] ?? 1);
         $limit = 50;
         $offset = ($page - 1) * $limit;
 
-        // Recuperare date
+        // Retrieve data
         $logs = $logModel->getPaginated($filters, $limit, $offset);
         $totalLogs = $logModel->count($filters);
         $totalPages = (int)ceil($totalLogs / $limit);

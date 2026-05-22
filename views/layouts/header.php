@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ro" data-bs-theme="dark">
+<html lang="<?= getLang() ?>" data-bs-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= APP_NAME ?> - Centralized Logs</title>
+    <title><?= APP_NAME ?> - <?= __('Centralized Logs') ?></title>
     
     <!-- Google Fonts: Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -20,5 +20,22 @@
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <!-- App CSS -->
     <link rel="stylesheet" href="assets/app.css?v=<?= time() ?>">
+    
+    <!-- Translations exposure for JS -->
+    <script>
+        <?php
+        $lang = getLang();
+        $langFile = __DIR__ . "/../../lang/{$lang}.json";
+        $translations = file_exists($langFile) ? json_decode(file_get_contents($langFile), true) : [];
+        ?>
+        window.Translations = <?= json_encode($translations) ?>;
+        window.__ = function(key, replacements = {}) {
+            let text = window.Translations[key] || key;
+            for (let placeholder in replacements) {
+                text = text.replace(':' + placeholder, replacements[placeholder]);
+            }
+            return text;
+        };
+    </script>
 </head>
 <body>

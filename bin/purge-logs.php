@@ -1,13 +1,15 @@
 <?php
 
+declare(strict_types=1);
+
 require_once __DIR__ . '/../bootstrap.php';
 
 use App\Controllers\LogController;
 use App\Utilities\LogViaCurl;
 
 /**
- * Script de mentenanta: Arhivare in TXT si apoi stergere din DB.
- * Utilizare: php bin/purge-logs.php [zile]
+ * Maintenance Script: Archive to TXT and then purge from DB.
+ * Usage: php bin/purge-logs.php [days]
  */
 
 $days = isset($argv[1]) ? (int)$argv[1] : 30;
@@ -40,7 +42,7 @@ try {
 
     echo json_encode([
         'status' => 'error',
-        'message' => 'A aparut o eroare critica in timpul rularii scriptului de mentenanta.'
+        'message' => 'A critical error occurred while running the maintenance script.'
     ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n";
 
     exit(1);

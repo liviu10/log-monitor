@@ -5,11 +5,11 @@ namespace App\Models;
 use App\Utilities\MySQLWrapper;
 
 /**
- * Clasa User
+ * User class
  *
- * Gestioneaza utilizatorii administratori ai sistemului de loguri.
- * Ofera functionalitati pentru autentificare (gasire dupa username) si crearea de noi conturi administrative.
- * Toate parolele sunt stocate securizat folosind algoritmul BCRYPT.
+ * Manages the administrative users of the log system.
+ * Provides functionalities for authentication (finding by username) and creating new administrative accounts.
+ * All passwords are stored securely using the BCRYPT algorithm.
  *
  * @category Model
  * @package  App\Models
@@ -21,10 +21,10 @@ use App\Utilities\MySQLWrapper;
 class User
 {
     /**
-     * Constructorul clasei User.
-     * Utilizăm Constructor Property Promotion pentru injecția bazei de date.
+     * User class constructor.
+     * Using Constructor Property Promotion for database injection.
      * 
-     * @param MySQLWrapper $db Instanța wrapper-ului de bază de date.
+     * @param MySQLWrapper $db Database wrapper instance.
      */
     public function __construct(
         protected MySQLWrapper $db = new MySQLWrapper(
@@ -38,10 +38,10 @@ class User
     }
 
     /**
-     * Cauta un utilizator in baza de date pe baza numelui de utilizator.
+     * Finds a user in the database based on the username.
      *
-     * @param string $username Numele de utilizator cautat.
-     * @return array|null Datele utilizatorului sau null daca nu exista.
+     * @param string $username The username to search for.
+     * @return array|null User data or null if not found.
      */
     public function findByUsername(string $username): ?array
     {
@@ -50,11 +50,11 @@ class User
     }
 
     /**
-     * Creeaza un nou utilizator administrator in sistem.
+     * Creates a new administrative user in the system.
      *
-     * @param string $username Numele de utilizator dorit.
-     * @param string $password Parola in format text clar (va fi hash-uita).
-     * @return int|bool ID-ul noii inregistrari sau false in caz de eroare.
+     * @param string $username The desired username.
+     * @param string $password Password in plain text (will be hashed).
+     * @return int|bool The ID of the new record or false on error.
      */
     public function create(string $username, string $password): int|bool
     {

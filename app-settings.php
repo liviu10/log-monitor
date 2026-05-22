@@ -1,12 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 require_once __DIR__ . '/bootstrap.php';
 
 use App\Controllers\AppSettingController;
 
 $controller = new AppSettingController();
 
-// Citim datele din request, oferind suport si pentru JSON payloads (util pentru multi-salvare/multi-actualizare)
+// Reading data from the request, providing support for JSON payloads (useful for multi-save/multi-update)
 $inputData = $_POST;
 $rawInput = file_get_contents('php://input');
 

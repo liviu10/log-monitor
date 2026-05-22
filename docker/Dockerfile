@@ -7,7 +7,7 @@ RUN composer install --no-dev --no-interaction --no-autoloader --no-scripts
 # Stage 2: Final Image
 FROM docker.io/dunglas/frankenphp:latest-alpine
 
-# Instalam pachetele de sistem necesare
+# Install system packages
 RUN apk add --no-cache \
     git \
     curl \
@@ -16,29 +16,29 @@ RUN apk add --no-cache \
     cronie \
     bash
 
-# Instalam extensiile PHP (folosind utilitarul preinstalat in imagine)
+# Install PHP extensions (using the utility preinstalled in the image)
 RUN install-php-extensions gd pdo_mysql mysqli zip mbstring intl bcmath opcache
 
-# Setari PHP si Caddy
+# PHP and Caddy settings
 COPY docker/php.ini /usr/local/etc/php/conf.d/app-optimizations.ini
 COPY docker/Caddyfile /etc/caddy/Caddyfile
 
 WORKDIR /var/www/html
 
-# Copiem vendor-ul generat proaspat in etapa builder
+# Copy vendor from builder stage
 COPY --from=builder /app/vendor ./vendor
 
-# Copiem codul sursa
+# Copy source code
 COPY . .
 
-# Optimizare autoload
+# Optimize autoload
 COPY --from=builder /usr/bin/composer /usr/bin/composer
 RUN composer dump-autoload --optimize --no-dev && rm /usr/bin/composer
 
-# Permisiuni
+# Permissions
 RUN chown -R root:root /var/www/html && chmod -R 755 /var/www/html
 
-# Setup Entrypoint si Cron
+# Setup Entrypoint and Cron
 COPY docker/docker-entrypoint.sh /usr/local/bin/
 COPY docker/crontab /var/www/html/docker/crontab
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh && mkdir -p storage/logs

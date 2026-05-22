@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Controllers;
 
 use App\Models\User;
@@ -7,23 +9,23 @@ use App\Utilities\Validation;
 use App\Utilities\MySQLWrapper;
 
 /**
- * Clasa UserController
+ * UserController Class
  *
- * Administreaza utilizatorii care au acces la panoul de control al sistemului de loguri.
- * Permite vizualizarea, crearea si eliminarea conturilor de administrator, 
- * incluzand reguli de securitate pentru a preveni auto-stergerea.
+ * Manages users who have access to the log system control panel.
+ * Allows viewing, creating, and deleting administrator accounts, 
+ * including security rules to prevent self-deletion.
  *
  * @category Controller
  * @package  App\Controllers
  * @version  1.1
  * @since    PHP 8.4
  * @author   Voica Liviu
- * @license  Proprietar
+ * @license  Proprietary
  */
 class UserController extends BaseController
 {
     /**
-     * Afiseaza lista tuturor administratorilor inregistrati.
+     * Displays the list of all registered administrators.
      */
     public function index(): void
     {
@@ -38,8 +40,8 @@ class UserController extends BaseController
     }
 
     /**
-     * Proceseaza crearea unui nou cont de administrator.
-     * Valideaza complexitatea minima a parolei si unicitatea numelui de utilizator.
+     * Processes the creation of a new administrator account.
+     * Validates minimum password complexity and username uniqueness.
      */
     public function store(array $data): never
     {
@@ -47,8 +49,8 @@ class UserController extends BaseController
         
         $payload = $data;
         $validator = new Validation([
-            'username' => 'utilizator',
-            'password' => 'parola',
+            'username' => __('Username'),
+            'password' => __('Password'),
         ]);
         
         $errors = $validator->validate([
@@ -64,13 +66,13 @@ class UserController extends BaseController
         $userModel = new User();
         $userModel->create($payload['username'], $payload['password']);
         
-        setFlash('success', 'Succes', 'Utilizatorul a fost creat cu succes.');
+        setFlash('success', __('Success'), __('User created successfully.'));
         $this->redirect('users.php');
     }
 
     /**
-     * Sterge un utilizator din sistem.
-     * Include o verificare de securitate pentru a impiedica un administrator sa isi stearga propriul cont.
+     * Deletes a user from the system.
+     * Includes a security check to prevent an administrator from deleting their own account.
      */
     public function delete(array $data): never
     {
@@ -78,15 +80,15 @@ class UserController extends BaseController
         
         $id = $data['id'] ?? null;
         if ($id) {
-            // Nu lasam utilizatorul sa se stearga pe sine din sesiune
+            // Preventing user from deleting their own session
             if ((int)$id === (int)($_SESSION['auth.user']['id'] ?? 0)) {
-                setFlash('danger', 'Eroare', 'Nu iti poti sterge propriul cont.');
+                setFlash('danger', __('Error'), __('You cannot delete your own account.'));
                 $this->redirect('users.php');
             }
 
             $db = MySQLWrapper::getInstance();
             $db->delete('users', ['id' => $id]);
-            setFlash('success', 'Succes', 'Utilizatorul a fost sters.');
+            setFlash('success', __('Success'), __('User deleted successfully.'));
         }
         
         $this->redirect('users.php');

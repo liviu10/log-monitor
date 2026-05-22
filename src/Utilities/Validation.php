@@ -3,11 +3,11 @@
 namespace App\Utilities;
 
 /**
- * Clasa Validation
+ * Class Validation
  *
- * Ofera un motor de validare flexibil pentru datele primite prin request-uri.
- * Suporta reguli de baza precum 'required', 'string', 'int', 'email', 'date', 'array', 'min', 'max', 'in' si 'regex'.
- * Permite personalizarea numelor campurilor pentru generarea unor mesaje de eroare mai prietenoase.
+ * Provides a flexible validation engine for data received through requests.
+ * Supports basic rules such as 'required', 'string', 'int', 'email', 'date', 'array', 'min', 'max', 'in', and 'regex'.
+ * Allows customization of field names for generating more user-friendly error messages.
  *
  * @category Utility
  * @package  App\Utilities
@@ -20,25 +20,25 @@ class Validation
 {
     use ValidateEmail;
 
-    /** @var array Tablou cu erorile colectate in urma validarii. */
+    /** @var array Array with collected validation errors. */
     private array $errors = [];
 
     /**
-     * Constructorul clasei Validation.
-     * Utilizăm Constructor Property Promotion pentru maparea numelor câmpurilor.
+     * Constructor of the Validation class.
+     * We use Constructor Property Promotion to map the field names.
      *
-     * @param array $fieldNames Tablou de forma ['nume_camp' => 'Eticheta'].
+     * @param array $fieldNames Array of the form ['field_name' => 'Label'].
      */
     public function __construct(
         private array $fieldNames = []
     ) {}
 
     /**
-     * Valideaza un set de date (payload) pe baza unor reguli specificate.
-     * 
-     * @param array $rules   Regulile de validare.
-     * @param array $payload Datele de validat.
-     * @return array Tablou cu erori (gol daca validarea a reusit).
+     * Validates a set of data (payload) based on specified rules.
+     *
+     * @param array $rules   The validation rules.
+     * @param array $payload The data to validate.
+     * @return array Array with errors (empty if validation succeeded).
      */
     public function validate(array $rules, array $payload): array
     {
@@ -73,7 +73,7 @@ class Validation
     }
 
     /**
-     * Aplică o regulă de validare specifică asupra unei valori.
+     * Applies a specific validation rule to a value.
      */
     private function applyRule(string $field, string $rule, mixed $value): void
     {
@@ -109,23 +109,23 @@ class Validation
     }
 
     /**
-     * Genereaza mesaje de eroare lizibile in limba romana pentru o regula esuata.
+     * Generates human-readable error messages in Romanian for a failed rule.
      */
     public function messages(string $field, string $rule): string
     {
-        $label = $this->fieldNames[$field] ?? ucfirst($field);
+        $label = __($this->fieldNames[$field] ?? ucfirst($field));
 
         return match (true) {
-            $rule === 'required' => "Campul $label este obligatoriu.",
-            $rule === 'email' => "Campul $label nu este o adresa de email valida.",
-            $rule === 'int' => "Campul $label trebuie sa fie un numar intreg.",
-            $rule === 'date' => "Campul $label nu este o data valida.",
-            $rule === 'array' => "Campul $label trebuie sa fie o lista.",
-            str_starts_with($rule, 'in:') => "Selectia pentru $label este invalida.",
-            str_starts_with($rule, 'min:') => "Campul $label este sub limita minima de " . substr($rule, 4) . ".",
-            str_starts_with($rule, 'max:') => "Campul $label depaseste limita maxima de " . substr($rule, 4) . ".",
-            str_starts_with($rule, 'regex:') => "Campul $label nu are un format valid.",
-            default => "Campul $label este invalid.",
+            $rule === 'required' => __('Campul :field este obligatoriu.', ['field' => $label]),
+            $rule === 'email' => __('Campul :field nu este o adresa de email valida.', ['field' => $label]),
+            $rule === 'int' => __('Campul :field trebuie sa fie un numar intreg.', ['field' => $label]),
+            $rule === 'date' => __('Campul :field nu este o data valida.', ['field' => $label]),
+            $rule === 'array' => __('Campul :field trebuie sa fie o lista.', ['field' => $label]),
+            str_starts_with($rule, 'in:') => __('Selectia pentru :field este invalida.', ['field' => $label]),
+            str_starts_with($rule, 'min:') => __('Campul :field este sub limita minima de :min.', ['field' => $label, 'min' => substr($rule, 4)]),
+            str_starts_with($rule, 'max:') => __('Campul :field depaseste limita maxima de :max.', ['field' => $label, 'max' => substr($rule, 4)]),
+            str_starts_with($rule, 'regex:') => __('Campul :field nu are un format valid.', ['field' => $label]),
+            default => __('Campul :field este invalid.', ['field' => $label]),
         };
     }
 }

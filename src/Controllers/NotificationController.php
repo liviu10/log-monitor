@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Controllers;
 
 use App\Models\AppSetting;
@@ -7,26 +9,26 @@ use App\Utilities\SendNotification;
 use App\Utilities\LogViaCurl;
 
 /**
- * Clasa NotificationController
+ * NotificationController Class
  *
- * Responsabila pentru gestionarea si trimiterea alertelor automate 
- * prin diverse canale (email, Teams prin email, etc.) in functie de setarile aplicatiilor.
+ * Responsible for managing and sending automated alerts 
+ * through various channels (email, Teams via email, etc.) based on application settings.
  *
  * @category Controller
  * @package  App\Controllers
  * @version  1.5
  * @since    PHP 8.4
  * @author   Voica Liviu
- * @license  Proprietar
+ * @license  Proprietary
  */
 class NotificationController extends BaseController
 {
     /**
-     * Trimite o alerta pe baza setarilor aplicatiei si a detaliilor logului.
+     * Sends an alert based on the application's settings and the log details.
      * Supports multiple channels (e.g. "email,teams" or single channel).
      *
-     * @param array $app        Datele aplicatiei (id, name, etc.).
-     * @param array $logPayload Datele logului curent (level, message, context).
+     * @param array $app        Application data (id, name, etc.).
+     * @param array $logPayload Current log data (level, message, context).
      * @return void
      */
     public function sendAlert(array $app, array $logPayload): void
@@ -40,18 +42,18 @@ class NotificationController extends BaseController
                 $settings[$row['key']] = $row['value'];
             }
 
-            // Citim canalele active (suporta comma-separated, ex: "email,teams")
+            // Reading active channels (supports comma-separated, e.g., "email,teams")
             $channels = array_map('trim', explode(',', strtolower($settings['notification_channel'] ?? '')));
             $levelsRaw = $settings['notification_levels'] ?? '';
             $levels = array_map('trim', explode(',', strtolower($levelsRaw)));
             $currentLevel = strtolower($logPayload['level']);
 
-            // Daca nivelul curent nu este in lista celor de notificat, ne oprim
+            // If the current level is not in the notification list, stop
             if (!in_array($currentLevel, $levels, true)) {
                 return;
             }
 
-            // Maparea prioritatilor Outlook (1 = High, 3 = Normal, 5 = Low) in functie de log level
+            // Mapping Outlook priorities (1 = High, 3 = Normal, 5 = Low) based on log level
             $priority = match ($currentLevel) {
                 'emergency', 'alert', 'critical', 'error' => 1,
                 'warning', 'notice' => 3,
@@ -64,12 +66,12 @@ class NotificationController extends BaseController
                 $contextStr = json_encode($logPayload['context'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
             }
 
-            // 1. Canalul Email (alerta catre adresele de email de monitorizare)
+            // 1. Email channel (alert to monitoring email addresses)
             if (in_array('email', $channels, true)) {
                 $emailRecipient = $settings['notification_email'] ?? null;
                 if (!empty($emailRecipient)) {
                     $notifier = new SendNotification();
-                    $subject = sprintf("[%s] Alerta Log %s - %s", strtoupper($logPayload['level']), $app['name'], APP_NAME);
+                    $subject = sprintf("[%s] Log Alert %s - %s", strtoupper($logPayload['level']), $app['name'], APP_NAME);
 
                     $emailMessage = "A fost inregistrat un log de nivel mare:\n\n"
                         . "Aplicatie: " . $app['name'] . "\n"
@@ -90,12 +92,12 @@ class NotificationController extends BaseController
                 }
             }
 
-            // 2. Canalul Microsoft Teams (prin trimiterea unui e-mail direct catre adresa canalului Teams)
+            // 2. Microsoft Teams channel (by sending a direct email to the Teams channel address)
             if (in_array('teams', $channels, true)) {
                 $teamsEmail = $settings['notification_teams_email'] ?? null;
                 if (!empty($teamsEmail)) {
                     $notifier = new SendNotification();
-                    $subject = sprintf("[%s] Alerta Log %s - %s", strtoupper($logPayload['level']), $app['name'], APP_NAME);
+                    $subject = sprintf("[%s] Log Alert %s - %s", strtoupper($logPayload['level']), $app['name'], APP_NAME);
 
                     $emailMessage = "A fost inregistrat un log de nivel mare:\n\n"
                         . "Aplicatie: " . $app['name'] . "\n"

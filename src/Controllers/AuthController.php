@@ -1,29 +1,31 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Controllers;
 
 use App\Models\User;
 use App\Utilities\Validation;
 
 /**
- * Clasa AuthController
+ * AuthController Class
  *
- * Gestioneaza procesele de autentificare, autorizare si deconectare a utilizatorilor administratori.
- * Include logica pentru afisarea formularului de login, validarea credentialelor folosind hash-uri BCRYPT 
- * si gestionarea sesiunilor active.
+ * Manages the authentication, authorization, and logout processes for administrator users.
+ * Includes the logic for displaying the login form, validating credentials using BCRYPT hashes 
+ * and managing active sessions.
  *
  * @category Controller
  * @package  App\Controllers
  * @version  1.1
  * @since    PHP 8.4
  * @author   Voica Liviu
- * @license  Proprietar
+ * @license  Proprietary
  */
 class AuthController extends BaseController
 {
     /**
-     * Afiseaza pagina de login.
-     * Daca utilizatorul este deja autentificat, il redirectioneaza catre dashboard.
+     * Displays the login page.
+     * If the user is already authenticated, redirects them to the dashboard.
      */
     public function showLogin(): void
     {
@@ -34,16 +36,16 @@ class AuthController extends BaseController
     }
 
     /**
-     * Proceseaza tentativa de autentificare a unui utilizator.
-     * Valideaza datele de intrare si verifica parola folosind password_verify.
+     * Processes the authentication attempt of a user.
+     * Validates input data and checks the password using password_verify.
      */
     public function login(array $data): never
     {
         $payload = $data;
         
         $validator = new Validation([
-            'username' => 'utilizator',
-            'password' => 'parola',
+            'username' => __('Username'),
+            'password' => __('Password'),
         ]);
 
         $errors = $validator->validate([
@@ -67,12 +69,12 @@ class AuthController extends BaseController
             $this->redirect('index.php');
         }
 
-        setFlash('danger', 'Eroare autentificare', 'Utilizator sau parola incorecta.');
+        setFlash('danger', __('Authentication error'), __('Invalid username or password.'));
         $this->redirect('login.php');
     }
 
     /**
-     * Deconecteaza utilizatorul prin distrugerea sesiunii curente.
+     * Logs the user out by destroying the current session.
      */
     public function logout(): never
     {

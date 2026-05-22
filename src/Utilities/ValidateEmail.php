@@ -5,9 +5,9 @@ namespace App\Utilities;
 /**
  * Trait ValidateEmail
  *
- * Ofera functionalitati reutilizabile pentru validarea riguroasa a adreselor de e-mail.
- * Pe langa verificarea formatului standard, acesta verifica si existenta inregistrarilor DNS (MX sau A) 
- * pentru domeniul adresei de e-mail furnizate.
+ * Offers reusable functionality for rigorous email address validation.
+ * Besides checking the standard format, it also verifies the existence of DNS records (MX or A)
+ * for the domain of the provided email address.
  *
  * @category Utility
  * @package  App\Utilities
@@ -19,10 +19,10 @@ namespace App\Utilities;
 trait ValidateEmail
 {
     /**
-     * Valideaza o lista de adrese de e-mail (separate prin virgula).
+     * Validates a list of email addresses (separated by comma).
      *
-     * @param string $emailsToVerify Adresele de e-mail de verificat.
-     * @return array Tablou continand adresele care au esuat la validare.
+     * @param string $emailsToVerify The email addresses to validate.
+     * @return array Array containing the addresses that failed validation.
      */
     public function validateEmail(string $emailsToVerify): array
     {
@@ -30,13 +30,13 @@ trait ValidateEmail
         $emailList = array_map('trim', explode(',', $emailsToVerify));
 
         foreach ($emailList as $email) {
-            // Verificare format standard
+            // Standard format verification
             if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
                 $invalidEmails[] = $email;
                 continue;
             }
 
-            // Verificare existenta domeniu in DNS
+            // Domain existence verification in DNS
             $domain = substr(strrchr($email, "@") ?: '', 1);
             if ($domain === '' || (!checkdnsrr($domain, "MX") && !checkdnsrr($domain, "A"))) {
                 $invalidEmails[] = $email;

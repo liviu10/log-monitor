@@ -1,35 +1,35 @@
 #!/bin/bash
 set -e
 
-# Asteapta pana cand baza de date este accesibila
+# Wait for the database to be accessible
 echo "Waiting for database to be ready..."
 until nc -z $DB_HOST $DB_PORT; do
   sleep 1
 done
 echo "Database is up!"
 
-# Instaleaza dependintele daca folderul vendor lipseste sau este incomplet
+# Install dependencies if vendor folder is missing or incomplete
 if [ ! -d "vendor" ]; then
     echo "Installing composer dependencies..."
     composer install --no-interaction --optimize-autoloader
 fi
 
-# Ruleaza migrarile
+# Run migrations
 echo "Running database migrations..."
 ./vendor/bin/phinx migrate -e development
 
-# Ruleaza seed-urile
+# Run seeds
 echo "Running database seeds..."
 ./vendor/bin/phinx seed:run -e development
 
-# Inregistreaza si porneste Cron
+# Register and start cron
 if [ -f "docker/crontab" ]; then
     echo "Registering cron jobs..."
     crontab docker/crontab
-    # Pornim crond pe Alpine (cronie)
+    # Start crond on Alpine (cronie)
     crond
 fi
 
-# Porneste procesul principal
+# Start application server
 echo "Starting Application Server..."
 exec "$@"

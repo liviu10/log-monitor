@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Controllers;
 
 use App\Models\App;
@@ -8,33 +10,33 @@ use App\Enums\LogLevel;
 use App\Utilities\Validation;
 
 /**
- * Clasa LogController
+ * LogController Class
  *
- * Responsabila pentru gestionarea cererilor de tip API pentru inregistrarea logurilor.
- * Asigura securitatea prin verificarea User-Agent-ului (pentru a preveni logging-ul din browser), 
- * validarea header-elor Content-Type si a cheilor API unice per aplicatie.
+ * Responsible for managing API-type requests for log registration.
+ * Ensures security through User-Agent verification (to prevent browser logging), 
+ * Content-Type header validation, and unique API keys per application.
  *
  * @category Controller
  * @package  App\Controllers
  * @version  1.2
  * @since    PHP 8.4
  * @author   Voica Liviu
- * @license  Proprietar
+ * @license  Proprietary
  */
 class LogController extends BaseController
 {
     /**
-     * Proceseaza si stocheaza o noua intrare de log primita prin POST.
+     * Processes and stores a new log entry received via POST.
      * 
-     * Aceasta metoda efectueaza urmatoarele verificari:
-     * - Blocheaza cererile provenite din browsere web (securitate server-to-server).
-     * - Impune formatul JSON pentru payload.
-     * - Valideaza cheia API furnizata in header.
-     * - Valideaza structura si nivelul logului conform enumerarii LogLevel.
+     * This method performs the following checks:
+     * - Blocks requests originating from web browsers (server-to-server security).
+     * - Enforces JSON format for the payload.
+     * - Validates the API key provided in the header.
+     * - Validates the log structure and level according to the LogLevel enumeration.
      */
     public function store(): never
     {
-        // 1. Verificare User-Agent (Blocam browserele pentru securitate)
+        // 1. User-Agent verification (Block browsers for security)
         $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? '';
         $browserSignatures = ['Mozilla', 'Chrome', 'Safari', 'Edge', 'Opera', 'Firefox'];
         
@@ -47,13 +49,13 @@ class LogController extends BaseController
             }
         }
 
-        // 2. Verificare Content-Type
+        // 2. Content-Type verification
         $contentType = $_SERVER['CONTENT_TYPE'] ?? $_SERVER['HTTP_CONTENT_TYPE'] ?? '';
         if (!str_contains($contentType, 'application/json')) {
             $this->jsonResponse(['error' => 'Content-Type must be application/json'], 415);
         }
 
-        // 3. Verificare API Key
+        // 3. API Key verification
         $apiKey = $_SERVER['HTTP_X_API_KEY'] ?? null;
         
         if (!$apiKey) {
@@ -67,7 +69,7 @@ class LogController extends BaseController
             $this->jsonResponse(['error' => 'Invalid or inactive API Key'], 403);
         }
 
-        // 4. Decodificare si validare JSON
+        // 4. JSON decoding and validation
         $payload = json_decode(file_get_contents('php://input'), true);
 
         if (!$payload) {
@@ -75,9 +77,9 @@ class LogController extends BaseController
         }
 
         $validator = new Validation([
-            'level' => 'nivel log',
-            'message' => 'mesaj',
-            'context' => 'context',
+            'level' => __('Log level'),
+            'message' => __('Message'),
+            'context' => __('Context'),
         ]);
 
         $errors = $validator->validate([
@@ -96,7 +98,7 @@ class LogController extends BaseController
             $this->jsonResponse(['errors' => $errorMessages], 422);
         }
 
-        // 5. Inregistrare log in baza de date
+        // 5. Log registration in database
         $logModel = new Log();
         $result = $logModel->create(
             $app['id'],
@@ -106,7 +108,7 @@ class LogController extends BaseController
         );
 
         if ($result) {
-            // Trimitem notificari prin intermediul NotificationController
+            // Sending notifications through NotificationController
             $notificationController = new NotificationController();
             $notificationController->sendAlert($app, [
                 'level' => $payload['level'],
@@ -114,17 +116,17 @@ class LogController extends BaseController
                 'context' => $payload['context'] ?? null,
             ]);
 
-            $this->jsonResponse(['status' => 'success', 'message' => 'Log recorded']);
+            $this->jsonResponse(['status' => true, 'message' => __('Log recorded')]);
         }
 
-        $this->jsonResponse(['error' => 'Failed to store log'], 500);
+        $this->jsonResponse(['error' => __('Failed to store log')], 500);
     }
 
     /**
-     * Purgeaza si arhiveaza logurile mai vechi de un numar de zile.
+     * Purges and archives logs older than a specified number of days.
      *
-     * @param int    $days       Numarul de zile pentru retentie.
-     * @param string $backupPath Calea absoluta a fisierului de backup.
+     * @param int    $days       Number of days for retention.
+     * @param string $backupPath Absolute path to the backup file.
      * @return array{
      *   status: string,
      *   message: string,
@@ -141,14 +143,14 @@ class LogController extends BaseController
 
         if ($totalToArchive === 0) {
             return [
-                'status' => 'success',
-                'message' => 'Nu exista loguri vechi de arhivat.',
+                'status' => true,
+                'message' => __('No old logs to archive.'),
                 'archived_count' => 0,
                 'deleted_count' => 0
             ];
         }
 
-        // Cream directorul de backup daca nu exista
+        // Creating backup directory if it doesn't exist
         $dir = dirname($backupPath);
         if (!is_dir($dir)) {
             mkdir($dir, 0755, true);
@@ -156,7 +158,7 @@ class LogController extends BaseController
 
         $fileHandle = fopen($backupPath, 'w');
         if (!$fileHandle) {
-            throw new \RuntimeException("Nu s-a putut crea fisierul de backup la calea: {$backupPath}");
+            throw new \RuntimeException(__('Failed to create backup file at path: %s', $backupPath));
         }
 
         fwrite($fileHandle, "LOG MONITOR BACKUP - GENERATED AT " . date('Y-m-d H:i:s') . "\n");
@@ -188,15 +190,15 @@ class LogController extends BaseController
 
         fclose($fileHandle);
 
-        // Stergem logurile vechi din baza de date
+        // Deleting old logs from the database
         $deletedCount = $logModel->deleteBeforeDate($cutoffDate);
 
-        // Optimizam tabela logs
+        // Optimizing the logs table
         $logModel->optimize();
 
         return [
-            'status' => 'success',
-            'message' => 'Procesul de arhivare si curatare s-a finalizat cu succes.',
+            'status' => true,
+            'message' => __('Archive and cleanup process completed successfully.'),
             'archived_count' => $offset,
             'deleted_count' => $deletedCount
         ];

@@ -1,28 +1,30 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Controllers;
 
 /**
- * Clasa BaseController
+ * BaseController Class
  *
- * Serveste ca clasa de baza pentru toate controllerele din aplicatie.
- * Ofera metode utilitare pentru gestionarea raspunsurilor JSON, randarea vizualizarilor, redirectionari si verificarea autentificarii.
- * Include, de asemenea, setarea header-elor de securitate pentru toate cererile protejate.
+ * Serves as the base class for all controllers in the application.
+ * Provides utility methods for managing JSON responses, rendering views, redirections, and authentication checking.
+ * Also includes setting security headers for all protected requests.
  *
  * @category Controller
  * @package  App\Controllers
  * @version  1.1
  * @since    PHP 8.4
  * @author   Voica Liviu
- * @license  Proprietar
+ * @license  Proprietary
  */
 class BaseController
 {
     /**
-     * Trimite un raspuns in format JSON catre client.
+     * Sends a response in JSON format to the client.
      *
-     * @param array $data   Datele care vor fi codificate JSON.
-     * @param int   $status Codul de stare HTTP (default 200).
+     * @param array $data   Data to be JSON encoded.
+     * @param int   $status HTTP status code (default 200).
      */
     protected function jsonResponse(array $data, int $status = 200): never
     {
@@ -33,10 +35,10 @@ class BaseController
     }
 
     /**
-     * Randeaza un fisier de vizualizare (view) si extrage datele furnizate.
+     * Render a view file and extract the provided data.
      *
-     * @param string $view Numele/Calea fisierului de vizualizare.
-     * @param array  $data Datele care vor fi disponibile in vizualizare.
+     * @param string $view Name/Path of the view file.
+     * @param array  $data Data to be available in the view.
      */
     protected function render(string $view, array $data = []): void
     {
@@ -45,9 +47,9 @@ class BaseController
     }
 
     /**
-     * Redirectioneaza utilizatorul catre un URL specificat si opreste executia.
+     * Redirect the user to a specified URL and stop execution.
      *
-     * @param string $url URL-ul de destinatie.
+     * @param string $url Destination URL.
      */
     protected function redirect(string $url): never
     {
@@ -56,13 +58,13 @@ class BaseController
     }
 
     /**
-     * Verifica daca utilizatorul este autentificat si aplica header-ele de securitate.
+     * Checks if the user is authenticated and applies security headers.
      *
-     * @return array|null Datele utilizatorului daca este autentificat.
+     * @return array|null User data if authenticated.
      */
     protected function checkAuth(): ?array
     {
-        // Adaugarea header-elor de securitate pentru fiecare cerere autentificata
+        // Adding security headers for each authenticated request
         header('X-Frame-Options: DENY');
         header('X-Content-Type-Options: nosniff');
         header('X-XSS-Protection: 1; mode=block');

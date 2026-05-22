@@ -1,9 +1,9 @@
 <?php
 /**
- * Fisier Utilitar: helpers.php
+ * Helper Functions File
  *
- * Contine functii globale si setari de baza pentru aplicatie, incluzand gestionarea sesiunilor, 
- * functii de debug, constructia URL-urilor, managementul autentificarii si mesaje flash de tip toast.
+ * Contains global utility functions and basic application settings, including session management, 
+ * debug functions, URL construction, authentication management, and flash toast messages.
  *
  * @category Utility
  * @package  App\Utilities
@@ -16,23 +16,23 @@
 use Symfony\Component\VarDumper\VarDumper;
 
 /**
- * Porneste sesiunea daca nu este deja pornita.
- * Seteaza durata de viata a sesiunii si parametrii cookie-urilor de sesiune la 24 de ore.
+ * Starts the session if not already started.
+ * Sets the session lifetime and session cookie parameters to 24 hours.
  */
 if (session_id() === '') {
-    ini_set('session.gc_maxlifetime', '86400'); // Seteaza durata de viata a sesiunii la 24 de ore
-    session_set_cookie_params(86400); // Seteaza durata de viata a cookie-ului de sesiune la 24 de ore
-    session_start(); // Porneste sesiunea
+    ini_set('session.gc_maxlifetime', '86400'); // Sets session lifetime to 24 hours
+    session_set_cookie_params(86400); // Sets session cookie lifetime to 24 hours
+    session_start(); // Starts the session
 }
 
-/** @const string Rolul de administrator implicit. */
+/** @const string The default administrator role. */
 define('ROLE_ADMIN', 'admin');
 
 /**
- * Afiseaza variabilele date si opreste executia scriptului (Debug & Die).
- * Utilizeaza VarDumper de la Symfony pentru o mai buna vizualizare a variabilelor.
+ * Displays the given variables and stops script execution (Debug & Die).
+ * Uses Symfony's VarDumper for better variable visualization.
  * 
- * @param mixed ...$args Una sau mai multe variabile de afisat.
+ * @param mixed ...$args One or more variables to display.
  */
 if (!function_exists('dd')) {
     function dd(mixed ...$args): never
@@ -45,10 +45,10 @@ if (!function_exists('dd')) {
 }
 
 /**
- * Construieste URL-ul de baza al aplicatiei in mod dinamic.
- * Detecteaza automat protocolul, serverul si subfolderul in care este instalat proiectul.
+ * Constructs the base URL of the application dynamically.
+ * Automatically detects the protocol, server, and subfolder where the project is installed.
  * 
- * @return string URL-ul de baza al aplicatiei.
+ * @return string The base URL of the application.
  */
 if (!function_exists('constructUrl')) {
     function constructUrl(): string
@@ -63,15 +63,15 @@ if (!function_exists('constructUrl')) {
 }
 
 /**
- * Verifica daca utilizatorul este autentificat in sistem.
- * Gestioneaza si procesul de deconectare daca parametrul 'action=logout' este prezent.
+ * Checks if the user is authenticated in the system.
+ * Manages the logout process if the 'action=logout' parameter is present.
  * 
- * @return bool Returneaza true daca utilizatorul are o sesiune valida, altfel redirect catre login.
+ * @return bool Returns true if the user has a valid session, otherwise redirects to login.
  */
 if (!function_exists('checkAuthUser')) {
     function checkAuthUser(): bool
     {
-        // Gestionare deconectare (Logout)
+        // Logout handling
         if (isset($_GET['action']) && $_GET['action'] === 'logout') {
             unset($_SESSION['auth.user']);
             session_destroy();
@@ -92,8 +92,8 @@ if (!function_exists('checkAuthUser')) {
         if (!isset($_SESSION['auth.user']) || empty($_SESSION['auth.user'])) {
             setFlash(
                 'warning', 
-                'Atentionare autentificare', 
-                'Trebuie sa te autentifici pentru a accesa aceasta pagina.'
+                __('Atentionare autentificare'), 
+                __('Trebuie sa te autentifici pentru a accesa aceasta pagina.')
             );
 
             header('Location: login.php');
@@ -105,9 +105,9 @@ if (!function_exists('checkAuthUser')) {
 }
 
 /**
- * Returneaza datele utilizatorului autentificat din sesiune.
+ * Returns the authenticated user's data from the session.
  * 
- * @return array|null Tablou cu datele utilizatorului sau null daca nu este logat.
+ * @return array|null Array with user data or null if not logged in.
  */
 if (!function_exists('getCurrentAuthUser')) {
     function getCurrentAuthUser(): ?array
@@ -118,7 +118,7 @@ if (!function_exists('getCurrentAuthUser')) {
 }
 
 /**
- * Formateaza o data din formatul SQL (YYYY-MM-DD) in formatul european (d.m.Y).
+ * Formats a date from SQL format (YYYY-MM-DD) to European format (d.m.Y).
  */
 if (!function_exists('formatDate')) {
     function formatDate(string $dateString): string
@@ -128,7 +128,7 @@ if (!function_exists('formatDate')) {
 }
 
 /**
- * Verifica daca utilizatorul curent are o anumita permisiune (Mockup).
+ * Checks if the current user has a specific permission (Mockup).
  */
 if (!function_exists('can')) {
     function can(string $permission): bool
@@ -138,7 +138,7 @@ if (!function_exists('can')) {
 }
 
 /**
- * Genereaza un token CSRF unic pentru sesiunea curenta.
+ * Generates a unique CSRF token for the current session.
  */
 if (!function_exists('generateCsrfToken')) {
     function generateCsrfToken(): string
@@ -151,7 +151,7 @@ if (!function_exists('generateCsrfToken')) {
 }
 
 /**
- * Verifica daca un token CSRF primit corespunde cu cel din sesiune.
+ * Verifies if a received CSRF token matches the one in the session.
  */
 if (!function_exists('verifyCsrfToken')) {
     function verifyCsrfToken(?string $token): bool
@@ -164,7 +164,7 @@ if (!function_exists('verifyCsrfToken')) {
 }
 
 /**
- * Seteaza un mesaj flash (notificare temporara) in sesiune pentru a fi afisat ca toast.
+ * Sets a flash message (temporary notification) in the session to be displayed as a toast.
  */
 if (!function_exists('setFlash')) {
     function setFlash(string $type, string $title, string $message, int $toastDelay = 10000, string $redirectUrl = ''): void
@@ -180,7 +180,7 @@ if (!function_exists('setFlash')) {
 }
 
 /**
- * Recupereaza mesajul flash din sesiune si il sterge imediat (consum unitar).
+ * Retrieves the flash message from the session and deletes it immediately (single consumption).
  */
 if (!function_exists('getFlash')) {
     function getFlash(): ?array
@@ -193,5 +193,47 @@ if (!function_exists('getFlash')) {
         }
 
         return null;
+    }
+}
+
+/**
+ * Returns the current language code (e.g., 'ro', 'en').
+ */
+if (!function_exists('getLang')) {
+    function getLang(): string
+    {
+        if (!isset($_SESSION['app_lang'])) {
+            $_SESSION['app_lang'] = 'ro';
+        }
+        return $_SESSION['app_lang'];
+    }
+}
+
+/**
+ * Translates a key into the current language.
+ */
+if (!function_exists('__')) {
+    function __(string $key, array $replacements = []): string
+    {
+        static $translations = null;
+
+        if ($translations === null) {
+            $lang = getLang();
+            $path = __DIR__ . "/../../lang/{$lang}.json";
+
+            if (file_exists($path)) {
+                $translations = json_decode(file_get_contents($path), true) ?: [];
+            } else {
+                $translations = [];
+            }
+        }
+
+        $text = $translations[$key] ?? $key;
+
+        foreach ($replacements as $placeholder => $value) {
+            $text = str_replace(':' . $placeholder, $value, $text);
+        }
+
+        return $text;
     }
 }

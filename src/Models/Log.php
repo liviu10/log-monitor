@@ -6,11 +6,11 @@ use App\Utilities\MySQLWrapper;
 use PDO;
 
 /**
- * Clasa Log
+ * Log Class
  *
- * Gestioneaza operatiunile de baza de date pentru entitatea Log.
- * Ofera functionalitati pentru crearea de noi inregistrari, recuperarea paginata a logurilor cu filtre si numararea totalului de loguri.
- * Utilizeaza indexarea FULLTEXT pentru cautari performante in mesajele si contextul logurilor.
+ * Manages database operations for the Log entity.
+ * Provides functionality for creating new records, retrieving paginated logs with filters, and counting total logs.
+ * Uses FULLTEXT indexing for efficient searches in log messages and context.
  *
  * @category Model
  * @package  App\Models
@@ -22,10 +22,10 @@ use PDO;
 class Log
 {
     /**
-     * Constructorul clasei Log.
-     * Utilizăm Constructor Property Promotion pentru injecția bazei de date.
+     * Log class constructor.
+     * Using Constructor Property Promotion for database injection.
      * 
-     * @param MySQLWrapper $db Instanța wrapper-ului de bază de date.
+     * @param MySQLWrapper $db The database wrapper instance.
      */
     public function __construct(
         protected MySQLWrapper $db = new MySQLWrapper(
@@ -39,13 +39,13 @@ class Log
     }
 
     /**
-     * Creeaza o noua inregistrare de log in baza de date.
+     * Creates a new log record in the database.
      *
-     * @param int    $appId   ID-ul aplicatiei care genereaza logul.
-     * @param string $level   Nivelul de severitate al logului.
-     * @param string $message Mesajul descriptiv al logului.
-     * @param mixed  $context Date suplimentare (va fi stocat ca JSON).
-     * @return int|bool ID-ul inregistrarii create sau false in caz de eroare.
+     * @param int    $appId   The ID of the application generating the log.
+     * @param string $level   The severity level of the log.
+     * @param string $message The descriptive message of the log.
+     * @param mixed  $context Additional data (will be stored as JSON).
+     * @return int|bool The ID of the created record or false on failure.
      */
     public function create(int $appId, string $level, string $message, mixed $context = null): int|bool
     {
@@ -58,12 +58,12 @@ class Log
     }
 
     /**
-     * Recupereaza o lista paginata de loguri pe baza filtrelor aplicate.
+     * Fetches a paginated list of logs based on applied filters.
      *
-     * @param array $filters Tablou cu filtre.
-     * @param int   $limit   Numarul maxim de inregistrari per pagina.
-     * @param int   $offset  Punctul de start pentru paginare.
-     * @return array Tablou de loguri gasite.
+     * @param array $filters Array with filters.
+     * @param int   $limit   Maximum number of records per page.
+     * @param int   $offset  Starting point for pagination.
+     * @return array Array of found logs.
      */
     public function getPaginated(array $filters = [], int $limit = 50, int $offset = 0): array
     {
@@ -95,10 +95,10 @@ class Log
     }
 
     /**
-     * Numara totalul de loguri care corespund filtrelor selectate.
+     * Counts the total number of logs that correspond to the selected filters.
      *
-     * @param array $filters Tablou cu filtre aplicate.
-     * @return int Numarul total de loguri gasite.
+     * @param array $filters Array with applied filters.
+     * @return int Total number of logs found.
      */
     public function count(array $filters = []): int
     {
@@ -125,10 +125,10 @@ class Log
     }
 
     /**
-     * Numara totalul de loguri create inainte de o anumita data.
+     * Counts the total number of logs created before a specific date.
      *
-     * @param string $date Data limita (cutoff date).
-     * @return int Numarul total de loguri.
+     * @param string $date Cutoff date.
+     * @return int Total number of logs.
      */
     public function countBeforeDate(string $date): int
     {
@@ -138,12 +138,12 @@ class Log
     }
 
     /**
-     * Recupereaza logurile create inainte de o anumita data, paginat.
+     * Fetches logs created before a specific date, paginated.
      *
-     * @param string $date   Data limita.
-     * @param int    $limit  Numarul de loguri per chunk.
-     * @param int    $offset Punctul de start.
-     * @return array Tablou de loguri cu numele aplicatiei asociate.
+     * @param string $date   Cutoff date.
+     * @param int    $limit  Number of logs per chunk.
+     * @param int    $offset Starting point.
+     * @return array Array of logs with associated application names.
      */
     public function getBeforeDate(string $date, int $limit, int $offset): array
     {
@@ -159,10 +159,10 @@ class Log
     }
 
     /**
-     * Sterge logurile create inainte de o anumita data.
+     * Deletes logs created before a specific date.
      *
-     * @param string $date Data limita.
-     * @return int|false Numarul de inregistrari sterse sau false in caz de eroare.
+     * @param string $date Cutoff date.
+     * @return int|false Number of deleted records or false on error.
      */
     public function deleteBeforeDate(string $date): int|false
     {
@@ -172,9 +172,9 @@ class Log
     }
 
     /**
-     * Optimizeaza tabela logs pentru a elibera spatiul de stocare.
+     * Optimizes the logs table to free up storage space.
      *
-     * @return bool True in caz de succes, false altfel.
+     * @return bool True on success, false otherwise.
      */
     public function optimize(): bool
     {
@@ -183,7 +183,7 @@ class Log
     }
 
     /**
-     * Recupereaza statistici pentru dashboard.
+     * Fetches statistics for the dashboard.
      *
      * @return array{
      *   total: int,
@@ -195,7 +195,7 @@ class Log
     {
         $total = $this->count();
         
-        // Numaram erorile de severitate mare
+        // Counts high severity errors
         $critical = 0;
         foreach (['ERROR', 'CRITICAL', 'EMERGENCY', 'ALERT'] as $lvl) {
             $critical += $this->count(['level' => $lvl]);

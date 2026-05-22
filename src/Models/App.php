@@ -5,11 +5,11 @@ namespace App\Models;
 use App\Utilities\MySQLWrapper;
 
 /**
- * Clasa App
+ * App Class
  *
- * Gestioneaza entitatile de tip aplicatie care pot trimite loguri catre sistem.
- * Ofera metode pentru identificarea unei aplicatii prin cheia API, recuperarea tuturor aplicatiilor, 
- * crearea de noi aplicatii si stergerea celor existente.
+ * Manages application entities that can send logs to the system.
+ * Provides methods to identify an application via API key, retrieve all applications, 
+ * create new applications, and delete existing ones.
  *
  * @category Model
  * @package  App\Models
@@ -21,10 +21,10 @@ use App\Utilities\MySQLWrapper;
 class App
 {
     /**
-     * Constructorul clasei App.
-     * Utilizăm Constructor Property Promotion pentru a injecta dependența bazei de date.
+     * App class constructor.
+     * Using Constructor Property Promotion to inject the database dependency.
      * 
-     * @param MySQLWrapper $db Instanta wrapper-ului de baza de date.
+     * @param MySQLWrapper $db The database wrapper instance.
      */
     public function __construct(
         protected MySQLWrapper $db = new MySQLWrapper(
@@ -34,15 +34,15 @@ class App
             pass: 'password'
         )
     ) {
-        // Dacă folosim Singleton, putem suprascrie aici sau lăsa promoția să gestioneze instanța implicită
+        // If using Singleton, we can overwrite here or let promotion handle the default instance
         $this->db = MySQLWrapper::getInstance();
     }
 
     /**
-     * Gaseste o aplicatie in baza de date folosind cheia API unica.
+     * Finds an application in the database using the unique API key.
      *
-     * @param string $apiKey Cheia API de cautat.
-     * @return array|null Datele aplicatiei sau null daca nu este gasita.
+     * @param string $apiKey The API key to search for.
+     * @return array|null Application data or null if not found.
      */
     public function findByApiKey(string $apiKey): ?array
     {
@@ -51,9 +51,9 @@ class App
     }
 
     /**
-     * Recupereaza toate aplicatiile inregistrate in sistem.
+     * Retrieves all registered applications.
      *
-     * @return array Tablou cu toate aplicatiile.
+     * @return array Array containing all applications.
      */
     public function getAll(): array
     {
@@ -61,11 +61,11 @@ class App
     }
 
     /**
-     * Inregistreaza o noua aplicatie in sistem.
+     * Registers a new application in the system.
      *
-     * @param string $name   Numele aplicatiei.
-     * @param string $apiKey Cheia API generata pentru aplicatie.
-     * @return int|bool ID-ul noii inregistrari sau false in caz de eroare.
+     * @param string $name   The name of the application.
+     * @param string $apiKey The API key generated for the application.
+     * @return int|bool The ID of the new record or false on failure.
      */
     public function create(string $name, string $apiKey): int|bool
     {
@@ -76,11 +76,11 @@ class App
     }
 
     /**
-     * Actualizeaza datele unei aplicatii in sistem.
+     * Updates an application's data in the system.
      *
-     * @param int   $id   ID-ul aplicatiei de actualizat.
-     * @param array $data Tablou de date de actualizat (ex: ['name' => 'Noul Nume']).
-     * @return bool True in caz de succes, false altfel.
+     * @param int   $id   The ID of the application to update.
+     * @param array $data Array of data to update (e.g., ['name' => 'New Name']).
+     * @return bool True on success, false otherwise.
      */
     public function update(int $id, array $data): bool
     {
@@ -88,10 +88,10 @@ class App
     }
 
     /**
-     * Sterge o aplicatie din sistem pe baza ID-ului.
+     * Deletes an application from the system based on its ID.
      *
-     * @param int $id ID-ul aplicatiei de sters.
-     * @return bool True in caz de succes, false altfel.
+     * @param int $id The ID of the application to delete.
+     * @return bool True on success, false otherwise.
      */
     public function delete(int $id): bool
     {

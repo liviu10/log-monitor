@@ -5,10 +5,10 @@ namespace App\Models;
 use App\Utilities\MySQLWrapper;
 
 /**
- * Clasa AppSetting
+ * AppSetting Class
  *
- * Gestioneaza setarile specifice unei aplicatii din baza de date.
- * Ofera metode pentru citirea, crearea/actualizarea si stergerea setarilor.
+ * Manages settings specific to an application in the database.
+ * Provides methods for reading, creating/updating, and deleting settings.
  *
  * @category Model
  * @package  App\Models
@@ -20,10 +20,10 @@ use App\Utilities\MySQLWrapper;
 class AppSetting
 {
     /**
-     * Constructorul clasei AppSetting.
-     * Utilizăm Constructor Property Promotion pentru a injecta dependența bazei de date.
+     * AppSetting class constructor.
+     * Using Constructor Property Promotion to inject the database dependency.
      * 
-     * @param MySQLWrapper $db Instanta wrapper-ului de baza de date.
+     * @param MySQLWrapper $db The database wrapper instance.
      */
     public function __construct(
         protected MySQLWrapper $db = new MySQLWrapper(
@@ -37,10 +37,10 @@ class AppSetting
     }
 
     /**
-     * Recupereaza toate setarile pentru o aplicatie.
+     * Retrieves all settings for an application.
      *
-     * @param int $appId ID-ul aplicatiei.
-     * @return array Tablou cu toate setarile aplicatiei.
+     * @param int $appId The application ID.
+     * @return array Array with all application settings.
      */
     public function getSettingsForApp(int $appId): array
     {
@@ -48,11 +48,11 @@ class AppSetting
     }
 
     /**
-     * Gaseste o setare specifica pe baza app_id si cheie.
+     * Finds a specific setting based on app_id and key.
      *
-     * @param int    $appId ID-ul aplicatiei.
-     * @param string $key   Cheia setarii.
-     * @return array|null Datele setarii sau null daca nu este gasita.
+     * @param int    $appId The application ID.
+     * @param string $key   The setting key.
+     * @return array|null Setting data or null if not found.
      */
     public function getSetting(int $appId, string $key): ?array
     {
@@ -64,12 +64,12 @@ class AppSetting
     }
 
     /**
-     * Salveaza sau actualizeaza o setare pentru o aplicatie.
+     * Saves or updates a setting for an application.
      *
-     * @param int    $appId ID-ul aplicatiei.
-     * @param string $key   Cheia setarii.
-     * @param string $value Valoarea setarii.
-     * @return bool True in caz de succes, false altfel.
+     * @param int    $appId The application ID.
+     * @param string $key   The setting key.
+     * @param string $value The setting value.
+     * @return bool True on success, false otherwise.
      */
     public function saveSetting(int $appId, string $key, string $value): bool
     {
@@ -93,12 +93,12 @@ class AppSetting
     }
 
     /**
-     * Actualizeaza cheia si/sau valoarea unei setari.
+     * Updates the key and/or value of a setting.
      *
-     * @param int    $appId  ID-ul aplicatiei.
-     * @param string $oldKey Cheia veche a setarii.
-     * @param array  $data   Tablou cu datele de actualizat ('key' si/sau 'value').
-     * @return bool True in caz de succes, false altfel.
+     * @param int    $appId  The application ID.
+     * @param string $oldKey The old setting key.
+     * @param array  $data   Array with data to update ('key' and/or 'value').
+     * @return bool True on success, false otherwise.
      */
     public function updateSetting(int $appId, string $oldKey, array $data): bool
     {
@@ -123,11 +123,11 @@ class AppSetting
     }
 
     /**
-     * Sterge o setare a unei aplicatii.
+     * Deletes a setting of an application.
      *
-     * @param int    $appId ID-ul aplicatiei.
-     * @param string $key   Cheia setarii.
-     * @return bool True in caz de succes, false altfel.
+     * @param int    $appId The application ID.
+     * @param string $key   The setting key.
+     * @return bool True on success, false otherwise.
      */
     public function deleteSetting(int $appId, string $key): bool
     {

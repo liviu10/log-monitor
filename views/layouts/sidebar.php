@@ -11,21 +11,21 @@
             <?php $currentPage = basename($_SERVER['PHP_SELF']); ?>
             
             <a href="index.php" class="nav-link rounded-3 px-3 py-2 <?= $currentPage === 'index.php' ? 'active bg-info bg-opacity-10 text-info' : 'text-secondary hover-bg-light' ?>">
-                <i class="fas fa-list-ul me-2"></i> Logs
+                <i class="fas fa-list-ul me-2"></i> <?= __('Logs') ?>
             </a>
             
             <a href="apps.php" class="nav-link rounded-3 px-3 py-2 <?= $currentPage === 'apps.php' ? 'active bg-info bg-opacity-10 text-info' : 'text-secondary hover-bg-light' ?>">
-                <i class="fas fa-microchip me-2"></i> Apps
+                <i class="fas fa-microchip me-2"></i> <?= __('Apps') ?>
             </a>
             
             <a href="users.php" class="nav-link rounded-3 px-3 py-2 <?= $currentPage === 'users.php' ? 'active bg-info bg-opacity-10 text-info' : 'text-secondary hover-bg-light' ?>">
-                <i class="fas fa-users me-2"></i> Users
+                <i class="fas fa-users me-2"></i> <?= __('Users') ?>
             </a>
             
             <hr class="border-secondary opacity-25 my-4">
             
             <a href="login.php?action=logout" class="nav-link text-danger px-3 py-2">
-                <i class="fas fa-sign-out-alt me-2"></i> Logout
+                <i class="fas fa-sign-out-alt me-2"></i> <?= __('Logout') ?>
             </a>
         </nav>
     </div>

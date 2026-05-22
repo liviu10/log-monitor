@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use Phinx\Seed\AbstractSeed;
 
 class InitialDataSeed extends AbstractSeed

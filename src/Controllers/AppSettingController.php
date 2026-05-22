@@ -1,27 +1,29 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Controllers;
 
 use App\Models\AppSetting;
 use App\Utilities\Validation;
 
 /**
- * Clasa AppSettingController
+ * AppSettingController Class
  *
- * Gestioneaza setarile aplicatiilor din panoul de administrare.
- * Permite listarea, crearea, actualizarea si stergerea setarilor (individual sau multiplu).
+ * Manages application settings in the administration panel.
+ * Allows listing, creating, updating, and deleting settings (individually or in bulk).
  *
  * @category Controller
  * @package  App\Controllers
  * @version  1.2
  * @since    PHP 8.4
  * @author   Voica Liviu
- * @license  Proprietar
+ * @license  Proprietary
  */
 class AppSettingController extends BaseController
 {
     /**
-     * Returneaza toate setarile pentru o aplicatie specifica, sub forma de raspuns JSON.
+     * Returns all settings for a specific application as a JSON response.
      */
     public function index(array $getData): void
     {
@@ -29,7 +31,7 @@ class AppSettingController extends BaseController
 
         $appId = isset($getData['app_id']) ? (int)$getData['app_id'] : 0;
         if ($appId <= 0) {
-            $this->jsonResponse(['success' => false, 'message' => 'ID aplicatie invalid.'], 400);
+            $this->jsonResponse(['success' => false, 'message' => __('Invalid application ID.')], 400);
         }
 
         $appSettingModel = new AppSetting();
@@ -42,7 +44,7 @@ class AppSettingController extends BaseController
     }
 
     /**
-     * Adauga o setare noua sau mai multe setari simultan pentru o aplicatie.
+     * Adds a new setting or multiple settings simultaneously for an application.
      */
     public function store(array $postData): void
     {
@@ -50,12 +52,12 @@ class AppSettingController extends BaseController
 
         $appId = isset($postData['app_id']) ? (int)$postData['app_id'] : 0;
         if ($appId <= 0) {
-            $this->jsonResponse(['success' => false, 'message' => 'ID aplicatie invalid.'], 400);
+            $this->jsonResponse(['success' => false, 'message' => __('Invalid application ID.')], 400);
         }
 
         $appSettingModel = new AppSetting();
 
-        // 1. Suport pentru salvare multipla (trimitere array in campul 'settings')
+        // Support for bulk save (sending array in 'settings' field)
         if (isset($postData['settings']) && is_array($postData['settings'])) {
             $saved = 0;
             $errors = [];
@@ -65,11 +67,11 @@ class AppSettingController extends BaseController
                 $value = isset($item['value']) ? trim($item['value']) : '';
 
                 if (empty($key)) {
-                    $errors[] = "Setarea #$index: Cheia este obligatorie.";
+                    $errors[] = __("Setting #:index: The key is required.", ['index' => $index]);
                     continue;
                 }
                 if (!preg_match('/^[a-zA-Z0-9_\-\.]+$/', $key)) {
-                    $errors[] = "Setarea '$key': Cheia poate conține doar litere, cifre, sublinieri (_), cratime (-) și puncte (.).";
+                    $errors[] = __("Setting ':key': The key can only contain letters, numbers, underscores (_), hyphens (-) and dots (.)", ['key' => $key]);
                     continue;
                 }
 
@@ -77,14 +79,14 @@ class AppSettingController extends BaseController
                 if ($success) {
                     $saved++;
                 } else {
-                    $errors[] = "Setarea '$key': Eroare la salvare.";
+                    $errors[] = __("Setting ':key': Error saving.", ['key' => $key]);
                 }
             }
 
             if (!empty($errors)) {
                 $this->jsonResponse([
                     'success' => false,
-                    'message' => 'Salvare finalizată cu unele erori: ' . implode(' ', $errors),
+                    'message' => __('Save completed with some errors: ') . implode(' ', $errors),
                     'saved_count' => $saved
                 ], 422);
                 return;
@@ -92,16 +94,16 @@ class AppSettingController extends BaseController
 
             $this->jsonResponse([
                 'success' => true,
-                'message' => "$saved setări au fost salvate cu succes."
+                'message' => __(':count settings saved successfully.', ['count' => $saved])
             ]);
             return;
         }
 
-        // 2. Comportamentul clasic pentru salvarea unei singure setari
+        // Classic behavior for saving a single setting
         $validator = new Validation([
-            'app_id' => 'ID aplicatie',
-            'key' => 'cheie setare',
-            'value' => 'valoare setare',
+            'app_id' => __('Application ID'),
+            'key' => __('Setting key'),
+            'value' => __('Setting value'),
         ]);
 
         $errors = $validator->validate([
@@ -130,7 +132,7 @@ class AppSettingController extends BaseController
         if ($appSettingModel->getSetting($appId, $key)) {
             $this->jsonResponse([
                 'success' => false,
-                'message' => 'O setare cu această cheie există deja.'
+                'message' => __('A setting with this key already exists.')
             ], 422);
             return;
         }
@@ -140,18 +142,18 @@ class AppSettingController extends BaseController
         if ($success) {
             $this->jsonResponse([
                 'success' => true,
-                'message' => 'Setarea a fost salvată cu succes.'
+                'message' => __('Setting saved successfully.')
             ]);
         } else {
             $this->jsonResponse([
                 'success' => false,
-                'message' => 'Eroare la salvarea setării în baza de date.'
+                'message' => __('Error saving setting in the database.')
             ], 500);
         }
     }
 
     /**
-     * Actualizeaza o setare existenta sau mai multe setari simultan.
+     * Updates an existing setting or multiple settings simultaneously.
      */
     public function update(array $postData): void
     {
@@ -159,12 +161,12 @@ class AppSettingController extends BaseController
 
         $appId = isset($postData['app_id']) ? (int)$postData['app_id'] : 0;
         if ($appId <= 0) {
-            $this->jsonResponse(['success' => false, 'message' => 'ID aplicatie invalid.'], 400);
+            $this->jsonResponse(['success' => false, 'message' => __('ID aplicatie invalid.')], 400);
         }
 
         $appSettingModel = new AppSetting();
 
-        // 1. Suport pentru actualizare multipla (trimitere array in campul 'settings')
+        // Support for bulk update (sending array in 'settings' field)
         if (isset($postData['settings']) && is_array($postData['settings'])) {
             $updated = 0;
             $errors = [];
@@ -175,11 +177,11 @@ class AppSettingController extends BaseController
                 $oldKey = isset($item['old_key']) ? trim($item['old_key']) : $key;
 
                 if (empty($key)) {
-                    $errors[] = "Setarea #$index: Cheia este obligatorie.";
+                    $errors[] = __("Setting #:index: The key is required.", ['index' => $index]);
                     continue;
                 }
                 if (!preg_match('/^[a-zA-Z0-9_\-\.]+$/', $key)) {
-                    $errors[] = "Setarea '$key': Cheia poate conține doar litere, cifre, sublinieri (_), cratime (-) și puncte (.).";
+                    $errors[] = __("Setting ':key': The key can only contain letters, numbers, underscores (_), hyphens (-) and dots (.)", ['key' => $key]);
                     continue;
                 }
 
@@ -190,14 +192,14 @@ class AppSettingController extends BaseController
                 if ($success) {
                     $updated++;
                 } else {
-                    $errors[] = "Setarea '$key': Eroare la actualizare (verificati daca noua cheie nu este deja folosita).";
+                    $errors[] = __("Setting ':key': Error updating (check if the new key is not already in use).", ['key' => $key]);
                 }
             }
 
             if (!empty($errors)) {
                 $this->jsonResponse([
                     'success' => false,
-                    'message' => 'Actualizare finalizată cu unele erori: ' . implode(' ', $errors),
+                    'message' => __('Update completed with some errors: ') . implode(' ', $errors),
                     'updated_count' => $updated
                 ], 422);
                 return;
@@ -205,17 +207,17 @@ class AppSettingController extends BaseController
 
             $this->jsonResponse([
                 'success' => true,
-                'message' => "$updated setări au fost actualizate cu succes."
+                'message' => __(':count settings updated successfully.', ['count' => $updated])
             ]);
             return;
         }
 
-        // 2. Comportamentul clasic pentru actualizarea unei singure setari
+        // Classic behavior for updating a single setting
         $validator = new Validation([
-            'app_id' => 'ID aplicatie',
-            'key' => 'cheie setare',
-            'value' => 'valoare setare',
-            'old_key' => 'cheie originala setare',
+            'app_id' => __('Application ID'),
+            'key' => __('Setting key'),
+            'value' => __('Setting value'),
+            'old_key' => __('Original setting key'),
         ]);
 
         $errors = $validator->validate([
@@ -251,18 +253,18 @@ class AppSettingController extends BaseController
         if ($success) {
             $this->jsonResponse([
                 'success' => true,
-                'message' => 'Setarea a fost actualizată cu succes.'
+                'message' => __('Setting updated successfully.')
             ]);
         } else {
             $this->jsonResponse([
                 'success' => false,
-                'message' => 'Eroare la actualizarea setării. Verificați dacă noua cheie nu există deja.'
+                'message' => __('Error updating setting. Please check if the new key does not already exist.')
             ], 400);
         }
     }
 
     /**
-     * Sterge o setare a unei aplicatii.
+     * Deletes a setting of an application.
      */
     public function delete(array $postData): void
     {
@@ -274,7 +276,7 @@ class AppSettingController extends BaseController
         if ($appId <= 0 || empty($key)) {
             $this->jsonResponse([
                 'success' => false,
-                'message' => 'Parametri invalizi pentru stergerea setarii.'
+                'message' => __('Invalid parameters for deleting the setting.')
             ], 400);
             return;
         }
@@ -285,12 +287,12 @@ class AppSettingController extends BaseController
         if ($success) {
             $this->jsonResponse([
                 'success' => true,
-                'message' => 'Setarea a fost stearsa cu succes.'
+                'message' => __('Setting deleted successfully.')
             ]);
         } else {
             $this->jsonResponse([
                 'success' => false,
-                'message' => 'Setarea nu a putut fi stearsa.'
+                'message' => __('Setting could not be deleted.')
             ], 500);
         }
     }

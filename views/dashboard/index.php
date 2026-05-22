@@ -11,7 +11,7 @@
                     <i class="fas fa-bars"></i>
                 </button>
                 <div class="d-flex align-items-center justify-content-between w-100">
-                    <h2 class="h5 mb-0 fw-bold text-light">System Logs</h2>
+                    <h2 class="h5 mb-0 fw-bold text-light"><?= __('Logs Timeline') ?></h2>
                     
                     <!-- Live Tailing & User Dropdown -->
                     <div class="d-flex align-items-center gap-3">
@@ -20,15 +20,35 @@
                                 class="btn btn-sm d-flex align-items-center gap-2 border px-3 rounded-pill transition-all"
                                 :class="autoRefresh ? 'btn-success border-success bg-success bg-opacity-10 text-success' : 'btn-outline-secondary text-secondary'">
                             <span class="pulse-dot" :class="autoRefresh ? 'bg-success' : 'bg-secondary'"></span>
-                            <span class="small fw-bold" x-text="autoRefresh ? 'LIVE (refresh in ' + countdown + 's)' : 'LIVE OFF'"></span>
+                            <span class="small fw-bold" x-text="autoRefresh ? window.__('LIVE (refresh in :seconds s)', { seconds: countdown }) : window.__('LIVE OFF')"></span>
                         </button>
+
+                        <!-- Language Switcher -->
+                        <div class="dropdown">
+                            <button class="btn btn-dark btn-sm dropdown-toggle d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-globe text-secondary"></i>
+                                <span class="text-uppercase"><?= getLang() ?></span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow">
+                                <li>
+                                    <a class="dropdown-item d-flex align-items-center justify-content-between <?= getLang() === 'ro' ? 'active font-weight-bold' : '' ?>" href="change-lang.php?lang=ro">
+                                        Română <?= getLang() === 'ro' ? '✓' : '' ?>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item d-flex align-items-center justify-content-between <?= getLang() === 'en' ? 'active font-weight-bold' : '' ?>" href="change-lang.php?lang=en">
+                                        English <?= getLang() === 'en' ? '✓' : '' ?>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
 
                         <div class="dropdown">
                             <button class="btn btn-dark btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
                                 <i class="far fa-user-circle me-2 text-info"></i> <?= htmlspecialchars($_SESSION['auth.user']['username'] ?? 'User') ?>
                             </button>
                             <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow">
-                                <li><a class="dropdown-item" href="login.php?action=logout">Deconectare</a></li>
+                                <li><a class="dropdown-item" href="login.php?action=logout"><?= __('Logout') ?></a></li>
                             </ul>
                         </div>
                     </div>
@@ -42,7 +62,7 @@
                         <div class="card border-0 shadow-sm metric-card p-3 position-relative overflow-hidden">
                             <div class="d-flex align-items-center justify-content-between">
                                 <div>
-                                    <span class="text-secondary small fw-bold text-uppercase d-block mb-1">Total Logs</span>
+                                    <span class="text-secondary small fw-bold text-uppercase d-block mb-1"><?= __('Total Logs') ?></span>
                                     <h3 class="h2 text-light mb-0 font-monospace fw-bold"><?= number_format($stats['total'] ?? 0) ?></h3>
                                 </div>
                                 <div class="icon-shape bg-info bg-opacity-10 text-info rounded-3 p-3">
@@ -56,7 +76,7 @@
                         <div class="card border-0 shadow-sm metric-card p-3 position-relative overflow-hidden">
                             <div class="d-flex align-items-center justify-content-between">
                                 <div>
-                                    <span class="text-secondary small fw-bold text-uppercase d-block mb-1">Active Apps</span>
+                                    <span class="text-secondary small fw-bold text-uppercase d-block mb-1"><?= __('Active Apps') ?></span>
                                     <h3 class="h2 text-light mb-0 font-monospace fw-bold"><?= count($apps ?? []) ?></h3>
                                 </div>
                                 <div class="icon-shape bg-primary bg-opacity-10 text-primary rounded-3 p-3">
@@ -70,7 +90,7 @@
                         <div class="card border-0 shadow-sm metric-card p-3 position-relative overflow-hidden">
                             <div class="d-flex align-items-center justify-content-between">
                                 <div>
-                                    <span class="text-secondary small fw-bold text-uppercase d-block mb-1">Critical Alerts</span>
+                                    <span class="text-secondary small fw-bold text-uppercase d-block mb-1"><?= __('Critical Alerts') ?></span>
                                     <h3 class="h2 text-danger mb-0 font-monospace fw-bold"><?= number_format($stats['critical'] ?? 0) ?></h3>
                                 </div>
                                 <div class="icon-shape bg-danger bg-opacity-10 text-danger rounded-3 p-3">
@@ -84,7 +104,7 @@
                         <div class="card border-0 shadow-sm metric-card p-3 position-relative overflow-hidden">
                             <div class="d-flex align-items-center justify-content-between">
                                 <div>
-                                    <span class="text-secondary small fw-bold text-uppercase d-block mb-1">Warnings</span>
+                                    <span class="text-secondary small fw-bold text-uppercase d-block mb-1"><?= __('Warnings') ?></span>
                                     <h3 class="h2 text-warning mb-0 font-monospace fw-bold"><?= number_format($stats['warning'] ?? 0) ?></h3>
                                 </div>
                                 <div class="icon-shape bg-warning bg-opacity-10 text-warning rounded-3 p-3">
@@ -101,27 +121,27 @@
                     <div class="card-body p-4">
                         <form action="index.php" method="GET" class="row g-3 align-items-end">
                             <div class="col-md-4">
-                                <label class="form-label text-secondary small fw-bold text-uppercase">Căutare rapidă</label>
+                                <label class="form-label text-secondary small fw-bold text-uppercase"><?= __('Quick search') ?></label>
                                 <div class="input-group">
                                     <span class="input-group-text bg-dark border-secondary border-opacity-25 text-secondary">
                                         <i class="fas fa-search"></i>
                                     </span>
-                                    <input type="text" name="search" class="form-control bg-dark border-secondary border-opacity-25 text-light" placeholder="Căutare în mesaje sau context..." value="<?= htmlspecialchars($filters['search'] ?? '') ?>">
+                                    <input type="text" name="search" class="form-control bg-dark border-secondary border-opacity-25 text-light" placeholder="<?= __('Search in messages or context...') ?>" value="<?= htmlspecialchars($filters['search'] ?? '') ?>">
                                 </div>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label text-secondary small fw-bold text-uppercase">Aplicație</label>
+                                <label class="form-label text-secondary small fw-bold text-uppercase"><?= __('Application') ?></label>
                                 <select name="app_id" class="form-select bg-dark border-secondary border-opacity-25 text-light">
-                                    <option value="">Toate Aplicațiile</option>
+                                    <option value=""><?= __('All Applications') ?></option>
                                     <?php foreach ($apps as $app): ?>
                                         <option value="<?= $app['id'] ?>" <?= ((string)($filters['app_id'] ?? '') === (string)$app['id']) ? 'selected' : '' ?>><?= htmlspecialchars((string)$app['name']) ?></option>
                                     <?php endforeach; ?>
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label text-secondary small fw-bold text-uppercase">Nivel severitate</label>
+                                <label class="form-label text-secondary small fw-bold text-uppercase"><?= __('Severity Level') ?></label>
                                 <select name="level" class="form-select bg-dark border-secondary border-opacity-25 text-light">
-                                    <option value="">Toate Nivelurile</option>
+                                    <option value=""><?= __('All Levels') ?></option>
                                     <?php foreach ($levels as $level): ?>
                                         <option value="<?= $level ?>" <?= (($filters['level'] ?? '') === $level) ? 'selected' : '' ?>><?= $level ?></option>
                                     <?php endforeach; ?>
@@ -129,9 +149,9 @@
                             </div>
                             <div class="col-md-2 d-flex gap-2">
                                 <button type="submit" class="btn btn-info w-100 fw-bold shadow-sm">
-                                    <i class="fas fa-filter me-1"></i> Filtrează
+                                    <i class="fas fa-filter me-1"></i> <?= __('Filter') ?>
                                 </button>
-                                <a href="index.php" class="btn btn-outline-secondary" title="Resetează filtrele">
+                                <a href="index.php" class="btn btn-outline-secondary" title="<?= __('Reset Filters') ?>">
                                     <i class="fas fa-undo"></i>
                                 </a>
                             </div>
@@ -141,11 +161,11 @@
 
                 <!-- Application Quick-Filter Pills -->
                 <div class="mb-4">
-                    <span class="text-secondary small fw-bold text-uppercase d-inline-block me-3 mb-2">Aplicații:</span>
+                    <span class="text-secondary small fw-bold text-uppercase d-inline-block me-3 mb-2"><?= __('Applications:') ?></span>
                     <div class="d-inline-flex flex-wrap gap-2">
                         <a href="index.php?<?= http_build_query(array_merge($filters, ['app_id' => '', 'page' => 1])) ?>" 
                            class="badge rounded-pill px-3 py-2 text-decoration-none transition-all <?= empty($filters['app_id']) ? 'bg-info text-dark fw-bold shadow-sm' : 'bg-dark text-secondary border border-secondary border-opacity-25 hover-bg-light' ?>">
-                            Toate Aplicațiile
+                            <?= __('All Applications') ?>
                         </a>
                         <?php foreach ($apps as $app): ?>
                             <?php 
@@ -165,7 +185,7 @@
                         <?php if (empty($logs)): ?>
                             <div class="card border-0 p-5 text-center text-secondary bg-dark bg-opacity-25" style="border: 1px solid rgba(51, 65, 85, 0.25) !important;">
                                 <i class="fas fa-inbox d-block fs-1 mb-3 opacity-25"></i>
-                                Nu s-au găsit loguri pentru filtrele selectate.
+                                <?= __('No logs found for the selected filters.') ?>
                             </div>
                         <?php endif; ?>
                         
@@ -214,7 +234,7 @@
                                             <?= htmlspecialchars((string)($log['message'] ?? '')) ?>
                                         </span>
                                         <?php if ($log['context']): ?>
-                                            <span class="badge bg-dark text-info ms-1 small" title="Conține context JSON">
+                                            <span class="badge bg-dark text-info ms-1 small" title="<?= __('Contains JSON context') ?>">
                                                 <i class="fas fa-code fs-xs me-1"></i> JSON
                                             </span>
                                         <?php endif; ?>
@@ -258,18 +278,18 @@
                 <div class="modal-content bg-dark border-secondary shadow-lg border-opacity-25 rounded-4 overflow-hidden">
                     <div class="modal-header border-secondary border-opacity-25 bg-black bg-opacity-20 p-4">
                         <h5 class="modal-title text-light fw-bold d-flex align-items-center gap-2">
-                            <i class="fas fa-info-circle text-info"></i> Log Entry Details
+                            <i class="fas fa-info-circle text-info"></i> <?= __('Log Entry Details') ?>
                         </h5>
                         <button type="button" class="btn-close btn-close-white" @click="showModal = false"></button>
                     </div>
                     <div class="modal-body p-4" x-show="selectedLog">
                         <div class="row g-4 mb-4">
                             <div class="col-md-6">
-                                <label class="text-secondary small fw-bold text-uppercase d-block mb-1">Application</label>
+                                <label class="text-secondary small fw-bold text-uppercase d-block mb-1"><?= __('Application') ?></label>
                                 <div class="text-light fs-5 fw-bold" x-text="selectedLog?.app"></div>
                             </div>
                             <div class="col-md-3">
-                                <label class="text-secondary small fw-bold text-uppercase d-block mb-1">Level</label>
+                                <label class="text-secondary small fw-bold text-uppercase d-block mb-1"><?= __('Level') ?></label>
                                 <span class="badge rounded-pill px-3 py-2 border" 
                                       :class="{
                                           'bg-danger bg-opacity-10 text-danger border-danger border-opacity-25': ['ERROR', 'CRITICAL', 'EMERGENCY', 'ALERT'].includes(selectedLog?.level),
@@ -281,27 +301,27 @@
                                       x-text="selectedLog?.level"></span>
                             </div>
                             <div class="col-md-3">
-                                <label class="text-secondary small fw-bold text-uppercase d-block mb-1">Timestamp</label>
+                                <label class="text-secondary small fw-bold text-uppercase d-block mb-1"><?= __('Timestamp') ?></label>
                                 <div class="text-secondary font-monospace" x-text="selectedLog?.timestamp"></div>
                             </div>
                         </div>
 
                         <div class="mb-4">
-                            <label class="text-secondary small fw-bold text-uppercase d-block mb-1">Message</label>
+                            <label class="text-secondary small fw-bold text-uppercase d-block mb-1"><?= __('Message') ?></label>
                             <div class="p-3 bg-black bg-opacity-25 rounded border border-secondary border-opacity-10 text-light font-monospace text-break" x-text="selectedLog?.message"></div>
                         </div>
 
                         <div>
-                            <label class="text-secondary small fw-bold text-uppercase d-block mb-1">Context (JSON)</label>
+                            <label class="text-secondary small fw-bold text-uppercase d-block mb-1"><?= __('Context (JSON)') ?></label>
                             <div class="bg-black bg-opacity-50 p-3 rounded border border-secondary border-opacity-25 overflow-auto" style="max-height: 400px;">
                                 <pre class="mb-0 text-info small"><code x-text="JSON.stringify(selectedLog?.context, null, 4)"></code></pre>
                             </div>
                         </div>
                     </div>
                     <div class="modal-footer border-secondary border-opacity-25 bg-black bg-opacity-10 p-3">
-                        <button type="button" class="btn btn-secondary px-4 btn-sm" @click="showModal = false">Close</button>
-                        <button type="button" class="btn btn-info px-4 btn-sm text-dark fw-bold" @click="navigator.clipboard.writeText(JSON.stringify(selectedLog, null, 4)); alert('Copied to clipboard!')">
-                            <i class="fas fa-copy me-2"></i> Copy Log
+                        <button type="button" class="btn btn-secondary px-4 btn-sm" @click="showModal = false"><?= __('Close') ?></button>
+                        <button type="button" class="btn btn-info px-4 btn-sm text-dark fw-bold" @click="navigator.clipboard.writeText(JSON.stringify(selectedLog, null, 4)); alert(__('Copied to clipboard!'))">
+                            <i class="fas fa-copy me-2"></i> <?= __('Copy Log') ?>
                         </button>
                     </div>
                 </div>

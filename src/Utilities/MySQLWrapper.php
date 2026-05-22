@@ -9,11 +9,11 @@ use PDOException;
 use PDOStatement;
 
 /**
- * Clasa MySQLWrapper
+ * MySQLWrapper Class
  *
- * Ofera o interfata simplificata si securizata pentru interactiunea cu o baza de date MySQL folosind PDO.
- * Implementeaza modelul Singleton pentru a asigura o singura conexiune activa pe parcursul executiei scriptului.
- * Include metode pentru operatiuni de tip CRUD (Create, Read, Update, Delete) si gestionarea erorilor de conectare.
+ * Provides a simplified and secure interface for interacting with a MySQL database using PDO.
+ * Implements the Singleton pattern to ensure a single active connection throughout the script's execution.
+ * Includes methods for CRUD (Create, Read, Update, Delete) operations and connection error handling.
  *
  * @category Utility
  * @package  App\Utilities
@@ -24,13 +24,13 @@ use PDOStatement;
  */
 class MySQLWrapper
 {
-    /** @var MySQLWrapper|null Instanta Singleton a clasei. */
+    /** @var MySQLWrapper|null Singleton instance of the class. */
     private static ?self $instance = null;
 
-    /** @var PDO|null Resursa de conexiune la baza de date. */
+    /** @var PDO|null Database connection resource. */
     private ?PDO $connection = null;
 
-    /** @var array<int, int|bool> Optiunile implicite pentru configurarea PDO. */
+    /** @var array<int, int|bool> Default options for PDO configuration. */
     private array $options = [
         PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
@@ -38,15 +38,15 @@ class MySQLWrapper
     ];
 
     /**
-     * Constructorul clasei MySQLWrapper.
-     * Utilizăm Constructor Property Promotion pentru toți parametrii de configurare.
+     * MySQLWrapper class constructor.
+     * Using Constructor Property Promotion for all configuration parameters.
      *
-     * @param string $host    Gazda bazei de date.
-     * @param string $db      Numele bazei de date.
-     * @param string $user    Utilizatorul.
-     * @param string $pass    Parola.
-     * @param string $port    Portul (implicit 3306).
-     * @param string $charset Charset-ul (implicit utf8mb4).
+     * @param string $host    Database host.
+     * @param string $db      Database name.
+     * @param string $user    Database username.
+     * @param string $pass    Database password.
+     * @param string $port    Port (default 3306).
+     * @param string $charset Charset (default utf8mb4).
      */
     public function __construct(
         private readonly string $host,
@@ -60,8 +60,8 @@ class MySQLWrapper
     }
 
     /**
-     * Returneaza instanta unica a clasei MySQLWrapper (Singleton).
-     * Daca instanta nu exista, o creeaza folosind variabilele de mediu.
+     * Returns the unique instance of the MySQLWrapper class (Singleton).
+     * Creates an instance using environment variables if it doesn't exist.
      */
     public static function getInstance(): self
     {
@@ -75,7 +75,7 @@ class MySQLWrapper
     }
 
     /**
-     * Stabileste conexiunea la baza de date folosind configuratiile setate.
+     * Establishes a database connection using the configured settings.
      */
     public function connect(): void
     {
@@ -84,8 +84,8 @@ class MySQLWrapper
         try {
             $this->connection = new PDO($dsn, $this->user, $this->pass, $this->options);
         } catch (\Throwable $e) {
-            // Trimitem log-ul prin cURL (dacă conexiunea la DB e căzută, LogViaCurl are protecție la recursivitate)
-            LogViaCurl::send('ERROR', 'Eroare de conectare la baza de date', [
+            // Send log via cURL (if DB connection is down, LogViaCurl has recursion protection)
+            LogViaCurl::send('ERROR', 'Database connection error', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
                 'exception_message' => $e->getMessage(),
@@ -101,7 +101,7 @@ class MySQLWrapper
     }
 
     /**
-     * Returneaza obiectul PDO activ.
+     * Returns the active PDO object.
      */
     public function getConnection(): ?PDO
     {
@@ -109,7 +109,7 @@ class MySQLWrapper
     }
 
     /**
-     * Inchide conexiunea la baza de date prin setarea resursei la null.
+     * Closes the database connection by setting the resource to null.
      */
     public function disconnect(): void
     {
@@ -117,11 +117,11 @@ class MySQLWrapper
     }
 
     /**
-     * Executa o interogare SQL securizata folosind prepared statements.
+     * Executes a secure SQL query using prepared statements.
      *
-     * @param string $sql    Interogarea SQL.
-     * @param array  $params Parametrii pentru bind.
-     * @return PDOStatement|false Obiectul statement sau false in caz de eroare.
+     * @param string $sql    SQL query.
+     * @param array  $params Parameters for binding.
+     * @return PDOStatement|false The statement object or false if an error occurs.
      */
     public function query(string $sql, array $params = []): PDOStatement|false
     {
@@ -150,11 +150,11 @@ class MySQLWrapper
     }
 
     /**
-     * Insereaza o inregistrare noua intr-o tabela.
+     * Inserts a new record into a table.
      *
-     * @param string $table Numele tabelei.
-     * @param array  $data  Tablou asociativ de date (coloana => valoare).
-     * @return string|int|bool ID-ul inserat, true (pentru tabele fara auto-inc) sau false.
+     * @param string $table Table name.
+     * @param array  $data  Associative array of data (column => value).
+     * @return string|int|bool Inserted ID, true (for tables without auto-increment), or false.
      */
     public function create(string $table, array $data): string|int|bool
     {
@@ -183,13 +183,13 @@ class MySQLWrapper
     }
 
     /**
-     * Citeste date dintr-o tabela cu filtre optionale.
+     * Reads data from a table with optional filters.
      *
-     * @param string $table      Numele tabelei.
-     * @param array  $conditions Conditii WHERE (coloana => valoare).
-     * @param array  $columns    Coloanele de extras.
-     * @param string $logic      Logica dintre conditii (AND/OR).
-     * @return array|false Tablou de rezultate sau false in caz de eroare.
+     * @param string $table      Table name.
+     * @param array  $conditions WHERE conditions (column => value).
+     * @param array  $columns    Columns to retrieve.
+     * @param string $logic      Logic between conditions (AND/OR).
+     * @return array|false Array of results or false in case of error.
      */
     public function read(string $table, array $conditions = [], array $columns = ['*'], string $logic = 'AND'): array|false
     {
@@ -216,13 +216,13 @@ class MySQLWrapper
     }
 
     /**
-     * Actualizeaza inregistrari intr-o tabela.
+     * Updates records in a table.
      *
-     * @param string $table      Numele tabelei.
-     * @param array  $data       Datele noi (coloana => valoare).
-     * @param array  $conditions Conditii WHERE.
-     * @param string $logic      Logica dintre conditii.
-     * @return int|false Numarul de randuri afectate sau false.
+     * @param string $table      Table name.
+     * @param array  $data       New data (column => value).
+     * @param array  $conditions WHERE conditions.
+     * @param string $logic      Logic between conditions.
+     * @return int|false Number of affected rows or false.
      */
     public function update(string $table, array $data, array $conditions, string $logic = 'AND'): int|false
     {
@@ -251,12 +251,12 @@ class MySQLWrapper
     }
 
     /**
-     * Sterge inregistrari dintr-o tabela pe baza unor conditii.
+     * Deletes records from a table based on certain conditions.
      *
-     * @param string $table      Numele tabelei.
-     * @param array  $conditions Conditii WHERE.
-     * @param string $logic      Logica dintre conditii.
-     * @return int|false Numarul de randuri afectate sau false.
+     * @param string $table      Table name.
+     * @param array  $conditions WHERE conditions.
+     * @param string $logic      Logic between conditions.
+     * @return int|false Number of affected rows or false.
      */
     public function delete(string $table, array $conditions, string $logic = 'AND'): int|false
     {

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 require_once __DIR__ . '/vendor/autoload.php';
 
 // Load Environment Variables
@@ -16,7 +18,7 @@ define('APP_NAME', $_ENV['APP_NAME'] ?? 'LogMonitor');
 define('APP_URL', constructUrl());
 
 /**
- * Generează un câmp de input ascuns pentru protecție CSRF în formulare HTML.
+ * Generates a hidden input field for CSRF protection in HTML forms.
  */
 if (!function_exists('csrf_field')) {
     function csrf_field(): string {

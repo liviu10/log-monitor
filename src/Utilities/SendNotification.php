@@ -10,10 +10,10 @@ use PHPMailer\PHPMailer\Exception as PHPMailerException;
 /**
  * Clasa SendNotification
  *
- * Gestioneaza trimiterea notificarilor prin e-mail folosind PHPMailer.
- * Aceasta clasa gestioneaza procesul de construire si trimitere a e-mailurilor cu diverse optiuni, cum ar fi destinatari, atasamente, prioritate etc.
+ * Manages the sending of notifications via email using PHPMailer.
+ * This class handles the process of building and sending emails with various options, such as recipients, attachments, priority, etc.
  *
- * @category Pachet
+ * @category Package
  * @package  App\Utilities
  * @version  1.1
  * @since    PHP 8.3.30
@@ -22,38 +22,38 @@ use PHPMailer\PHPMailer\Exception as PHPMailerException;
  */
 class SendNotification
 {
-    /** @const string Numele fisierului de jurnal pentru evenimentele de trimitere a notificarilor. */
+    /** @const string The name of the log file for notification sending events. */
     private const NOTIFICATION_LOG_FILE_NAME = 'send_notification_log';
 
-    /** @var bool Flag pentru a verifica daca notificarile pot fi trimise (dezactivate in mediul de dezvoltare). */
+    /** @var bool Flag to check if notifications can be sent (disabled in development environment). */
     private bool $canSendNotification = true;
 
     /**
-     * Constructor SendNotification.
+     * SendNotification Class Constructor.
      *
-     * Verifica daca mediul permite trimiterea notificarilor.
-     * In mediul de dezvoltare, notificarile sunt dezactivate.
+     * Checks if the environment allows sending notifications.
+     * In the development environment, notifications are disabled.
      */
     public function __construct()
     {
-        // Verifica mediul si dezactiveaza notificarile in mediul 'dev' sau 'development'
+        // Checks the environment and disables notifications in the 'dev' or 'development' environment
         $appEnv = $_ENV['APP_ENV'] ?? 'dev';
         if ($appEnv === 'dev' || $appEnv === 'development') {
             LogViaCurl::send(
                 'INFO',
-                'Trimiterea notificarilor este permisa numai in PPT si PROD.',
+                'Notification sending is only allowed in PPT and PROD.',
                 ['channel' => self::NOTIFICATION_LOG_FILE_NAME]
             );
-            $this->canSendNotification = false; // Dezactiveaza trimiterea notificarilor in mediul de dezvoltare
+            $this->canSendNotification = false; // Disables notification sending in the development environment
         }
     }
 
     /**
-     * Trimite un e-mail cu mesajul dat folosind PHPMailer.
-     * Gestioneaza adaugarea destinatarilor, setarea subiectului si a corpului e-mailului, atasamentelor si trimiterea e-mailului.
+     * Sends an email with the given message using PHPMailer.
+     * Manages the addition of recipients, setting the subject and body of the email, attachments and sending the email.
      *
-     * Daca este furnizata o cale de atasament, aceasta poate fi o singura cale de fisier sau un array de cai de fisiere.
-     * In cazul unui array, toate fisierele din array vor fi atasate la e-mail.
+     * If an attachment path is provided, it can be a single file path or an array of file paths.
+     * In the case of an array, all files in the array will be attached to the email.
      *
      * @param array{
      *   to: string,
@@ -62,13 +62,13 @@ class SendNotification
      *   attachmentPath?: string|array<int, string>|null,
      *   from?: string|null,
      *   subject?: string|null
-     * } $emailData Datele pentru e-mail.
+     * } $emailData Data for the email.
      *
-     * @return string|false Continutul .eml al email-ului in caz de succes, sau false in caz de eroare.
+     * @return string|false The content of the .eml email in case of success, or false in case of error.
      */
     public function handle(array $emailData)
     {
-        // Extrage datele din array-ul de intrare
+        // Extracts data from the input array
         $to = $emailData['to'];
         $message = $emailData['message'];
         $priority = $emailData['priority'] ?? 3;
@@ -76,49 +76,49 @@ class SendNotification
         $from = $emailData['from'] ?? null;
         $subject = $emailData['subject'] ?? null;
 
-        // Daca trimiterea notificarilor este dezactivata, iesi din functie
+        // If notification sending is disabled, exit the function
         if (!$this->canSendNotification) {
             return false;
         }
 
-        // Initializeaza instanta PHPMailer
+        // Initializes the PHPMailer instance
         $mail = new PHPMailer(true);
 
         try {
-            // Setari server pentru SMTP
+            // SMTP server settings
             $mail->isSMTP();
-            $mail->Host = (is_string($_ENV['SMTP_HOST'] ?? null) ? $_ENV['SMTP_HOST'] : '10.165.1.12'); // Adresa serverului SMTP
-            $mail->Port = (is_int($_ENV['SMTP_PORT'] ?? null) ? $_ENV['SMTP_PORT'] : 587); // Port SMTP
+            $mail->Host = (is_string($_ENV['SMTP_HOST'] ?? null) ? $_ENV['SMTP_HOST'] : '10.165.1.12'); // SMTP server address
+            $mail->Port = (is_int($_ENV['SMTP_PORT'] ?? null) ? $_ENV['SMTP_PORT'] : 587); // SMTP port
             $mail->SMTPAuth = true;
             $mail->Username = (is_string($_ENV['SMTP_USERNAME'] ?? null) ? $_ENV['SMTP_USERNAME'] : '');
             $mail->Password = (is_string($_ENV['SMTP_PASSWORD'] ?? null) ? $_ENV['SMTP_PASSWORD'] : '');
 
-            // Timeout pentru trimiterea mesajului si socket
-            $mail->Timeout = 1800; // 30 minute
+            // Timeout for sending the message and socket
+            $mail->Timeout = 1800; // 30 minutes
 
             /**
-             * Configurarea optiunilor SMTPOptions.
+             * SMTPOptions configuration.
              *
-             * Se initializeaza cu un timeout pentru socket.
-             * Daca variabilele de mediu pentru proxy (PROXY_HOST, PROXY_PORT) sunt definite,
-             * se adauga configuratia pentru a ruta traficul SMTP printr-un proxy.
-             * Aceasta este utila in mediile corporate cu politici stricte de retea.
-             * Setarile 'verify_peer' si 'verify_peer_name' sunt dezactivate pentru
-             * a evita erorile de validare a certificatelor SSL in spatele unui proxy.
+             * Initialized with a socket timeout.
+             * If environment variables for proxy (PROXY_HOST, PROXY_PORT) are defined,
+             * the configuration to route SMTP traffic through a proxy is added.
+             * This is useful in corporate environments with strict network policies.
+             * 'verify_peer' and 'verify_peer_name' settings are disabled to
+             * avoid SSL certificate validation errors behind a proxy.
              */
             $smtpOptions = [
                 'socket' => [
-                    'timeout' => 1800, // 30 minute
+                    'timeout' => 1800, // 30 minutes
                 ],
             ];
 
-            // Verifica si adauga configuratia pentru proxy daca este definita in mediu
+            // Checks and adds proxy configuration if defined in the environment
             if (!empty($_ENV['PROXY_HOST']) && !empty($_ENV['PROXY_PORT'])) {
                 $proxyUrl = "tcp://{$_ENV['PROXY_HOST']}:{$_ENV['PROXY_PORT']}";
                 
-                // Optiunile de proxy sunt adaugate in contextul 'ssl'.
-                // Chiar daca nu se foloseste SMTPSecure explicit, PHPMailer poate initia STARTTLS,
-                // moment in care aceste setari de context vor fi utilizate.
+                // Proxy options are added to the 'ssl' context.
+                // Even if SMTPSecure is not used explicitly, PHPMailer can initiate STARTTLS,
+                // at which point these context settings will be used.
                 $smtpOptions['ssl'] = [
                     'proxy' => $proxyUrl,
                     'verify_peer' => false,
@@ -129,57 +129,57 @@ class SendNotification
 
             $mail->SMTPOptions = $smtpOptions;
 
-            // Informatii expeditor (De la si Raspunde la)
+            // Sender information (From and Reply To)
             $smtpFrom = (is_string($_ENV['SMTP_FROM'] ?? null) ? $_ENV['SMTP_FROM'] : 'noreply.aitpl@groupama.ro');
             $mail->setFrom($from === null ? $smtpFrom : $from);
             $mail->addReplyTo($smtpFrom);
 
-            // Adauga destinatari
-            $toAddresses = array_map('trim', explode(',', $to)); // Imparte destinatarii multipli
+            // Adds recipients
+            $toAddresses = array_map('trim', explode(',', $to)); // Splits multiple recipients
             foreach ($toAddresses as $address) {
-                $mail->addAddress($address); // Adauga fiecare destinatar
+                $mail->addAddress($address); // Adds each recipient
             }
 
-            // Adauga CC si BCC daca sunt disponibile in variabilele de mediu
+            // Adds CC and BCC if available in environment variables
             if (isset($_ENV['SMTP_CC']) && is_string($_ENV['SMTP_CC']) && $_ENV['SMTP_CC'] !== '') {
                 $ccAddresses = array_map('trim', explode(',', $_ENV['SMTP_CC']));
                 foreach ($ccAddresses as $cc) {
-                    $mail->addCC($cc); // Adauga destinatar CC
+                    $mail->addCC($cc); // Adds CC recipient
                 }
             }
             if (isset($_ENV['SMTP_BCC']) && is_string($_ENV['SMTP_BCC']) && $_ENV['SMTP_BCC'] !== '') {
                 $bccAddresses = array_map('trim', explode(',', $_ENV['SMTP_BCC']));
                 foreach ($bccAddresses as $bcc) {
-                    $mail->addBCC($bcc); // Adauga destinatar BCC
+                    $mail->addBCC($bcc); // Adds BCC recipient
                 }
             }
 
-            // Seteaza subiectul si corpul
+            // Sets the subject and body
             $mail->Subject = $subject === null ? sprintf(
                 '%s - %s',
                 (is_string($_ENV['APP_NAME'] ?? null) ? $_ENV['APP_NAME'] : 'AITPL Exchange Rate'),
                 (is_string($_ENV['SMTP_SUBJECT'] ?? null) ? $_ENV['SMTP_SUBJECT'] : 'AITPL Notificare automata')
             ) : $subject;
-            $mail->isHTML(true); // Seteaza e-mailul in format HTML
-            $mail->Body = nl2br($message); // Seteaza corpul e-mailului
+            $mail->isHTML(true); // Sets the email to HTML format
+            $mail->Body = nl2br($message); // Sets the body of the email
 
-            // Seteaza prioritatea e-mailului
-            $allowedPriorities = [1, 2, 3, 4, 5]; // Niveluri de prioritate valide
+            // Sets the priority of the email
+            $allowedPriorities = [1, 2, 3, 4, 5]; // Valid priority levels
             if (!in_array($priority, $allowedPriorities, true)) {
-                $priority = 3; // Implicit la prioritate normala daca este data o prioritate invalida
+                $priority = 3; // Default to normal priority if an invalid priority is provided
             }
             $mail->Priority = $priority;
 
-            // Gestioneaza atasamentul daca este furnizat
+            // Handles the attachment if it is provided
             if ($attachmentPath !== null) {
-                // Daca este un array, parcurge si ataseaza fiecare fisier
+                // If it is an array, it iterates and attaches each file
                 $attachments = is_array($attachmentPath) ? $attachmentPath : [$attachmentPath];
 
                 foreach ($attachments as $filePath) {
-                    // Normalizeaza calea pentru a rezolva '..' si a verifica existenta
+                    // Normalizes the path to resolve '..' and check for existence
                     $normalizedPath = realpath($filePath);
 
-                    // Verifica daca calea atasamentului este valida si lizibila
+                    // Checks if the attachment path is valid and readable
                     if ($normalizedPath === false || !is_readable($normalizedPath)) {
                         LogViaCurl::send(
                             'ERROR',
@@ -194,11 +194,11 @@ class SendNotification
                         return false;
                     }
 
-                    // Verifica daca calea atasamentului este un director in loc de un fisier
+                    // Checks if the attachment path points to a directory instead of a file
                     if (is_dir($normalizedPath)) {
                         LogViaCurl::send(
                             'ERROR',
-                            'Calea atasamentului indica un director, nu un fisier.',
+                            'The attachment path points to a directory, not a file.',
                             [
                                 'location' => __METHOD__,
                                 'file' => $filePath,
@@ -209,7 +209,7 @@ class SendNotification
                         return false;
                     }
 
-                    // Adauga atasamentul la e-mail
+                    // Adds the attachment to the email
                     $mail->addAttachment($normalizedPath);
                 }
             }
@@ -219,10 +219,10 @@ class SendNotification
             $mail->preSend();
             $emlContent = $mail->getSentMIMEMessage();
 
-            // Poti salva temporar pe server sau returna direct
+            // Can be temporarily saved on the server or returned directly
             return $emlContent;
         } catch (\Throwable $e) {
-            // Inregistreaza orice erori care apar in timpul procesului de trimitere a e-mailului
+            // Logs any errors that occur during the email sending process
             LogViaCurl::send(
                 'ERROR',
                 'Nu s-a putut trimite e-mailul de notificare folosind PHPMailer.',
