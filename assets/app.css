@@ -1,0 +1,129 @@
+/* Core Layout & Theme overrides */
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #0f172a;
+}
+
+[x-cloak] {
+    display: none !important;
+}
+
+.card {
+    border-color: #334155 !important;
+    background-color: #1e293b;
+}
+
+.table {
+    --bs-table-bg: transparent;
+    --bs-table-border-color: #334155;
+}
+
+/* Toast Progress Bar */
+.toast-progress-bar {
+    height: 3px;
+    width: 100%;
+}
+
+/* Common helper classes */
+.backdrop-blur {
+    backdrop-filter: blur(8px);
+}
+
+.bg-slate-800 {
+    background-color: #1e293b;
+}
+
+.transition-all {
+    transition: all 0.3s ease;
+}
+
+.hover-bg-light:hover {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+    color: #fff !important;
+}
+
+/* Sidebar styling */
+.nav-link.active {
+    pointer-events: none;
+}
+
+/* Pagination overrides */
+.pagination .page-link:hover {
+    background-color: var(--bs-info) !important;
+    color: black !important;
+}
+
+.pagination .page-item.active .page-link {
+    background-color: var(--bs-info) !important;
+    border-color: var(--bs-info) !important;
+    color: black !important;
+    font-weight: bold;
+}
+
+/* Metrics cards styling */
+.metric-card {
+    background-color: #1e293b;
+    border: 1px solid rgba(51, 65, 85, 0.4) !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.metric-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(59, 130, 246, 0.4) !important;
+    background-color: #243249;
+}
+
+.card-glow {
+    position: absolute;
+    bottom: -20px;
+    right: -20px;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    filter: blur(40px);
+    opacity: 0.15;
+    pointer-events: none;
+}
+
+/* Pulse dot indicator */
+.pulse-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+    animation: pulse 1.6s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+    }
+    70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 6px rgba(34, 197, 94, 0);
+    }
+    100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+    }
+}
+
+/* Log card styling */
+.log-timeline-card {
+    cursor: pointer;
+    border-left-width: 4px !important;
+    border: 1px solid rgba(51, 65, 85, 0.3);
+    transition: all 0.2s ease-in-out;
+}
+
+.log-timeline-card:hover {
+    background-color: #28354e !important;
+    transform: scale(1.005);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
+}
+
+.message-text {
+    color: #e2e8f0;
+}

@@ -88,7 +88,7 @@ class LogViaCurl
     {
         try {
             $db = MySQLWrapper::getInstance();
-            $apps = $db->read('apps', [], ['limit' => 1]);
+            $apps = $db->read('apps', []);
             return !empty($apps) ? (string)$apps[0]['api_key'] : '';
         } catch (\Throwable $e) {
             // Fallback în error_log-ul sistemului dacă baza de date este căzută total

@@ -31,8 +31,3 @@
     </div>
 </div>
 
-<style>
-    .transition-all { transition: all 0.3s ease; }
-    .hover-bg-light:hover { background-color: rgba(255, 255, 255, 0.05) !important; color: #fff !important; }
-    .nav-link.active { pointer-events: none; }
-</style>

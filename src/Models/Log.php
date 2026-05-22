@@ -181,4 +181,32 @@ class Log
         $stmt = $this->db->query("OPTIMIZE TABLE logs");
         return $stmt !== false;
     }
+
+    /**
+     * Recupereaza statistici pentru dashboard.
+     *
+     * @return array{
+     *   total: int,
+     *   critical: int,
+     *   warning: int
+     * }
+     */
+    public function getStats(): array
+    {
+        $total = $this->count();
+        
+        // Numaram erorile de severitate mare
+        $critical = 0;
+        foreach (['ERROR', 'CRITICAL', 'EMERGENCY', 'ALERT'] as $lvl) {
+            $critical += $this->count(['level' => $lvl]);
+        }
+        
+        $warning = $this->count(['level' => 'WARNING']);
+        
+        return [
+            'total' => $total,
+            'critical' => $critical,
+            'warning' => $warning
+        ];
+    }
 }

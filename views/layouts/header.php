@@ -18,29 +18,7 @@
     
     <!-- Alpine JS -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #0f172a;
-        }
-
-        .toast-progress-bar {
-            height: 3px;
-            width: 100%;
-        }
-        
-        [x-cloak] { display: none !important; }
-
-        .card {
-            border-color: #334155;
-            background-color: #1e293b;
-        }
-
-        .table {
-            --bs-table-bg: transparent;
-            --bs-table-border-color: #334155;
-        }
-    </style>
+    <!-- App CSS -->
+    <link rel="stylesheet" href="assets/app.css?v=<?= time() ?>">
 </head>
 <body>

@@ -48,8 +48,5 @@
     </div>
 </div>
 
-<style>
-    .bg-slate-800 { background-color: #1e293b; }
-</style>
 
 <?php include __DIR__ . '/../layouts/footer.php'; ?>

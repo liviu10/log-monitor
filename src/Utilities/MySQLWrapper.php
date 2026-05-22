@@ -162,7 +162,8 @@ class MySQLWrapper
             return false;
         }
 
-        $columns = implode(', ', array_keys($data));
+        $escapedColumns = array_map(fn($col) => "`{$col}`", array_keys($data));
+        $columns = implode(', ', $escapedColumns);
         $placeholders = implode(', ', array_fill(0, count($data), '?'));
 
         $sql = "INSERT INTO {$table} ({$columns}) VALUES ({$placeholders})";
@@ -192,14 +193,18 @@ class MySQLWrapper
      */
     public function read(string $table, array $conditions = [], array $columns = ['*'], string $logic = 'AND'): array|false
     {
-        $sql = "SELECT " . implode(', ', $columns) . " FROM {$table}";
+        $escapedSelectColumns = array_map(function($col) {
+            return $col === '*' ? '*' : "`{$col}`";
+        }, $columns);
+
+        $sql = "SELECT " . implode(', ', $escapedSelectColumns) . " FROM {$table}";
         $params = [];
 
         if (!empty($conditions)) {
             $sql .= " WHERE ";
             $clauses = [];
             foreach ($conditions as $key => $value) {
-                $clauses[] = "{$key} = ?";
+                $clauses[] = "`{$key}` = ?";
                 $params[] = $value;
             }
             $sql .= implode(" {$logic} ", $clauses);
@@ -228,14 +233,14 @@ class MySQLWrapper
         $setClauses = [];
         $params = [];
         foreach ($data as $key => $value) {
-            $setClauses[] = "{$key} = ?";
+            $setClauses[] = "`{$key}` = ?";
             $params[] = $value;
         }
         $sql = "UPDATE {$table} SET " . implode(', ', $setClauses);
 
         $whereClauses = [];
         foreach ($conditions as $key => $value) {
-            $whereClauses[] = "{$key} = ?";
+            $whereClauses[] = "`{$key}` = ?";
             $params[] = $value;
         }
         $sql .= " WHERE " . implode(" {$logic} ", $whereClauses);
@@ -263,7 +268,7 @@ class MySQLWrapper
         $clauses = [];
         $params = [];
         foreach ($conditions as $key => $value) {
-            $clauses[] = "{$key} = ?";
+            $clauses[] = "`{$key}` = ?";
             $params[] = $value;
         }
         $sql .= implode(" {$logic} ", $clauses);

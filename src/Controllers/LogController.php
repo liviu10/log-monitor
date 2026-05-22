@@ -106,6 +106,14 @@ class LogController extends BaseController
         );
 
         if ($result) {
+            // Trimitem notificari prin intermediul NotificationController
+            $notificationController = new NotificationController();
+            $notificationController->sendAlert($app, [
+                'level' => $payload['level'],
+                'message' => $payload['message'],
+                'context' => $payload['context'] ?? null,
+            ]);
+
             $this->jsonResponse(['status' => 'success', 'message' => 'Log recorded']);
         }
 

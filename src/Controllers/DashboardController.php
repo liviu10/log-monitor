@@ -51,6 +51,7 @@ class DashboardController extends BaseController
         
         $apps = $appModel->getAll();
         $levels = LogLevel::all();
+        $stats = $logModel->getStats();
 
         $this->render('dashboard/index', [
             'logs' => $logs,
@@ -59,6 +60,7 @@ class DashboardController extends BaseController
             'filters' => $filters,
             'page' => $page,
             'totalPages' => $totalPages,
+            'stats' => $stats,
         ]);
     }
 }

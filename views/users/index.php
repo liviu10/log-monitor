@@ -114,10 +114,5 @@
     </div>
 </div>
 
-<style>
-    .backdrop-blur { backdrop-filter: blur(8px); }
-    .bg-slate-800 { background-color: #1e293b; }
-    .card { border: 1px solid #334155 !important; }
-</style>
 
 <?php include __DIR__ . '/../layouts/footer.php'; ?>
