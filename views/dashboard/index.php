@@ -130,7 +130,7 @@
                                 </div>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label text-secondary small fw-bold text-uppercase"><?= __('Application') ?></label>
+                                <label class="form-label text-secondary small fw-bold text-uppercase"><?= __('Applications') ?></label>
                                 <select name="app_id" class="form-select bg-dark border-secondary border-opacity-25 text-light">
                                     <option value=""><?= __('All Applications') ?></option>
                                     <?php foreach ($apps as $app): ?>
@@ -139,7 +139,7 @@
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label text-secondary small fw-bold text-uppercase"><?= __('Severity Level') ?></label>
+                                <label class="form-label text-secondary small fw-bold text-uppercase"><?= __('Severity Levels') ?></label>
                                 <select name="level" class="form-select bg-dark border-secondary border-opacity-25 text-light">
                                     <option value=""><?= __('All Levels') ?></option>
                                     <?php foreach ($levels as $level): ?>

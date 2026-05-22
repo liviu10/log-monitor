@@ -86,7 +86,7 @@ class AppSettingController extends BaseController
             if (!empty($errors)) {
                 $this->jsonResponse([
                     'success' => false,
-                    'message' => __('Save completed with some errors: ') . implode(' ', $errors),
+                    'message' => __('Saving completed with some errors: ') . implode(' ', $errors),
                     'saved_count' => $saved
                 ], 422);
                 return;
@@ -94,7 +94,7 @@ class AppSettingController extends BaseController
 
             $this->jsonResponse([
                 'success' => true,
-                'message' => __(':count settings saved successfully.', ['count' => $saved])
+                'message' => __(':count settings were saved successfully.', ['count' => $saved])
             ]);
             return;
         }
@@ -199,7 +199,7 @@ class AppSettingController extends BaseController
             if (!empty($errors)) {
                 $this->jsonResponse([
                     'success' => false,
-                    'message' => __('Update completed with some errors: ') . implode(' ', $errors),
+                    'message' => __('Updating completed with some errors: ') . implode(' ', $errors),
                     'updated_count' => $updated
                 ], 422);
                 return;
@@ -207,7 +207,7 @@ class AppSettingController extends BaseController
 
             $this->jsonResponse([
                 'success' => true,
-                'message' => __(':count settings updated successfully.', ['count' => $updated])
+                'message' => __(':count settings were updated successfully.', ['count' => $updated])
             ]);
             return;
         }
@@ -258,7 +258,7 @@ class AppSettingController extends BaseController
         } else {
             $this->jsonResponse([
                 'success' => false,
-                'message' => __('Error updating setting. Please check if the new key does not already exist.')
+                'message' => __('Error updating setting. Verify if the new key does not exist already.')
             ], 400);
         }
     }
@@ -276,7 +276,7 @@ class AppSettingController extends BaseController
         if ($appId <= 0 || empty($key)) {
             $this->jsonResponse([
                 'success' => false,
-                'message' => __('Invalid parameters for deleting the setting.')
+                'message' => __('Invalid parameters for deleting setting.')
             ], 400);
             return;
         }

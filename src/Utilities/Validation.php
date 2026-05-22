@@ -116,16 +116,16 @@ class Validation
         $label = __($this->fieldNames[$field] ?? ucfirst($field));
 
         return match (true) {
-            $rule === 'required' => __('Campul :field este obligatoriu.', ['field' => $label]),
-            $rule === 'email' => __('Campul :field nu este o adresa de email valida.', ['field' => $label]),
-            $rule === 'int' => __('Campul :field trebuie sa fie un numar intreg.', ['field' => $label]),
-            $rule === 'date' => __('Campul :field nu este o data valida.', ['field' => $label]),
-            $rule === 'array' => __('Campul :field trebuie sa fie o lista.', ['field' => $label]),
-            str_starts_with($rule, 'in:') => __('Selectia pentru :field este invalida.', ['field' => $label]),
-            str_starts_with($rule, 'min:') => __('Campul :field este sub limita minima de :min.', ['field' => $label, 'min' => substr($rule, 4)]),
-            str_starts_with($rule, 'max:') => __('Campul :field depaseste limita maxima de :max.', ['field' => $label, 'max' => substr($rule, 4)]),
-            str_starts_with($rule, 'regex:') => __('Campul :field nu are un format valid.', ['field' => $label]),
-            default => __('Campul :field este invalid.', ['field' => $label]),
+            $rule === 'required' => __('The field :field is required.', ['field' => $label]),
+            $rule === 'email' => __('The field :field is not a valid email address.', ['field' => $label]),
+            $rule === 'int' => __('The field :field must be an integer.', ['field' => $label]),
+            $rule === 'date' => __('The field :field is not a valid date.', ['field' => $label]),
+            $rule === 'array' => __('The field :field must be a list.', ['field' => $label]),
+            str_starts_with($rule, 'in:') => __('The selection for :field is invalid.', ['field' => $label]),
+            str_starts_with($rule, 'min:') => __('The field :field is below the minimum limit of :min.', ['field' => $label, 'min' => substr($rule, 4)]),
+            str_starts_with($rule, 'max:') => __('The field :field exceeds the maximum limit of :max.', ['field' => $label, 'max' => substr($rule, 4)]),
+            str_starts_with($rule, 'regex:') => __('The field :field does not have a valid format.', ['field' => $label]),
+            default => __('The field :field is invalid.', ['field' => $label]),
         };
     }
 }

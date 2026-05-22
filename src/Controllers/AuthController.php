@@ -69,7 +69,7 @@ class AuthController extends BaseController
             $this->redirect('index.php');
         }
 
-        setFlash('danger', __('Authentication error'), __('Invalid username or password.'));
+        setFlash('danger', __('Authentication error'), __('Incorrect username or password.'));
         $this->redirect('login.php');
     }
 

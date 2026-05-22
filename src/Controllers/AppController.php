@@ -76,7 +76,7 @@ class AppController extends BaseController
         
         $id = $postData['id'] ?? null;
         if (!$id) {
-            setFlash('danger', __('Error'), __('Application ID missing.'));
+            setFlash('danger', __('Error'), __('Missing application ID.'));
             $this->redirect('apps.php');
         }
 
