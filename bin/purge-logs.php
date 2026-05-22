@@ -8,12 +8,39 @@ use App\Controllers\LogController;
 use App\Utilities\LogViaCurl;
 
 /**
- * Maintenance Script: Archive to TXT and then purge from DB.
- * Usage: php bin/purge-logs.php [days]
+ * Script de Mentenanta: Arhivare in format TXT si curatare (purge) din baza de date.
+ * Executie: php bin/purge-logs.php [zile]
+ *
+ * @category Maintenance
+ * @package  Bin
+ * @version  1.3
+ * @since    PHP 8.4
+ * @author   Voica Liviu
+ * @license  Proprietar
  */
 
-$days = isset($argv[1]) ? (int)$argv[1] : 30;
-$cutoffDate = date('Y-m-d H:i:s', strtotime("-{$days} days"));
+// Validarea argumentelor din linia de comanda si aplicarea filozofiei Fail Fast
+$daysArgument = $argv[1] ?? '30';
+if (!is_numeric($daysArgument) || (int)$daysArgument < 1) {
+    echo json_encode([
+        'status' => 'error',
+        'message' => 'Invalid retention period specified. Must be a positive integer.'
+    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n";
+    exit(1);
+}
+
+$days = (int)$daysArgument;
+$timestamp = strtotime("-{$days} days");
+
+if ($timestamp === false) {
+    echo json_encode([
+        'status' => 'error',
+        'message' => 'Failed to calculate the logical cutoff date boundary.'
+    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n";
+    exit(1);
+}
+
+$cutoffDate = date('Y-m-d H:i:s', $timestamp);
 $backupFileName = "backup-logs-" . date('Y-m-d-His') . ".txt";
 $backupPath = __DIR__ . '/../storage/backups/' . $backupFileName;
 
@@ -28,16 +55,21 @@ try {
     exit(0);
 
 } catch (\Throwable $e) {
-    LogViaCurl::send('CRITICAL', 'FATAL ERROR in bin/purge-logs.php', [
-        'location' => 'bin/purge-logs.php',
+    // Structura obligatorie de logare in caz de exceptie
+    LogViaCurl::send('ERROR', 'Query execution failure event', [
+        'location' => __METHOD__,
         'line' => __LINE__,
         'exception_message' => $e->getMessage(),
         'exception_file' => $e->getFile(),
         'exception_line' => $e->getLine(),
         'exception_trace' => $e->getTraceAsString(),
-        'purge_days' => $days,
-        'cutoff_date' => $cutoffDate,
-        'backup_file' => $backupFileName
+        'sql_statement' => 'CLI Maintenance Purge Execution Failure',
+        'sql_parameters' => [
+            'purge_days' => $days,
+            'cutoff_date' => $cutoffDate,
+            'backup_file_path' => $backupPath
+        ],
+        'identifier' => 'MySQLWrapper_Query_Failure'
     ]);
 
     echo json_encode([
