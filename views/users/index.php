@@ -36,7 +36,7 @@
                     <!-- Create User Form -->
                     <div class="col-md-4">
                         <div class="card shadow-sm border-0 h-100 bg-slate-800">
-                            <div class="card-body p-4">
+                            <div class="card-bocdy p-4">
                                 <h3 class="h5 mb-4 text-light fw-bold">Add New Administrator</h3>
                                 <form action="users.php" method="POST">
                                     <div class="mb-3">
