@@ -8,10 +8,18 @@ use App\Controllers\UserController;
 
 $controller = new UserController();
 
-match ($_SERVER['REQUEST_METHOD']) {
-    'POST' => match ($_GET['action'] ?? null) {
-        'delete' => $controller->delete($_POST),
-        default => $controller->store($_POST),
-    },
-    default => $controller->index(),
-};
+try {
+    match ($_SERVER['REQUEST_METHOD'] ?? '') {
+        'POST' => match ($_GET['action'] ?? null) {
+            'delete' => $controller->delete($_POST),
+            null     => $controller->store($_POST),
+            default  => throw new InvalidArgumentException(__('Invalid user action.')),
+        },
+        'GET' => $controller->index(),
+        default => throw new RuntimeException(__('HTTP method not allowed for user management.')),
+    };
+} catch (Throwable $e) {
+    http_response_code(400);
+    echo json_encode(['error' => $e->getMessage()]);
+    exit;
+}

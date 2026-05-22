@@ -169,5 +169,15 @@
     "Critical Alerts": "Alerte Critice",
     "Warnings": "Avertismente",
     "Severity Levels": "Niveluri de severitate",
-    "Application": "Aplicatie"
+    "Application": "Aplicatie",
+    "Invalid or unsupported POST action.": "Actiune POST invalida sau nesuportata.",
+    "Unsupported HTTP method: ": "Metoda HTTP nesuportata: ",
+    "Invalid JSON payload provided.": "Formatul JSON furnizat este invalid.",
+    "Invalid POST action for settings.": "Actiune POST invalida pentru setari.",
+    "Unsupported HTTP method for settings.": "Metoda HTTP nesuportata pentru setari.",
+    "Unknown authentication action.": "Actiune de autentificare necunoscuta.",
+    "HTTP method not allowed for authentication.": "Metoda HTTP nepermisa pentru autentificare.",
+    "Invalid user action.": "Actiune utilizator nevalida.",
+    "HTTP method not allowed for user management.": "Metoda HTTP nepermisa pentru managementul utilizatorilor.",
+    "Critical: Configuration file (.env) is missing. Application cannot initialize.": "Critical: Configuration file (.env) is missing. Application cannot initialize."
 }

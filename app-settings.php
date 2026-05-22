@@ -8,22 +8,35 @@ use App\Controllers\AppSettingController;
 
 $controller = new AppSettingController();
 
-// Reading data from the request, providing support for JSON payloads (useful for multi-save/multi-update)
 $inputData = $_POST;
 $rawInput = file_get_contents('php://input');
 
 if (!empty($rawInput)) {
-    $jsonData = json_decode($rawInput, true);
-    if (is_array($jsonData)) {
-        $inputData = array_merge($inputData, $jsonData);
+    if (json_validate($rawInput)) {
+        $jsonData = json_decode($rawInput, true);
+        if (is_array($jsonData)) {
+            $inputData = array_merge($inputData, $jsonData);
+        }
+    } else {
+        http_response_code(400);
+        echo json_encode(['error' => __('Invalid JSON payload provided.')]);
+        exit;
     }
 }
 
-match ($_SERVER['REQUEST_METHOD']) {
-    'POST' => match ($_GET['action'] ?? null) {
-        'delete' => $controller->delete($inputData),
-        'update' => $controller->update($inputData),
-        default => $controller->store($inputData),
-    },
-    default => $controller->index($_GET),
-};
+try {
+    match ($_SERVER['REQUEST_METHOD'] ?? '') {
+        'POST' => match ($_GET['action'] ?? null) {
+            'delete' => $controller->delete($inputData),
+            'update' => $controller->update($inputData),
+            null     => $controller->store($inputData),
+            default  => throw new InvalidArgumentException(__('Invalid POST action for settings.')),
+        },
+        'GET' => $controller->index($_GET),
+        default => throw new RuntimeException(__('Unsupported HTTP method for settings.')),
+    };
+} catch (Throwable $e) {
+    http_response_code(400);
+    echo json_encode(['error' => $e->getMessage()]);
+    exit;
+}

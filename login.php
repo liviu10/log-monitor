@@ -8,10 +8,18 @@ use App\Controllers\AuthController;
 
 $controller = new AuthController();
 
-match ($_SERVER['REQUEST_METHOD']) {
-    'POST' => $controller->login($_POST),
-    default => match ($_GET['action'] ?? null) {
-        'logout' => $controller->logout(),
-        default => $controller->showLogin(),
-    },
-};
+try {
+    match ($_SERVER['REQUEST_METHOD'] ?? '') {
+        'POST' => $controller->login($_POST),
+        'GET' => match ($_GET['action'] ?? null) {
+            'logout' => $controller->logout(),
+            null     => $controller->showLogin(),
+            default  => throw new InvalidArgumentException(__('Unknown authentication action.')),
+        },
+        default => throw new RuntimeException(__('HTTP method not allowed for authentication.')),
+    };
+} catch (Throwable $e) {
+    http_response_code(400);
+    echo json_encode(['error' => $e->getMessage()]);
+    exit;
+}

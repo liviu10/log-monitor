@@ -6,7 +6,7 @@ require_once __DIR__ . '/bootstrap.php';
 
 use App\Controllers\LogController;
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
     header('Content-Type: application/json');
     http_response_code(405);
     echo json_encode(['error' => __('Method Not Allowed. Use POST.')]);

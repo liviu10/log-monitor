@@ -169,5 +169,15 @@
     "Critical Alerts": "Critical Alerts",
     "Warnings": "Warnings",
     "Severity Levels": "Severity Levels",
-    "Application": "Application"
+    "Application": "Application",
+    "Invalid or unsupported POST action.": "Invalid or unsupported POST action.",
+    "Unsupported HTTP method: ": "Unsupported HTTP method: ",
+    "Invalid JSON payload provided.": "Invalid JSON payload provided.",
+    "Invalid POST action for settings.": "Invalid POST action for settings.",
+    "Unsupported HTTP method for settings.": "Unsupported HTTP method for settings.",
+    "Unknown authentication action.": "Unknown authentication action.",
+    "HTTP method not allowed for authentication.": "HTTP method not allowed for authentication.",
+    "Invalid user action.": "Invalid user action.",
+    "HTTP method not allowed for user management.": "HTTP method not allowed for user management.",
+    "Critical: Configuration file (.env) is missing. Application cannot initialize.": "Critical: Configuration file (.env) is missing. Application cannot initialize."
 }
