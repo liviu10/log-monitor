@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/vendor/autoload.php';
 
+// Includere utilitare globale mai devreme pentru a avea acces la functia __()
+require_once __DIR__ . '/src/Utilities/helpers.php';
+
 // Abordare Fail Fast: Oprirea imediata a executiei daca fisierul .env lipseste
 if (!file_exists(__DIR__ . '/.env')) {
     http_response_code(500);
@@ -38,12 +41,25 @@ if ($currentScript !== 'log.php' && session_status() === PHP_SESSION_NONE) {
     ]);
 }
 
-// Includere utilitare globale
-require_once __DIR__ . '/src/Utilities/helpers.php';
-
 // Configurare aplicatie securizata contra atacurilor de tip Injection
 define('APP_NAME', htmlspecialchars($_ENV['APP_NAME'] ?? 'LogMonitor', ENT_QUOTES, 'UTF-8'));
 define('APP_URL', constructUrl());
+
+// Generare Nonce criptografic securizat pentru blocuri de script si stil inline (Protectie CSP)
+if (!defined('APP_NONCE')) {
+    define('APP_NONCE', bin2hex(random_bytes(16)));
+}
+
+// Trimitere header Content Security Policy optimizat pentru CDN-urile utilizate si AlpineJS
+header(
+    "Content-Security-Policy: default-src 'self'; " .
+    "script-src 'self' https://cdn.jsdelivr.net 'unsafe-eval' 'nonce-" . APP_NONCE . "'; " .
+    "style-src 'self' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com 'unsafe-inline'; " .
+    "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; " .
+    "img-src 'self' data:; " .
+    "connect-src 'self' https://cdn.jsdelivr.net; " .
+    "frame-ancestors 'none';"
+);
 
 /**
  * Genereaza un camp input ascuns pentru protectia CSRF in formularele HTML.

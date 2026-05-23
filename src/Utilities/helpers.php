@@ -10,7 +10,7 @@ declare(strict_types=1);
  *
  * @category Utilitare
  * @package  App\Utilities
- * @version  2.2
+ * @version  2.3
  * @since    PHP 8.4
  * @author   Voica Liviu
  * @license  Proprietar
@@ -55,13 +55,21 @@ if (!function_exists('dd')) {
 /**
  * Construieste URL-ul de baza al aplicatiei in mod dinamic.
  * Detecteaza automat protocolul securizat, serverul si subdirectorul de instalare.
+ * Previne atacurile de tip Host Header Injection prin validare stricta.
  *
  * @return string URL-ul complet de baza al aplicatiei.
  */
 if (!function_exists('constructUrl')) {
     function constructUrl(): string
     {
-        $host = filter_var($_SERVER['HTTP_HOST'] ?? 'localhost', FILTER_SET_COOKIE);
+        $rawHost = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        
+        // Validare stricta a host-ului pentru prevenirea Injection-ului
+        $host = filter_var($rawHost, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME);
+        if ($host === false) {
+            $host = 'localhost';
+        }
+        
         $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? ''));
         $basePath = rtrim($scriptDir, '/\\');
         
@@ -250,8 +258,9 @@ if (!function_exists('getLang')) {
 
 /**
  * Traduce o cheie text si inlocuieste parametrii dinamici intr-un mod securizat contra XSS.
+ * Utilizeaza functia nativa din PHP 8.4 json_validate pentru siguranta sporita.
  *
- * @param string $key Cheia de traducere (definita obligatoriu in engleza).
+ * @param string $key Cheia de cadrul de traducere.
  * @param array $replacements Vector asociativ cu parametrii de inlocuit.
  * @return string Textul final tradus si igienizat.
  */
