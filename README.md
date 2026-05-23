@@ -161,6 +161,32 @@ podman exec -it log-monitor-app php bin/purge-logs.php 30
 
 ---
 
+## 🧪 Testing
+
+The project includes unit and integration (feature) tests using PHPUnit. Tests run against a separate test database (`log_monitor_test`) to ensure development/production data is untouched.
+
+### 1. Install Testing Dependencies
+Run Composer inside the application container to install PHPUnit and update autoload mappings:
+```bash
+podman exec -it log-monitor-app composer install
+```
+
+### 2. Create the Test Database
+Ensure the testing database exists inside the MariaDB database container:
+```bash
+podman exec -it log-monitor-db mysql -u root -prootpassword -e "CREATE DATABASE IF NOT EXISTS log_monitor_test;"
+```
+
+### 3. Run the Test Suite
+Execute PHPUnit inside the container to run all unit and feature tests:
+```bash
+podman exec -it log-monitor-app vendor/bin/phpunit
+```
+
+*Note: Phinx database migrations and setup rollbacks are programmatically handled before tests execute inside the base `TestCase` class.*
+
+---
+
 ## 🌍 Directory Structure
 
 ```text
