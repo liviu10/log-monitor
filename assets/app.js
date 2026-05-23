@@ -1,6 +1,6 @@
 const App = {
     /**
-     * Toast Notifications handler
+     * Gestionare notificari de tip Toast
      */
     handleToast(toastContent) {
         const { type, title, message, toastDelay, redirectUrl } = toastContent;
@@ -80,7 +80,7 @@ const App = {
     },
 
     /**
-     * Alpine.js data constructor for the Dashboard page.
+     * Constructor date Alpine.js pentru pagina Dashboard.
      */
     dashboardPageData() {
         return {
@@ -130,7 +130,7 @@ const App = {
     },
 
     /**
-     * Alpine.js data constructor for the Manage Applications settings page.
+     * Constructor date Alpine.js pentru pagina de gestionare aplicatii (Manage Applications).
      */
     appsPageData() {
         return {
@@ -174,8 +174,8 @@ const App = {
                         } else {
                             App.handleToast({
                                 type: 'danger',
-                                title: window.__('Eroare'),
-                                message: data.message || window.__('Eroare la incarcarea setarilor.'),
+                                title: window.__('Error'),
+                                message: data.message || window.__('Error loading settings.'),
                                 toastDelay: 5000
                             });
                         }
@@ -184,8 +184,8 @@ const App = {
                         console.error(err);
                         App.handleToast({
                             type: 'danger',
-                            title: window.__('Eroare'),
-                            message: window.__('Eroare de retea la incarcarea setarilor.'),
+                            title: window.__('Error'),
+                            message: window.__('Network error loading settings.'),
                             toastDelay: 5000
                         });
                     })
@@ -198,8 +198,8 @@ const App = {
                 if (!this.newKey.trim() || !this.newValue.trim()) {
                     App.handleToast({
                         type: 'warning',
-                        title: window.__('Atentionare'),
-                        message: window.__('Cheia si valoarea sunt obligatorii.'),
+                        title: window.__('Warning'),
+                        message: window.__('Key and value are required.'),
                         toastDelay: 3000
                     });
                     return;
@@ -210,7 +210,7 @@ const App = {
                     App.handleToast({
                         type: 'warning',
                         title: window.__('Format Invalid'),
-                        message: window.__('Cheia poate contine doar litere, cifre, sublinieri (_), cratime (-) si puncte (.).'),
+                        message: window.__('Key can only contain letters, numbers, underscores (_), hyphens (-) and dots (.)'),
                         toastDelay: 5000
                     });
                     return;
@@ -222,8 +222,8 @@ const App = {
                 if (this.settings.some(s => s.key === keyVal) || this.pendingSettings.some(s => s.key === keyVal)) {
                     App.handleToast({
                         type: 'warning',
-                        title: window.__('Atentionare'),
-                        message: window.__('Aceasta cheie exista deja in lista sau in setarile active.'),
+                        title: window.__('Warning'),
+                        message: window.__('This key already exists in the list or active settings.'),
                         toastDelay: 4000
                     });
                     return;
@@ -267,7 +267,7 @@ const App = {
                         if (data.success) {
                             App.handleToast({
                                 type: 'success',
-                                title: window.__('Succes'),
+                                title: window.__('Success'),
                                 message: data.message,
                                 toastDelay: 3000
                             });
@@ -276,8 +276,8 @@ const App = {
                         } else {
                             App.handleToast({
                                 type: 'danger',
-                                title: window.__('Eroare'),
-                                message: data.message || window.__('Eroare la salvarea setarilor.'),
+                                title: window.__('Error'),
+                                message: data.message || window.__('Error saving settings.'),
                                 toastDelay: 5000
                             });
                         }
@@ -286,8 +286,8 @@ const App = {
                         console.error(err);
                         App.handleToast({
                             type: 'danger',
-                            title: window.__('Eroare'),
-                            message: window.__('Eroare de retea la salvarea setarilor.'),
+                            title: window.__('Error'),
+                            message: window.__('Network error saving settings.'),
                             toastDelay: 5000
                         });
                     })
@@ -300,8 +300,8 @@ const App = {
                 if (!setting.tempKey.trim() || !setting.tempValue.trim()) {
                     App.handleToast({
                         type: 'warning',
-                        title: window.__('Atentionare'),
-                        message: window.__('Cheia si valoarea sunt obligatorii.'),
+                        title: window.__('Warning'),
+                        message: window.__('Key and value are required.'),
                         toastDelay: 3000
                     });
                     return;
@@ -312,7 +312,7 @@ const App = {
                     App.handleToast({
                         type: 'warning',
                         title: window.__('Format Invalid'),
-                        message: window.__('Cheia poate contine doar litere, cifre, sublinieri (_), cratime (-) si puncte (.).'),
+                        message: window.__('Key can only contain letters, numbers, underscores (_), hyphens (-) and dots (.)'),
                         toastDelay: 5000
                     });
                     return;
@@ -321,8 +321,8 @@ const App = {
                 if (this.settings.some(s => s !== setting && s.key === setting.tempKey.trim())) {
                     App.handleToast({
                         type: 'warning',
-                        title: window.__('Atentionare'),
-                        message: window.__('Aceasta cheie este deja utilizata.'),
+                        title: window.__('Warning'),
+                        message: window.__('This key is already in use.'),
                         toastDelay: 4000
                     });
                     return;
@@ -347,7 +347,7 @@ const App = {
                         if (data.success) {
                             App.handleToast({
                                 type: 'success',
-                                title: window.__('Succes'),
+                                title: window.__('Success'),
                                 message: data.message,
                                 toastDelay: 3000
                             });
@@ -359,8 +359,8 @@ const App = {
                         } else {
                             App.handleToast({
                                 type: 'danger',
-                                title: window.__('Eroare'),
-                                message: data.message || window.__('Eroare la actualizarea setarii.'),
+                                title: window.__('Error'),
+                                message: data.message || window.__('Error updating setting.'),
                                 toastDelay: 5000
                             });
                         }
@@ -369,8 +369,8 @@ const App = {
                         console.error(err);
                         App.handleToast({
                             type: 'danger',
-                            title: window.__('Eroare'),
-                            message: window.__('Eroare de retea la actualizarea setarii.'),
+                            title: window.__('Error'),
+                            message: window.__('Network error updating setting.'),
                             toastDelay: 5000
                         });
                     })
@@ -395,7 +395,7 @@ const App = {
                         if (data.success) {
                             App.handleToast({
                                 type: 'success',
-                                title: window.__('Succes'),
+                                title: window.__('Success'),
                                 message: data.message,
                                 toastDelay: 3000
                             });
@@ -403,8 +403,8 @@ const App = {
                         } else {
                             App.handleToast({
                                 type: 'danger',
-                                title: window.__('Eroare'),
-                                message: data.message || window.__('Eroare la stergerea setarii.'),
+                                title: window.__('Error'),
+                                message: data.message || window.__('Error deleting setting.'),
                                 toastDelay: 5000
                             });
                         }
@@ -413,8 +413,8 @@ const App = {
                         console.error(err);
                         App.handleToast({
                             type: 'danger',
-                            title: window.__('Eroare'),
-                            message: window.__('Eroare de retea la stergerea setarii.'),
+                            title: window.__('Error'),
+                            message: window.__('Network error deleting setting.'),
                             toastDelay: 5000
                         });
                     });
