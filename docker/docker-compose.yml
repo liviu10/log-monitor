@@ -16,7 +16,8 @@ services:
     environment:
       - TZ=${TZ:-Europe/Bucharest}
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/login.php"]
       interval: 30s

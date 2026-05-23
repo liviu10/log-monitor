@@ -1,35 +1,36 @@
 #!/bin/bash
+# Activeaza modul Fail-Fast: opreste executia la prima eroare
 set -e
 
-# Wait for the database to be accessible
-echo "Waiting for database to be ready..."
-until nc -z $DB_HOST $DB_PORT; do
+echo "Validare variabile de mediu esentiale..."
+if [ -z "$DB_HOST" ] || [ -z "$DB_PORT" ]; then
+  echo "EROARE: DB_HOST sau DB_PORT nu sunt definite. Oprire imediata."
+  exit 1
+fi
+
+echo "Se asteapta accesibilitatea bazei de date la $DB_HOST:$DB_PORT..."
+until nc -z -w 2 "$DB_HOST" "$DB_PORT"; do
   sleep 1
 done
-echo "Database is up!"
+echo "Baza de date este pregatita!"
 
-# Install dependencies if vendor folder is missing or incomplete
+# Instaleaza dependintele doar daca directorul vendor lipseste
 if [ ! -d "vendor" ]; then
-    echo "Installing composer dependencies..."
-    composer install --no-interaction --optimize-autoloader
+    echo "Instalare dependinte composer..."
+    composer install --no-interaction --optimize-autoloader --no-dev
 fi
 
-# Run migrations
-echo "Running database migrations..."
-./vendor/bin/phinx migrate -e development
+# Rulare migrari in mediu securizat
+echo "Se ruleaza migrarile bazei de date..."
+./vendor/bin/phinx migrate -e production
 
-# Run seeds
-echo "Running database seeds..."
-./vendor/bin/phinx seed:run -e development
-
-# Register and start cron
+# Inregistrare joburi cron in container daca fisierul exista
 if [ -f "docker/crontab" ]; then
-    echo "Registering cron jobs..."
+    echo "Inregistrare joburi cron..."
     crontab docker/crontab
-    # Start crond on Alpine (cronie)
-    crond
+    # Pornire crond in background, cu trimitere loguri la sistem
+    crond -b -S
 fi
 
-# Start application server
-echo "Starting Application Server..."
+echo "Pornire Server Aplicatie..."
 exec "$@"

@@ -10,13 +10,46 @@ declare(strict_types=1);
  *
  * @category Utilitare
  * @package  App\Utilities
- * @version  2.3
+ * @version  2.5
  * @since    PHP 8.4
  * @author   Voica Liviu
  * @license  Proprietar
  */
 
 use Symfony\Component\VarDumper\VarDumper;
+
+/**
+ * Injecteaza headerele de securitate la nivel de runtime PHP.
+ * Asigura protectia pe serverul clasic (unde nu exista acces la configuratii)
+ * si ofera al doilea strat de protectie (Defense in Depth) in containere.
+ *
+ * @return void
+ */
+if (!function_exists('injectRuntimeSecurityHeaders')) {
+    function injectRuntimeSecurityHeaders(): void
+    {
+        // Previne atacurile de tip Clickjacking prin blocarea incadrarii in iframe
+        header('X-Frame-Options: DENY', true);
+
+        // Previne atacurile de tip MIME sniffing
+        header('X-Content-Type-Options: nosniff', true);
+
+        // Seteaza politica de transmitere a headerului Referer
+        header('Referrer-Policy: strict-origin-when-cross-origin', true);
+
+        // Politica stricta pentru executia de scripturi Vanilla JS si resurse
+        header("Content-Security-Policy: default-src 'self'; script-src 'self'; object-src 'none'; style-src 'self' 'unsafe-inline'; base-uri 'self'; form-action 'self';", true);
+
+        // Activare HSTS daca request-ul este securizat
+        $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || 
+                   (($_SERVER['SERVER_PORT'] ?? '') === '443') ||
+                   (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+
+        if ($isHttps) {
+            header('Strict-Transport-Security: max-age=63072000; includeSubDomains; preload', true);
+        }
+    }
+}
 
 // Validare si pornire securizata a sesiunii
 if (session_id() === '') {
@@ -30,6 +63,9 @@ if (session_id() === '') {
         'samesite' => 'Lax'
     ]);
     session_start();
+    
+    // Apelam injectarea la nivel de runtime pentru a acoperi ambele scenarii
+    injectRuntimeSecurityHeaders();
 }
 
 /** @const string ROLE_ADMIN Identificatorul pentru rolul de administrator. */
@@ -260,7 +296,7 @@ if (!function_exists('getLang')) {
  * Traduce o cheie text si inlocuieste parametrii dinamici intr-un mod securizat contra XSS.
  * Utilizeaza functia nativa din PHP 8.4 json_validate pentru siguranta sporita.
  *
- * @param string $key Cheia de cadrul de traducere.
+ * @param string $key Cheia din cadrul de traducere.
  * @param array $replacements Vector asociativ cu parametrii de inlocuit.
  * @return string Textul final tradus si igienizat.
  */
