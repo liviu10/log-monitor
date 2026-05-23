@@ -5,13 +5,13 @@
 }
 
 :80 {
-	# Setare director radacina in container
+	# Set the root directory
 	root * /var/www/html
 
-	# Activare compresie nativa pentru performanta
+	# Enable compression
 	encode zstd gzip
 
-	# Protectie fisiere sensibile la nivel de server web
+	# Protect sensitive files
 	@forbidden {
 		path .env*
 		path /phinx.php
@@ -21,15 +21,6 @@
 	}
 	respond @forbidden "Access Denied" 403
 
-	# Securitate la nivel de server web (Caddy)
-	header {
-		X-Frame-Options "DENY"
-		X-Content-Type-Options "nosniff"
-		Referrer-Policy "strict-origin-when-cross-origin"
-		Content-Security-Policy "default-src 'self'; script-src 'self'; object-src 'none'; style-src 'self' 'unsafe-inline'; base-uri 'self'; form-action 'self';"
-		-Server
-	}
-
-	# Executare PHP si integrare cu runtime-ul PHP
+	# Execute PHP files
 	php_server
 }
