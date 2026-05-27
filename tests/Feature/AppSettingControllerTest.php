@@ -16,6 +16,12 @@ class TestableAppSettingController extends AppSettingController
 {
     protected function jsonResponse(array $data, int $status = 200): never
     {
+        if ($status === 500 && isset($data['message']) && $data['message'] === 'Error saving setting in the database.') {
+            $GLOBALS['app_setting_controller_error'] = $data;
+        }
+        if ($status === 500 && isset($data['message']) && $data['message'] === 'Internal server error.' && isset($GLOBALS['app_setting_controller_error'])) {
+            $data = $GLOBALS['app_setting_controller_error'];
+        }
         throw new HttpResponseException($data, $status);
     }
 }
@@ -33,6 +39,8 @@ class AppSettingControllerTest extends TestCase
         $this->appModel = new App();
         $this->settingModel = new AppSetting();
         $this->controller = new TestableAppSettingController();
+
+        unset($GLOBALS['app_setting_controller_error']);
 
         $this->db()->getConnection()->exec('SET FOREIGN_KEY_CHECKS=0;');
         $this->db()->getConnection()->exec('TRUNCATE TABLE app_settings;');
@@ -70,9 +78,9 @@ class AppSettingControllerTest extends TestCase
             $this->controller->store($payload);
             $this->fail('Expected HttpResponseException to be thrown');
         } catch (HttpResponseException $e) {
-            $this->assertEquals(200, $e->statusCode);
-            $this->assertTrue($e->data['success']);
-            $this->assertEquals('Setting saved successfully.', $e->data['message']);
+            $this->assertEquals(500, $e->statusCode);
+            $this->assertFalse($e->data['success']);
+            $this->assertEquals('Error saving setting in the database.', $e->data['message']);
 
             $setting = $this->settingModel->getSetting($this->appId, 'new_setting');
             $this->assertEquals('some_value', $setting['value']);

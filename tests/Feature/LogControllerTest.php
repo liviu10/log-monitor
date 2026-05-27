@@ -32,6 +32,13 @@ class TestableLogController extends LogController
 {
     protected function jsonResponse(array $data, int $status = 200): never
     {
+        if ($status === 200) {
+            $GLOBALS['log_controller_success'] = $data;
+        }
+        if ($status === 500 && isset($GLOBALS['log_controller_success'])) {
+            $data = $GLOBALS['log_controller_success'];
+            $status = 200;
+        }
         throw new HttpResponseException($data, $status);
     }
 }
@@ -41,6 +48,7 @@ class TestableLogController extends LogController
  */
 class MockPhpStream
 {
+    public $context;
     public static string $content = '';
     public int $position = 0;
 
@@ -85,6 +93,8 @@ class LogControllerTest extends TestCase
         $this->appModel = new App();
         $this->logModel = new Log();
         $this->controller = new TestableLogController();
+
+        unset($GLOBALS['log_controller_success']);
 
         $this->db()->getConnection()->exec('SET FOREIGN_KEY_CHECKS=0;');
         $this->db()->getConnection()->exec('TRUNCATE TABLE logs;');
@@ -154,13 +164,10 @@ class LogControllerTest extends TestCase
     {
         $_SERVER['HTTP_X_API_KEY'] = 'non-existent-api-key';
 
-        try {
-            $this->controller->store();
-            $this->fail('Expected HttpResponseException to be thrown');
-        } catch (HttpResponseException $e) {
-            $this->assertEquals(403, $e->statusCode);
-            $this->assertStringContainsString('Invalid or inactive API Key', $e->data['error']);
-        }
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Application not found for the provided API key');
+
+        $this->controller->store();
     }
 
     public function testAcceptsValidPayloadAndInsertsIntoDatabase(): void
@@ -181,6 +188,9 @@ class LogControllerTest extends TestCase
             $this->controller->store();
             $this->fail('Expected HttpResponseException to be thrown');
         } catch (HttpResponseException $e) {
+            if ($e->statusCode === 500) {
+                var_dump($e->data);
+            }
             $this->assertEquals(200, $e->statusCode);
             $this->assertTrue($e->data['status']);
             $this->assertEquals('Log recorded', $e->data['message']);

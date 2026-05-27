@@ -89,10 +89,10 @@ podman-compose -f docker/docker-compose.yml up -d
 Prepare the database tables and populate the default seed data by running Phinx migrations inside the app container:
 ```bash
 # Run migrations
-podman exec -it log-monitor-app vendor/bin/phinx migrate
+podman exec -it log-monitor-app vendor/bin/phinx migrate -e development
 
 # Load initial seeds (default admin user, sample app, settings, and mock logs)
-podman exec -it log-monitor-app vendor/bin/phinx seed:run
+podman exec -it log-monitor-app vendor/bin/phinx seed:run -e development
 ```
 
 ---
@@ -148,16 +148,73 @@ LogMonitor provides a fast, server-to-server endpoint to submit logs. Frontend l
 
 ---
 
-## 🧹 Maintenance CLI Utility
+## 🔧 Container & Application Maintenance
 
-Manage disk space and database size by setting up a cron job or running the CLI maintenance command.
+### 1. Container Lifecycle Management (Podman)
+* **Start all services**:
+  ```bash
+  podman-compose -f docker/docker-compose.yml up -d
+  ```
+* **Stop all services**:
+  ```bash
+  podman-compose -f docker/docker-compose.yml down
+  ```
+* **Restart all services**:
+  ```bash
+  podman-compose -f docker/docker-compose.yml restart
+  ```
+* **View container real-time log output**:
+  ```bash
+  podman-compose -f docker/docker-compose.yml logs -f
+  ```
+* **Check status of running containers**:
+  ```bash
+  podman ps -a
+  ```
+* **Access the application container terminal shell**:
+  ```bash
+  podman exec -it log-monitor-app sh
+  ```
 
-The script archives old database entries to `/var/www/html/storage/backups/` in raw `.txt` format and purges them from the database.
+### 2. Database Administration (Phinx & MariaDB)
+* **Run outstanding database migrations**:
+  ```bash
+  podman exec -it log-monitor-app vendor/bin/phinx migrate -e development
+  ```
+* **Rollback last migration step**:
+  ```bash
+  podman exec -it log-monitor-app vendor/bin/phinx rollback -e development
+  ```
+* **Rollback all migrations (Reset database schema)**:
+  ```bash
+  podman exec -it log-monitor-app vendor/bin/phinx rollback -e development -t 0
+  ```
+* **Run database seeders**:
+  ```bash
+  podman exec -it log-monitor-app vendor/bin/phinx seed:run -e development
+  ```
+* **Create a new database migration class**:
+  ```bash
+  podman exec -it log-monitor-app vendor/bin/phinx create MyNewMigration
+  ```
+* **Dump/Backup the database**:
+  ```bash
+  podman exec -it log-monitor-db mariadb-dump -u user -ppassword log_monitor > backup.sql
+  ```
+* **Restore database from dump file**:
+  ```bash
+  podman exec -i log-monitor-db mariadb -u user -ppassword log_monitor < backup.sql
+  ```
 
-```bash
-# Executed inside the container (purges logs older than 30 days by default)
-podman exec -it log-monitor-app php bin/purge-logs.php 30
-```
+### 3. Log Retention & Application Maintenance
+* **Purge logs older than X days** (Automatically archives logs to `/var/www/html/storage/backups/` and deletes them from the active database):
+  ```bash
+  podman exec -it log-monitor-app php bin/purge-logs.php 30
+  ```
+* **Install vendor dependencies (production mode)**:
+  ```bash
+  podman exec -it log-monitor-app composer install --no-dev --optimize-autoloader
+  ```
 
 ---
 

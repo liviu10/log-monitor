@@ -97,17 +97,17 @@ class ValidationTest extends TestCase
         ];
 
         // Too short
-        $errors = $this->validation->validate($rules, ['password' => '12345']);
+        $errors = $this->validation->validate($rules, ['password' => 'abcde']);
         $this->assertArrayHasKey('password', $errors);
         $this->assertContains('min:6', $errors['password']);
 
         // Too long
-        $errors = $this->validation->validate($rules, ['password' => '1234567890123']);
+        $errors = $this->validation->validate($rules, ['password' => 'abcdefghijklm']);
         $this->assertArrayHasKey('password', $errors);
         $this->assertContains('max:12', $errors['password']);
 
         // Correct size
-        $errors = $this->validation->validate($rules, ['password' => '1234567']);
+        $errors = $this->validation->validate($rules, ['password' => 'abcdefg']);
         $this->assertArrayNotHasKey('password', $errors);
     }
 }

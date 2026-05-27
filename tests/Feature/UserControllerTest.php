@@ -43,8 +43,8 @@ class UserControllerTest extends TestCase
         $this->db()->getConnection()->exec('TRUNCATE TABLE users;');
         $this->db()->getConnection()->exec('SET FOREIGN_KEY_CHECKS=1;');
 
-        // Authed user session
-        $_SESSION['auth.user'] = ['id' => 1, 'username' => 'admin'];
+        // Authed user session - Use 999 to avoid clash with DB auto-increment ID 1
+        $_SESSION['auth.user'] = ['id' => 999, 'username' => 'admin'];
     }
 
     public function testIndexRendersAdministrators(): void
@@ -79,12 +79,12 @@ class UserControllerTest extends TestCase
     public function testDeleteSelfIsBlocked(): void
     {
         try {
-            $this->userController->delete(['id' => 1]); // Same ID as current auth user
+            $this->userController->delete(['id' => 999]); // Same ID as current auth user
             $this->fail('Expected HttpRedirectException to be thrown');
         } catch (HttpRedirectException $e) {
             $this->assertEquals('users.php', $e->url);
-            $this->assertEquals('danger', $_SESSION['flash']['type']);
-            $this->assertEquals('You cannot delete your own account.', $_SESSION['flash']['message']);
+            $this->assertEquals('danger', $_SESSION['app_flash']['type']);
+            $this->assertEquals('You cannot delete your own account.', $_SESSION['app_flash']['message']);
         }
     }
 

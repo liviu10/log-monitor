@@ -5,7 +5,7 @@ COPY composer.json ./
 RUN composer install --no-dev --no-interaction --no-autoloader --no-scripts
 
 # Stage 2: Final Image
-FROM docker.io/dunglas/frankenphp:latest-alpine
+FROM docker.io/dunglas/frankenphp:php8.4-alpine
 
 # Install system packages
 RUN apk add --no-cache \
@@ -31,9 +31,9 @@ COPY --from=builder /app/vendor ./vendor
 # Copy source code
 COPY . .
 
-# Optimize autoload
+# Optimize autoload and keep composer for development purposes
 COPY --from=builder /usr/bin/composer /usr/bin/composer
-RUN composer dump-autoload --optimize --no-dev && rm /usr/bin/composer
+RUN composer dump-autoload --optimize --no-dev
 
 # Permissions
 RUN chown -R root:root /var/www/html && chmod -R 755 /var/www/html
