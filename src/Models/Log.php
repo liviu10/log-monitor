@@ -9,7 +9,6 @@ use PDOException;
 use RuntimeException;
 use InvalidArgumentException;
 use App\Utilities\MySQLWrapper;
-use App\Utilities\LogViaCurl;
 
 /**
  * Log Class
@@ -80,7 +79,8 @@ class Log
             }
             return (int)$result;
         } catch (PDOException $e) {
-            LogViaCurl::send('ERROR', 'Query execution failure event', [
+            error_log(json_encode([
+                'error' => 'Query execution failure event',
                 'location' => __METHOD__,
                 'line' => __LINE__,
                 'exception_message' => $e->getMessage(),
@@ -90,7 +90,7 @@ class Log
                 'sql_statement' => $sql,
                 'sql_parameters' => $params,
                 'identifier' => 'MySQLWrapper_Query_Failure'
-            ]);
+            ], JSON_UNESCAPED_SLASHES));
             throw new RuntimeException(__('Database error saving log entry'), 0, $e);
         }
     }
@@ -134,16 +134,15 @@ class Log
             $params[] = trim((string)$filters['search']) . "*";
         }
 
-        // Securizare stricta: LIMIT si OFFSET sunt legate prin mapare curata sau parametri de tip integer direct in PDO wrapper
-        $sql .= " ORDER BY l.created_at DESC LIMIT ? OFFSET ?";
-        $params[] = $limit;
-        $params[] = $offset;
+        // Securizare stricta: LIMIT si OFFSET sunt interpolate direct ca intregi pentru a evita legarea lor ca string de catre PDO
+        $sql .= " ORDER BY l.created_at DESC LIMIT " . (int)$limit . " OFFSET " . (int)$offset;
 
         try {
             $stmt = $this->db->query($sql, $params);
             return $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
         } catch (PDOException $e) {
-            LogViaCurl::send('ERROR', 'Query execution failure event', [
+            error_log(json_encode([
+                'error' => 'Query execution failure event',
                 'location' => __METHOD__,
                 'line' => __LINE__,
                 'exception_message' => $e->getMessage(),
@@ -153,7 +152,7 @@ class Log
                 'sql_statement' => $sql,
                 'sql_parameters' => $params,
                 'identifier' => 'MySQLWrapper_Query_Failure'
-            ]);
+            ], JSON_UNESCAPED_SLASHES));
             return [];
         }
     }
@@ -188,7 +187,8 @@ class Log
             $stmt = $this->db->query($sql, $params);
             return $stmt ? (int)$stmt->fetchColumn() : 0;
         } catch (PDOException $e) {
-            LogViaCurl::send('ERROR', 'Query execution failure event', [
+            error_log(json_encode([
+                'error' => 'Query execution failure event',
                 'location' => __METHOD__,
                 'line' => __LINE__,
                 'exception_message' => $e->getMessage(),
@@ -198,7 +198,7 @@ class Log
                 'sql_statement' => $sql,
                 'sql_parameters' => $params,
                 'identifier' => 'MySQLWrapper_Query_Failure'
-            ]);
+            ], JSON_UNESCAPED_SLASHES));
             return 0;
         }
     }
@@ -218,7 +218,8 @@ class Log
             $stmt = $this->db->query($sql, $params);
             return $stmt ? (int)$stmt->fetchColumn() : 0;
         } catch (PDOException $e) {
-            LogViaCurl::send('ERROR', 'Query execution failure event', [
+            error_log(json_encode([
+                'error' => 'Query execution failure event',
                 'location' => __METHOD__,
                 'line' => __LINE__,
                 'exception_message' => $e->getMessage(),
@@ -228,7 +229,7 @@ class Log
                 'sql_statement' => $sql,
                 'sql_parameters' => $params,
                 'identifier' => 'MySQLWrapper_Query_Failure'
-            ]);
+            ], JSON_UNESCAPED_SLASHES));
             return 0;
         }
     }
@@ -255,14 +256,15 @@ class Log
                 JOIN apps a ON l.app_id = a.id 
                 WHERE l.created_at < ? 
                 ORDER BY l.created_at ASC 
-                LIMIT ? OFFSET ?";
-        $params = [$date, $limit, $offset];
+                LIMIT " . (int)$limit . " OFFSET " . (int)$offset;
+        $params = [$date];
 
         try {
             $stmt = $this->db->query($sql, $params);
             return $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
         } catch (PDOException $e) {
-            LogViaCurl::send('ERROR', 'Query execution failure event', [
+            error_log(json_encode([
+                'error' => 'Query execution failure event',
                 'location' => __METHOD__,
                 'line' => __LINE__,
                 'exception_message' => $e->getMessage(),
@@ -272,7 +274,7 @@ class Log
                 'sql_statement' => $sql,
                 'sql_parameters' => $params,
                 'identifier' => 'MySQLWrapper_Query_Failure'
-            ]);
+            ], JSON_UNESCAPED_SLASHES));
             return [];
         }
     }
@@ -293,7 +295,8 @@ class Log
             $stmt = $this->db->query($sql, $params);
             return $stmt ? (int)$stmt->rowCount() : 0;
         } catch (PDOException $e) {
-            LogViaCurl::send('ERROR', 'Query execution failure event', [
+            error_log(json_encode([
+                'error' => 'Query execution failure event',
                 'location' => __METHOD__,
                 'line' => __LINE__,
                 'exception_message' => $e->getMessage(),
@@ -303,7 +306,7 @@ class Log
                 'sql_statement' => $sql,
                 'sql_parameters' => $params,
                 'identifier' => 'MySQLWrapper_Query_Failure'
-            ]);
+            ], JSON_UNESCAPED_SLASHES));
             throw new RuntimeException(__('Failed to clear old logs from storage'), 0, $e);
         }
     }
@@ -320,7 +323,8 @@ class Log
             $stmt = $this->db->query($sql);
             return $stmt !== false;
         } catch (PDOException $e) {
-            LogViaCurl::send('ERROR', 'Query execution failure event', [
+            error_log(json_encode([
+                'error' => 'Query execution failure event',
                 'location' => __METHOD__,
                 'line' => __LINE__,
                 'exception_message' => $e->getMessage(),
@@ -330,7 +334,7 @@ class Log
                 'sql_statement' => $sql,
                 'sql_parameters' => [],
                 'identifier' => 'MySQLWrapper_Query_Failure'
-            ]);
+            ], JSON_UNESCAPED_SLASHES));
             return false;
         }
     }
@@ -358,7 +362,8 @@ class Log
                 'warning' => $warning
             ];
         } catch (PDOException $e) {
-            LogViaCurl::send('ERROR', 'Query execution failure event', [
+            error_log(json_encode([
+                'error' => 'Query execution failure event',
                 'location' => __METHOD__,
                 'line' => __LINE__,
                 'exception_message' => $e->getMessage(),
@@ -368,7 +373,7 @@ class Log
                 'sql_statement' => 'Dashboard Statistics Aggregation',
                 'sql_parameters' => [],
                 'identifier' => 'MySQLWrapper_Query_Failure'
-            ]);
+            ], JSON_UNESCAPED_SLASHES));
             return ['total' => 0, 'critical' => 0, 'warning' => 0];
         }
     }

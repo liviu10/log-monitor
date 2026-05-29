@@ -120,6 +120,7 @@
                 <div class="card mb-4 border-0 shadow-sm bg-dark bg-opacity-50">
                     <div class="card-body p-4">
                         <form action="index.php" method="GET" class="row g-3 align-items-end">
+                            <input type="hidden" name="limit" value="<?= htmlspecialchars((string)($limit ?? 10)) ?>">
                             <div class="col-md-4">
                                 <label class="form-label text-secondary small fw-bold text-uppercase"><?= __('Quick search') ?></label>
                                 <div class="input-group">
@@ -253,20 +254,109 @@
                     </div>
                 </div>
 
-                <!-- Pagination -->
-                <?php if (($totalPages ?? 0) > 1): ?>
-                    <nav class="mt-4">
-                        <ul class="pagination justify-content-center gap-1">
-                            <?php for ($i = 1; $i <= $totalPages; $i++): ?>
-                                <li class="page-item <?= ((int)($page ?? 1) === $i) ? 'active' : '' ?>">
-                                    <a class="page-link rounded bg-dark border-secondary border-opacity-25 text-light" href="?page=<?= $i ?>&<?= http_build_query(array_filter($filters ?? [])) ?>">
-                                        <?= $i ?>
+                <!-- Pagination & Page Size controls -->
+                <?php
+                    $currentPage = (int)($page ?? 1);
+                    $range = 2; // Range of pages to show around the current page
+                    $startPage = max(1, $currentPage - $range);
+                    $endPage = min($totalPages ?? 1, $currentPage + $range);
+                    $limitOptions = [10, 25, 50, 100];
+                ?>
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mt-4">
+                    <!-- Page Size Selector -->
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="text-secondary small text-nowrap mb-0"><?= __('Rows per page:') ?></label>
+                        <select class="form-select form-select-sm bg-dark border-secondary border-opacity-25 text-light" style="width: auto; cursor: pointer;" @change="window.location.href = $event.target.value">
+                            <?php foreach ($limitOptions as $l): ?>
+                                <?php
+                                    $urlParams = array_merge(array_filter($filters ?? []), [
+                                        'page' => 1,
+                                        'limit' => $l
+                                    ]);
+                                    $url = '?' . http_build_query($urlParams);
+                                ?>
+                                <option value="<?= htmlspecialchars($url) ?>" <?= ($limit === $l) ? 'selected' : '' ?>>
+                                    <?= $l ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <!-- Pagination Links -->
+                    <?php if (($totalPages ?? 0) > 1): ?>
+                        <nav aria-label="<?= __('Pagination') ?>">
+                            <ul class="pagination mb-0 gap-1 align-items-center">
+                                <!-- First Page -->
+                                <li class="page-item <?= ($currentPage <= 1) ? 'disabled' : '' ?>">
+                                    <a class="page-link rounded bg-dark border-secondary border-opacity-25 text-light" 
+                                       href="<?= ($currentPage <= 1) ? '#' : '?' . http_build_query(array_merge(array_filter($filters ?? []), ['page' => 1, 'limit' => $limit])) ?>" 
+                                       title="<?= __('First') ?>">
+                                        <i class="fas fa-angle-double-left small"></i>
                                     </a>
                                 </li>
-                            <?php endfor; ?>
-                        </ul>
-                    </nav>
-                <?php endif; ?>
+
+                                <!-- Prev Link -->
+                                <li class="page-item <?= ($currentPage <= 1) ? 'disabled' : '' ?>">
+                                    <a class="page-link rounded bg-dark border-secondary border-opacity-25 text-light" 
+                                       href="<?= ($currentPage <= 1) ? '#' : '?' . http_build_query(array_merge(array_filter($filters ?? []), ['page' => $currentPage - 1, 'limit' => $limit])) ?>" 
+                                       title="<?= __('Previous') ?>">
+                                        <i class="fas fa-chevron-left small"></i>
+                                    </a>
+                                </li>
+
+                                <!-- First Page Number if range starts after page 1 -->
+                                <?php if ($startPage > 1): ?>
+                                    <li class="page-item">
+                                        <a class="page-link rounded bg-dark border-secondary border-opacity-25 text-light" 
+                                           href="?<?= http_build_query(array_merge(array_filter($filters ?? []), ['page' => 1, 'limit' => $limit])) ?>">1</a>
+                                    </li>
+                                    <?php if ($startPage > 2): ?>
+                                        <li class="page-item disabled"><span class="page-link rounded bg-dark border-secondary border-opacity-25 text-secondary">...</span></li>
+                                    <?php endif; ?>
+                                <?php endif; ?>
+
+                                <!-- Intermediate Page Links -->
+                                <?php for ($i = $startPage; $i <= $endPage; $i++): ?>
+                                    <li class="page-item <?= ($currentPage === $i) ? 'active' : '' ?>">
+                                        <a class="page-link rounded bg-dark border-secondary border-opacity-25 text-light" 
+                                           href="?<?= http_build_query(array_merge(array_filter($filters ?? []), ['page' => $i, 'limit' => $limit])) ?>">
+                                            <?= $i ?>
+                                        </a>
+                                    </li>
+                                <?php endfor; ?>
+
+                                <!-- Last Page Number if range ends before totalPages -->
+                                <?php if ($endPage < $totalPages): ?>
+                                    <?php if ($endPage < $totalPages - 1): ?>
+                                        <li class="page-item disabled"><span class="page-link rounded bg-dark border-secondary border-opacity-25 text-secondary">...</span></li>
+                                    <?php endif; ?>
+                                    <li class="page-item">
+                                        <a class="page-link rounded bg-dark border-secondary border-opacity-25 text-light" 
+                                           href="?<?= http_build_query(array_merge(array_filter($filters ?? []), ['page' => $totalPages, 'limit' => $limit])) ?>"><?= $totalPages ?></a>
+                                    </li>
+                                <?php endif; ?>
+
+                                <!-- Next Link -->
+                                <li class="page-item <?= ($currentPage >= $totalPages) ? 'disabled' : '' ?>">
+                                    <a class="page-link rounded bg-dark border-secondary border-opacity-25 text-light" 
+                                       href="<?= ($currentPage >= $totalPages) ? '#' : '?' . http_build_query(array_merge(array_filter($filters ?? []), ['page' => $currentPage + 1, 'limit' => $limit])) ?>" 
+                                       title="<?= __('Next') ?>">
+                                        <i class="fas fa-chevron-right small"></i>
+                                    </a>
+                                </li>
+
+                                <!-- Last Page -->
+                                <li class="page-item <?= ($currentPage >= $totalPages) ? 'disabled' : '' ?>">
+                                    <a class="page-link rounded bg-dark border-secondary border-opacity-25 text-light" 
+                                       href="<?= ($currentPage >= $totalPages) ? '#' : '?' . http_build_query(array_merge(array_filter($filters ?? []), ['page' => $totalPages, 'limit' => $limit])) ?>" 
+                                       title="<?= __('Last') ?>">
+                                        <i class="fas fa-angle-double-right small"></i>
+                                    </a>
+                                </li>
+                            </ul>
+                        </nav>
+                    <?php endif; ?>
+                </div>
             </main>
         </div>
     </div>
@@ -293,8 +383,8 @@
                                 <span class="badge rounded-pill px-3 py-2 border" 
                                       :class="{
                                           'bg-danger bg-opacity-10 text-danger border-danger border-opacity-25': ['ERROR', 'CRITICAL', 'EMERGENCY', 'ALERT'].includes(selectedLog?.level),
-                                          'bg-warning bg-opacity-10 text-warning border-warning border-opacity-25 text-dark': selectedLog?.level === 'WARNING',
-                                          'bg-info bg-opacity-10 text-info border-info border-opacity-25 text-dark': selectedLog?.level === 'INFO',
+                                          'bg-warning bg-opacity-10 text-warning border-warning border-opacity-25': selectedLog?.level === 'WARNING',
+                                          'bg-info bg-opacity-10 text-info border-info border-opacity-25': selectedLog?.level === 'INFO',
                                           'bg-success bg-opacity-10 text-success border-success border-opacity-25': selectedLog?.level === 'NOTICE',
                                           'bg-secondary bg-opacity-10 text-secondary border-secondary border-opacity-25': !['ERROR', 'CRITICAL', 'EMERGENCY', 'ALERT', 'WARNING', 'INFO', 'NOTICE'].includes(selectedLog?.level)
                                       }"

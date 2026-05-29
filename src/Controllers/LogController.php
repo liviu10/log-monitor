@@ -8,7 +8,6 @@ use App\Models\App;
 use App\Models\Log;
 use App\Enums\LogLevel;
 use App\Utilities\Validation;
-use App\Utilities\LogViaCurl;
 
 /**
  * Clasa LogController
@@ -32,7 +31,7 @@ class LogController extends BaseController
     public function store(): never
     {
         // 1. Verificare User-Agent pentru protectie server-to-server
-        $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? '';
+        $userAgent = $this->getRequestHeader('User-Agent') ?? '';
         $browserSignatures = ['Mozilla', 'Chrome', 'Safari', 'Edge', 'Opera', 'Firefox'];
         
         foreach ($browserSignatures as $signature) {
@@ -45,19 +44,23 @@ class LogController extends BaseController
         }
 
         // 2. Verificare Content-Type
-        $contentType = $_SERVER['CONTENT_TYPE'] ?? $_SERVER['HTTP_CONTENT_TYPE'] ?? '';
+        $contentType = $this->getRequestHeader('Content-Type') ?? '';
         if (!str_contains($contentType, 'application/json')) {
             $this->jsonResponse(['error' => 'Content-Type must be application/json'], 415);
         }
 
         // 3. Verificare prezenta si validitate API Key
-        $apiKey = $_SERVER['HTTP_X_API_KEY'] ?? null;
+        $apiKey = $this->getRequestHeader('X-API-KEY');
         if (!$apiKey) {
             $this->jsonResponse(['error' => 'X-API-KEY header is missing'], 401);
         }
 
         $appModel = new App();
-        $app = $appModel->findByApiKey($apiKey);
+        try {
+            $app = $appModel->findByApiKey($apiKey);
+        } catch (\Throwable $e) {
+            $this->jsonResponse(['error' => 'Invalid or inactive API Key'], 403);
+        }
         if (!$app) {
             $this->jsonResponse(['error' => 'Invalid or inactive API Key'], 403);
         }
@@ -118,16 +121,17 @@ class LogController extends BaseController
             
             $this->jsonResponse(['error' => __('Failed to store log')], 500);
         } catch (\Throwable $e) {
-            LogViaCurl::send('ERROR', 'API log storage critical failure', [
+            error_log(json_encode([
+                'error' => 'API log storage critical failure',
                 'location' => __METHOD__,
                 'line' => __LINE__,
                 'exception_message' => $e->getMessage(),
                 'exception_file' => $e->getFile(),
                 'exception_line' => $e->getLine(),
                 'exception_trace' => $e->getTraceAsString(),
-                'app_id' => $app['id'],
+                'app_id' => $app['id'] ?? null,
                 'identifier' => 'LogController_Store_CriticalFailure'
-            ]);
+            ], JSON_UNESCAPED_SLASHES));
             $this->jsonResponse(['error' => __('Internal Server Error')], 500);
         }
     }
@@ -205,7 +209,8 @@ class LogController extends BaseController
                 'deleted_count' => $deletedCount
             ];
         } catch (\Throwable $e) {
-            LogViaCurl::send('ERROR', 'Log purge task failure event', [
+            error_log(json_encode([
+                'error' => 'Log purge task failure event',
                 'location' => __METHOD__,
                 'line' => __LINE__,
                 'exception_message' => $e->getMessage(),
@@ -215,8 +220,39 @@ class LogController extends BaseController
                 'retention_days' => $days,
                 'backup_destination' => $backupPath,
                 'identifier' => 'LogController_Purge_Failure'
-            ]);
+            ], JSON_UNESCAPED_SLASHES));
             throw $e;
         }
+    }
+
+    /**
+     * Returneaza valoarea unui header din request, case-insensitive.
+     */
+    private function getRequestHeader(string $name): ?string
+    {
+        $normalizedName = strtolower($name);
+        
+        if (function_exists('getallheaders')) {
+            $headers = getallheaders();
+            if (is_array($headers)) {
+                foreach ($headers as $key => $value) {
+                    if (strtolower((string)$key) === $normalizedName) {
+                        return (string)$value;
+                    }
+                }
+            }
+        }
+        
+        $serverKey = 'HTTP_' . strtoupper(str_replace('-', '_', $name));
+        if (isset($_SERVER[$serverKey])) {
+            return (string)$_SERVER[$serverKey];
+        }
+        
+        $directServerKey = strtoupper(str_replace('-', '_', $name));
+        if (isset($_SERVER[$directServerKey])) {
+            return (string)$_SERVER[$directServerKey];
+        }
+        
+        return null;
     }
 }

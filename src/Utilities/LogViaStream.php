@@ -7,22 +7,19 @@ namespace App\Utilities;
 use Throwable;
 use ErrorException;
 use RuntimeException;
-use InvalidArgumentException;
 
 /**
  * Clasa LogViaStream
  *
  * Centralizeaza si securizeaza logurile prin stream-uri native PHP.
- * Include protectie avansata cu memorie de rezerva pentru crash-uri de tip Out of Memory si Timeout iminent.
+ * Include protectie impotriva DDoS-ului intern si a buclelor infinite (Rate Limiting Local si Global).
  *
  * @category Utilities
  * @package  App\Utilities
- * @version  4.0
+ * @version  5.0
  * @since    PHP 8.4
- * @author   Voica Liviu
- * @license  Proprietar
  */
-class LogViaStream
+final class LogViaStream
 {
     private static bool $isLogging = false;
     private static ?string $requestId = null;
@@ -30,10 +27,25 @@ class LogViaStream
     private static ?float $startTime = null;
     private static string $apiKey = '';
     private static string $url = '';
+    
+    // Contor intern pentru request-ul curent (Protectie Bucla Infinite / Foreach)
+    private static int $logCountInRequest = 0;
+    
+    // Limite stricte de siguranta (Configurabile architectural)
+    private const int MAX_LOGS_PER_REQUEST = 30;  // Maxim loguri transmise de un singur script/apel
+    private const int MAX_LOGS_PER_MINUTE = 300;  // Maxim loguri acceptate global de pe tot serverul intr-un minut
+
+    /**
+     * Constructor privat pentru a preveni instantierea unei clase pur statice.
+     */
+    private function __construct()
+    {
+    }
 
     /**
      * Inregistreaza handlerul global si valideaza existenta configuratiilor (Fail-Fast).
-     * * @throws RuntimeException Daca variabilele de mediu esentiale lipsesc.
+     *
+     * @throws RuntimeException Daca variabilele de mediu esentiale lipsesc sau sunt invalide.
      */
     public static function registerHandlers(): void
     {
@@ -42,12 +54,11 @@ class LogViaStream
         // Alocare rezerva de memorie (500 KB) pentru situatii de urgenta (OOM)
         self::$memoryReserve = str_repeat('x', 1024 * 500);
 
-        // Validare stricta a configuratiilor conform principiului Fail-Fast
         $envApiKey = $_ENV['LOG_API_KEY'] ?? null;
         $envUrl = $_ENV['LOG_SERVER_URL'] ?? null;
 
         if (!is_string($envApiKey) || trim($envApiKey) === '') {
-            throw new RuntimeException('Configuratie invalida: LOG_API_KEY lipseste sau este vida.');
+            throw new RuntimeException('Configuratie invalida: LOG_API_KEY lipseste sau este visa.');
         }
 
         if (!is_string($envUrl) || filter_var($envUrl, FILTER_VALIDATE_URL) === false) {
@@ -57,53 +68,74 @@ class LogViaStream
         self::$apiKey = $envApiKey;
         self::$url = $envUrl;
 
-        // 1. Interceptare erori native PHP prin transformare in ErrorException (Best Practice)
+        // 1. Interceptare erori native PHP prin transformare in ErrorException
         set_error_handler(static function (int $severity, string $message, string $file, int $line): bool {
             if (!(error_reporting() & $severity)) {
                 return false;
             }
-            
-            // Transformam eroarea intr-o exceptie pentru a unifica fluxul defensiv
             throw new ErrorException($message, 0, $severity, $file, $line);
         });
 
-        // 2. Interceptare exceptii netratate (Inclusiv ErrorException de mai sus)
+        // 2. Interceptare exceptii netratate
         set_exception_handler(static function (Throwable $exception): void {
             self::handleException($exception);
         });
 
-        // 3. Interceptare erori fatale (Shutdown Function)
+        // 3. Interceptare erori fatale (Shutdown Function) cu protectie de buffer
         register_shutdown_function(static function (): void {
-            self::$memoryReserve = null; // Eliberare imediata spatiu RAM pentru procesarea finala
+            self::$memoryReserve = null; // Eliberare imediata spatiu RAM
 
             $error = error_get_last();
             $bufferContent = '';
 
-            while (ob_get_level() > 0) {
-                $content = ob_get_clean();
-                if ($content !== false) {
-                    $bufferContent = $content . $bufferContent;
+            // Golire defensiva a bufferelor evitand blocajele infinite
+            try {
+                while (ob_get_level() > 0) {
+                    $status = ob_get_status(true);
+                    $currentBuffer = end($status);
+                    
+                    if (isset($currentBuffer['flags']) && !($currentBuffer['flags'] & PHP_OUTPUT_HANDLER_REMOVABLE)) {
+                        ob_end_flush();
+                        break;
+                    }
+
+                    $content = ob_get_clean();
+                    if (is_string($content)) {
+                        $bufferContent = $content . $bufferContent;
+                    }
                 }
+            } catch (Throwable) {
+                // Ignoram esecul bufferului in faza terminala pentru a nu masca eroarea principala
             }
 
-            if ($error !== null && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true)) {
-                $type = match (true) {
-                    str_contains($error['message'], 'Allowed memory size') => 'Fatal Out Of Memory (RAM Exceeded)',
-                    str_contains($error['message'], 'Maximum execution time') => 'Fatal Execution Timeout',
-                    default => 'PHP Fatal Shutdown'
-                };
+            $hasFatalError = ($error !== null && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true));
+            $hasOrphanedBuffer = (trim($bufferContent) !== '');
 
-                self::send('CRITICAL', "Fatal Error: " . $error['message'], [
-                    'file' => $error['file'],
-                    'line' => $error['line'],
-                    'type' => $type,
-                    'captured_output_buffer' => substr($bufferContent, 0, 4000)
-                ]);
-            } elseif ($bufferContent !== '') {
-                self::send('WARNING', "Script terminat neasteptat cu output buffer nirendat.", [
-                    'type' => 'Orphaned Output Buffer',
-                    'captured_output_buffer' => substr($bufferContent, 0, 4000)
-                ]);
+            if ($hasFatalError || $hasOrphanedBuffer) {
+                if (function_exists('fastcgi_finish_request')) {
+                    fastcgi_finish_request();
+                }
+
+                if ($hasFatalError) {
+                    $message = $error['message'] ?? 'Unknown Fatal Error';
+                    $type = match (true) {
+                        str_contains($message, 'Allowed memory size') => 'Fatal Out Of Memory (RAM Exceeded)',
+                        str_contains($message, 'Maximum execution time') => 'Fatal Execution Timeout',
+                        default => 'PHP Fatal Shutdown'
+                    };
+
+                    self::send('CRITICAL', "Fatal Error: " . $message, [
+                        'file' => $error['file'] ?? 'unknown',
+                        'line' => $error['line'] ?? 0,
+                        'type' => $type,
+                        'captured_output_buffer' => substr($bufferContent, 0, 4000)
+                    ]);
+                } else {
+                    self::send('WARNING', "Script terminat neasteptat cu output buffer nirendat.", [
+                        'type' => 'Orphaned Buffer',
+                        'captured_output_buffer' => substr($bufferContent, 0, 4000)
+                    ]);
+                }
             }
         });
     }
@@ -132,7 +164,7 @@ class LogViaStream
             };
             
             $context['type'] = 'PHP Native Error';
-            if (str_contains($message, 'permission denied')) {
+            if (str_contains(strtolower($message), 'permission denied')) {
                 $context['type'] = 'File System Permission Error';
             }
         } elseif ($exception instanceof \PDOException || str_contains($exception::class, 'OCI')) {
@@ -147,15 +179,29 @@ class LogViaStream
     }
 
     /**
-     * Expediaza logul catre serverul centralizat.
+     * Expediaza logul catre serverul centralizat in mod controlat si securizat.
      */
     public static function send(string $level, string $message, array $context = []): bool
     {
+        // Preventie bucle de recursivitate
         if (self::$isLogging) {
             return false;
         }
 
+        // 1. Rate Limit Local: Opreste scriptul curent daca a generat prea multe loguri (ex: eroare in foreach)
+        if (self::$logCountInRequest >= self::MAX_LOGS_PER_REQUEST) {
+            error_log("LogViaStream Alert: S-a atins limita maxima de loguri per request (" . self::MAX_LOGS_PER_REQUEST . ").");
+            return false;
+        }
+
+        // 2. Rate Limit Global: Opreste flood-ul la nivel de server pe minut (Multi-Process Safe)
+        if (!self::checkGlobalRateLimit()) {
+            error_log("LogViaStream Alert: Rate limit-ul global a fost depasit (" . self::MAX_LOGS_PER_MINUTE . "/min). Log blocat preventiv.");
+            return false;
+        }
+
         self::$isLogging = true;
+        self::$logCountInRequest++;
 
         try {
             if (self::$requestId === null) {
@@ -201,16 +247,17 @@ class LogViaStream
             $oldErrorReporting = error_reporting(0);
             try {
                 $result = file_get_contents(self::$url, false, $streamContext);
+                $headers = $http_response_header ?? []; // Capturam variabila nativa imediat local
             } finally {
                 error_reporting($oldErrorReporting);
             }
 
-            if ($result === false || !isset($http_response_header)) {
+            if ($result === false || empty($headers)) {
                 error_log("LogMonitor Alert: Serverul de loguri la " . self::$url . " este indisponibil.");
                 return false;
             }
 
-            return str_contains($http_response_header[0], '200');
+            return isset($headers[0]) && str_contains($headers[0], '200');
 
         } catch (Throwable $e) {
             error_log(json_encode([
@@ -223,6 +270,54 @@ class LogViaStream
         } finally {
             self::$isLogging = false;
         }
+    }
+
+    /**
+     * Verifica in mod concurent daca s-a atins limita de loguri admisa pe minut la nivel de server web.
+     */
+    private static function checkGlobalRateLimit(): bool
+    {
+        $limitFile = sys_get_temp_dir() . '/log_rate_limit.json';
+        $now = time();
+        $minuteWindow = $now - ($now % 60); // Identificator unic pentru minutul curent
+
+        if (!file_exists($limitFile)) {
+            @file_put_contents($limitFile, json_encode(['window' => $minuteWindow, 'count' => 0]));
+        }
+
+        $fp = @fopen($limitFile, 'c+');
+        if (!$fp) {
+            return true; // Fail-open principle: Daca nu putem citi limitatorul, lasam logul sa treaca
+        }
+
+        // Lock exclusiv pentru a impiedica race conditions intre procesele FPM paralele
+        if (flock($fp, LOCK_EX)) {
+            $content = stream_get_contents($fp);
+            $data = json_decode(is_string($content) ? $content : '', true);
+
+            if (!is_array($data) || ($data['window'] ?? 0) !== $minuteWindow) {
+                // Minutul s-a schimbat sau structura e invalida -> resetam fereastra de timp
+                $data = ['window' => $minuteWindow, 'count' => 1];
+            } else {
+                $data['count']++;
+            }
+
+            if ($data['count'] > self::MAX_LOGS_PER_MINUTE) {
+                flock($fp, LOCK_UN);
+                fclose($fp);
+                return false; // Limita globala pe server a fost atinsa!
+            }
+
+            // Actualizam fisierul
+            ftruncate($fp, 0);
+            rewind($fp);
+            fwrite($fp, json_encode($data));
+            fflush($fp);
+            flock($fp, LOCK_UN);
+        }
+
+        fclose($fp);
+        return true;
     }
 
     /**
@@ -246,20 +341,20 @@ class LogViaStream
     }
 
     /**
-     * Ascunde datele sensibile din string-urile de conexiune baze de date.
+     * Ascunde datele sensibile din string-urile de conexiune baze de date (Multiline Safe).
      */
     private static function maskDatabaseSecrets(string $message): string
     {
-        if (str_contains($message, 'ORA-01017') || str_contains($message, 'logon denied')) {
-            $message = preg_replace('/for user\s+[\'"][^\'"]+[\'"]/i', "for user '******'", $message);
+        if (str_contains(strtolower($message), 'ora-01017') || str_contains(strtolower($message), 'logon denied')) {
+            $message = (string)preg_replace('/for user\s+[\'"][^\'"]+[\'"]/ims', "for user '******'", $message);
             $message = "Database Failure (Oracle Auth): " . $message;
         } 
         
         $patterns = [
-            '/(user|username|uid|pwd|password|pass|host|port|sid|service_name)=\s*[^\s;()"\']+/i'
+            '/(user|username|uid|pwd|password|pass|host|port|sid|service_name)\s*=\s*[^\s;()"\']+/ims'
         ];
         $message = (string)preg_replace($patterns, '$1=******', $message);
-        $message = (string)preg_replace('/(:?\/\/)[^:]+:[^@]+@/i', '$1******:******@', $message);
+        $message = (string)preg_replace('/(:?\/\/)[^:]+:[^@]+@/ims', '$1******:******@', $message);
 
         if (!str_contains($message, 'Database Failure')) {
             $message = "Database Failure: " . $message;
@@ -269,16 +364,33 @@ class LogViaStream
     }
 
     /**
-     * Igienizeaza recursiv structurile de date primite ca parametru.
+     * Igienizeaza recursiv structurile de date primite ca parametru (Inclusiv JSON ascuns).
      */
     private static function sanitizeData(array $data): array
     {
         $sensitiveKeys = ['password', 'pass', 'pwd', 'token', 'secret', 'auth', 'card', 'ccv', 'api_key'];
+        
         foreach ($data as $key => $value) {
             if (is_array($value)) {
                 $data[$key] = self::sanitizeData($value);
-            } elseif (in_array(strtolower((string)$key), $sensitiveKeys, true)) {
-                $data[$key] = '******';
+            } elseif (is_string($value)) {
+                $lowerKey = strtolower((string)$key);
+                
+                if (in_array($lowerKey, $sensitiveKeys, true)) {
+                    $data[$key] = '******';
+                } else {
+                    // Implementare nativa PHP 8.4 json_validate pentru payload-uri imbricate sub forma de text
+                    if (json_validate($value)) {
+                        try {
+                            $decoded = json_decode($value, true, 512, JSON_THROW_ON_ERROR);
+                            if (is_array($decoded)) {
+                                $data[$key] = json_encode(self::sanitizeData($decoded), JSON_UNESCAPED_SLASHES);
+                            }
+                        } catch (Throwable) {
+                            // Ignoram erorile de decodare fortata
+                        }
+                    }
+                }
             }
         }
         return $data;
@@ -289,7 +401,7 @@ class LogViaStream
      */
     private static function sanitizeMessage(string $message): string
     {
-        return (string)preg_replace('/(password|pass|pwd|token)=\s*[^\s&]+/i', '$1=******', $message);
+        return (string)preg_replace('/(password|pass|pwd|token)\s*=\s*[^\s&]+/ims', '$1=******', $message);
     }
 
     /**

@@ -234,5 +234,8 @@
     "Username cannot be empty": "Numele de utilizator nu poate fi gol.",
     "Secure password hashing hashing failed internally": "Generarea hash-ului securizat pentru parola a esuat intern.",
     "Failed to save administrative user record": "Nu s-a putut salva inregistrarea utilizatorului administrativ.",
-    "Key can only contain letters, numbers, underscores (_), hyphens (-) and dots (.):": "Cheia poate contine doar litere, cifre, sublinieri (_), cratime (-) si puncte (.)."
+    "Key can only contain letters, numbers, underscores (_), hyphens (-) and dots (.):": "Cheia poate contine doar litere, cifre, sublinieri (_), cratime (-) si puncte (.).",
+    "First": "Prima",
+    "Last": "Ultima",
+    "Rows per page:": "Randuri pe pagina:"
 }

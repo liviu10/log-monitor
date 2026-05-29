@@ -234,5 +234,8 @@
     "Username cannot be empty": "Username cannot be empty.",
     "Secure password hashing hashing failed internally": "Secure password hashing hashing failed internally.",
     "Failed to save administrative user record": "Failed to save administrative user record.",
-    "Key can only contain letters, numbers, underscores (_), hyphens (-) and dots (.):": "Key can only contain letters, numbers, underscores (_), hyphens (-) and dots (.)."
+    "Key can only contain letters, numbers, underscores (_), hyphens (-) and dots (.):": "Key can only contain letters, numbers, underscores (_), hyphens (-) and dots (.).",
+    "First": "First",
+    "Last": "Last",
+    "Rows per page:": "Rows per page:"
 }
