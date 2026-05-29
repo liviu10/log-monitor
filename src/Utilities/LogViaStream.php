@@ -4,145 +4,150 @@ declare(strict_types=1);
 
 namespace App\Utilities;
 
+use Throwable;
+use ErrorException;
+use RuntimeException;
+use InvalidArgumentException;
+
 /**
- * Clasa LogViaStream (Adaptata din LogViaCurl)
+ * Clasa LogViaStream
  *
- * Permite trimiterea securizata a logurilor catre o componenta centralizata prin stream-uri native PHP.
- * Implementeaza protectie la bucle, urmarire avansata si inregistrare automata ca error handler.
+ * Centralizeaza si securizeaza logurile prin stream-uri native PHP.
+ * Include protectie avansata cu memorie de rezerva pentru crash-uri de tip Out of Memory si Timeout iminent.
  *
  * @category Utilities
  * @package  App\Utilities
- * @version  2.0
+ * @version  4.0
  * @since    PHP 8.4
  * @author   Voica Liviu
  * @license  Proprietar
  */
 class LogViaStream
 {
-    /** @var bool $isLogging Indicator de stare pentru evitarea buclelor infinite la erori de DB. */
     private static bool $isLogging = false;
+    private static ?string $requestId = null;
+    private static ?string $memoryReserve = null;
+    private static ?float $startTime = null;
+    private static string $apiKey = '';
+    private static string $url = '';
 
     /**
-     * Inregistreaza automat clasa ca handler global pentru erori și excepții.
-     * Trebuie apelata o singura data in bootstrap-ul aplicatiei (ex: index.php).
+     * Inregistreaza handlerul global si valideaza existenta configuratiilor (Fail-Fast).
+     * * @throws RuntimeException Daca variabilele de mediu esentiale lipsesc.
      */
     public static function registerHandlers(): void
     {
-        // Interceptare erori native PHP (Warnings, Notices etc.)
-        set_error_handler(static function (int $severity, string $message, string $file, int $line) {
+        self::$startTime = (float)($_SERVER['REQUEST_TIME_FLOAT'] ?? microtime(true));
+
+        // Alocare rezerva de memorie (500 KB) pentru situatii de urgenta (OOM)
+        self::$memoryReserve = str_repeat('x', 1024 * 500);
+
+        // Validare stricta a configuratiilor conform principiului Fail-Fast
+        $envApiKey = $_ENV['LOG_API_KEY'] ?? null;
+        $envUrl = $_ENV['LOG_SERVER_URL'] ?? null;
+
+        if (!is_string($envApiKey) || trim($envApiKey) === '') {
+            throw new RuntimeException('Configuratie invalida: LOG_API_KEY lipseste sau este vida.');
+        }
+
+        if (!is_string($envUrl) || filter_var($envUrl, FILTER_VALIDATE_URL) === false) {
+            throw new RuntimeException('Configuratie invalida: LOG_SERVER_URL lipseste sau nu este un URL valid.');
+        }
+
+        self::$apiKey = $envApiKey;
+        self::$url = $envUrl;
+
+        // 1. Interceptare erori native PHP prin transformare in ErrorException (Best Practice)
+        set_error_handler(static function (int $severity, string $message, string $file, int $line): bool {
             if (!(error_reporting() & $severity)) {
                 return false;
             }
-
-            $levels = [
-                E_ERROR             => 'ERROR',
-                E_WARNING           => 'WARNING',
-                E_PARSE             => 'CRITICAL',
-                E_NOTICE            => 'INFO',
-                E_USER_ERROR        => 'ERROR',
-                E_USER_WARNING      => 'WARNING',
-                E_USER_NOTICE       => 'INFO',
-                E_RECOVERABLE_ERROR => 'ERROR',
-                E_DEPRECATED        => 'INFO',
-                E_USER_DEPRECATED   => 'INFO'
-            ];
-
-            $level = $levels[$severity] ?? 'ERROR';
             
-            self::send($level, $message, [
-                'file' => $file,
-                'line' => $line,
-                'type' => 'PHP Native Error'
-            ]);
-
-            return false; // Permite PHP-ului sa isi continue logica interna secundara
+            // Transformam eroarea intr-o exceptie pentru a unifica fluxul defensiv
+            throw new ErrorException($message, 0, $severity, $file, $line);
         });
 
-        // Interceptare exceptii netratate (Inclusiv PDO/MySQL si Oracle SQL cu filtrare avansata)
-        set_exception_handler(static function (\Throwable $exception) {
-            $context = [
-                'file'  => $exception->getFile(),
-                'line'  => $exception->getLine(),
-                'code'  => $exception->getCode(),
-                'trace' => substr($exception->getTraceAsString(), 0, 1000)
-            ];
-
-            $level = 'CRITICAL';
-            $message = $exception->getMessage();
-
-            // Verificam daca este o eroare de infrastructura de baza de date (PDO sau OCI)
-            if ($exception instanceof \PDOException || str_contains(get_class($exception), 'OCI')) {
-                $context['type'] = 'Database Infrastructure Error';
-
-                // Scenariul 1: Mascare pentru erori specifice Oracle (Versiuni Noi si Vechi)
-                if (str_contains($message, 'ORA-01017') || str_contains($message, 'logon denied')) {
-                    $message = preg_replace('/for user\s+[\'"][^\'"]+[\'"]/i', "for user '******'", $message);
-                    $message = "Database Failure (Oracle Auth): " . $message;
-                } 
-                
-                // Scenariul 2: Mascare generala pentru Connection Strings, DSN si TNS (MySQL, MariaDB, Oracle)
-                // Prinde: user=XYZ, password=XYZ, host=XYZ, port=XYZ, sid=XYZ etc.
-                $patterns = [
-                    '/(user|username|uid|pwd|password|pass|host|port|sid|service_name)=\s*[^\s;()"\']+/i'
-                ];
-                
-                $message = preg_replace($patterns, '$1=******', $message);
-
-                // Scenariul 3: Curatare suplimentara in caz ca URL-ul de conexiune contine credentiale inline
-                $message = preg_replace('/(:?\/\/)[^:]+:[^@]+@/i', '$1******:******@', $message);
-
-                if (!str_contains($message, 'Database Failure')) {
-                    $message = "Database Failure: " . $message;
-                }
-            } else {
-                $context['type'] = 'Standard Application Exception';
-                $message = "Exception: " . $message;
-            }
-
-            self::send($level, $message, $context);
+        // 2. Interceptare exceptii netratate (Inclusiv ErrorException de mai sus)
+        set_exception_handler(static function (Throwable $exception): void {
+            self::handleException($exception);
         });
 
-        // Interceptare erori fatale la închiderea scriptului (Out of memory, Compile errors etc.)
-        register_shutdown_function(static function () {
+        // 3. Interceptare erori fatale (Shutdown Function)
+        register_shutdown_function(static function (): void {
+            self::$memoryReserve = null; // Eliberare imediata spatiu RAM pentru procesarea finala
+
             $error = error_get_last();
             $bufferContent = '';
 
-            // Gestionare si logare buffer: Extragem tot ce apucase PHP sa randeze inainte de crash
             while (ob_get_level() > 0) {
-                // Preluam continutul buffer-ului curent si il inchidem
                 $content = ob_get_clean();
                 if ($content !== false) {
                     $bufferContent = $content . $bufferContent;
                 }
             }
-            
-            // Daca scriptul se inchide din cauza unui crash fatal pe care handlerele de mai sus nu l-au putut opri
+
             if ($error !== null && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true)) {
-                self::send('CRITICAL', "Fatal Shutdown Error: " . $error['message'], [
+                $type = match (true) {
+                    str_contains($error['message'], 'Allowed memory size') => 'Fatal Out Of Memory (RAM Exceeded)',
+                    str_contains($error['message'], 'Maximum execution time') => 'Fatal Execution Timeout',
+                    default => 'PHP Fatal Shutdown'
+                };
+
+                self::send('CRITICAL', "Fatal Error: " . $error['message'], [
                     'file' => $error['file'],
                     'line' => $error['line'],
-                    'type' => 'PHP Fatal Shutdown',
-                    // Atasam continutul buffer-ului in contextul logului (limitat la primele 2000 de caractere ca sa nu umplem DB-ul)
-                    'captured_output_buffer' => substr($bufferContent, 0, 2000)
+                    'type' => $type,
+                    'captured_output_buffer' => substr($bufferContent, 0, 4000)
                 ]);
             } elseif ($bufferContent !== '') {
-                // Daca nu avem o eroare fatala de PHP, dar scriptul s-a terminat brusc lasand buffer deschis (ex: un exit; sau die; neprevazut)
-                self::send('WARNING', "Script terminated unexpectedly with unrendered output buffer.", [
+                self::send('WARNING', "Script terminat neasteptat cu output buffer nirendat.", [
                     'type' => 'Orphaned Output Buffer',
-                    'captured_output_buffer' => substr($bufferContent, 0, 2000)
+                    'captured_output_buffer' => substr($bufferContent, 0, 4000)
                 ]);
             }
         });
     }
 
     /**
-     * Expediaza o inregistrare de log catre endpoint-ul configurat folosind wrapper-ul HTTP nativ.
-     * Protejeaza executia impotriva buclelor infinite in cazul esecului de rețea.
-     *
-     * @param string $level Nivelul de severitate (ex: INFO, ERROR, DEBUG).
-     * @param string $message Mesajul principal al logului.
-     * @param array $context Informatii suplimentare de context.
-     * @return bool True daca transmisia s-a finalizat cu status HTTP 200.
+     * Proceseaza si formateaza exceptiile interceptate.
+     */
+    private static function handleException(Throwable $exception): void
+    {
+        $context = [
+            'file'  => $exception->getFile(),
+            'line'  => $exception->getLine(),
+            'code'  => $exception->getCode(),
+            'trace' => self::formatTrace($exception)
+        ];
+
+        $level = 'CRITICAL';
+        $message = $exception->getMessage();
+
+        if ($exception instanceof ErrorException) {
+            $severity = $exception->getSeverity();
+            $level = match ($severity) {
+                E_WARNING, E_USER_WARNING => 'WARNING',
+                E_NOTICE, E_USER_NOTICE, E_DEPRECATED, E_USER_DEPRECATED => 'INFO',
+                default => 'ERROR'
+            };
+            
+            $context['type'] = 'PHP Native Error';
+            if (str_contains($message, 'permission denied')) {
+                $context['type'] = 'File System Permission Error';
+            }
+        } elseif ($exception instanceof \PDOException || str_contains($exception::class, 'OCI')) {
+            $context['type'] = 'Database Infrastructure Error';
+            $message = self::maskDatabaseSecrets($message);
+        } else {
+            $context['type'] = $exception::class;
+            $message = "Exception: " . $message;
+        }
+
+        self::send($level, $message, $context);
+    }
+
+    /**
+     * Expediaza logul catre serverul centralizat.
      */
     public static function send(string $level, string $message, array $context = []): bool
     {
@@ -153,72 +158,177 @@ class LogViaStream
         self::$isLogging = true;
 
         try {
-            // Extragem si validam cheia API direct
-            $apiKey = $_ENV['LOG_API_KEY'] ?? null;
-            if ($apiKey === null || trim((string)$apiKey) === '') {
-                return false;
+            if (self::$requestId === null) {
+                self::$requestId = bin2hex(random_bytes(6));
             }
 
-            // Extragem si validam URL-ul
-            $url = $_ENV['LOG_SERVER_URL'] ?? null;
-            if ($url === null || trim((string)$url) === '') {
-                return false;
-            }
+            $networkTimeout = self::calculateDynamicTimeout();
+
+            $extendedContext = array_merge([
+                'request_id'   => self::$requestId,
+                'http_method'  => $_SERVER['REQUEST_METHOD'] ?? 'CLI',
+                'uri'          => $_SERVER['REQUEST_URI'] ?? 'N/A',
+                'ip'           => $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1',
+                'referrer'     => $_SERVER['HTTP_REFERER'] ?? 'DIRECT',
+                'query_params' => !empty($_GET) ? self::sanitizeData($_GET) : null,
+                'post_data'    => !empty($_POST) ? self::sanitizeData($_POST) : null,
+                'memory_usage' => self::formatBytes(memory_get_usage(true)),
+                'peak_memory'  => self::formatBytes(memory_get_peak_usage(true))
+            ], $context);
 
             $payload = json_encode([
-                'level' => strtoupper($level),
-                'message' => $message,
-                'context' => $context
-            ], JSON_THROW_ON_ERROR);
+                'level'   => strtoupper($level),
+                'message' => self::sanitizeMessage($message),
+                'context' => $extendedContext
+            ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
 
             $options = [
                 'http' => [
-                    'method'  => 'POST',
-                    'header'  => [
+                    'method'        => 'POST',
+                    'header'        => [
                         'Content-Type: application/json',
-                        'X-API-KEY: ' . $apiKey,
+                        'X-API-KEY: ' . self::$apiKey,
                         'User-Agent: LogMonitor-Internal/1.0'
                     ],
-                    'content' => $payload,
+                    'content'       => $payload,
                     'ignore_errors' => true,
-                    'timeout' => 2.0
+                    'timeout'       => $networkTimeout
                 ]
             ];
 
             $streamContext = stream_context_create($options);
             
-            // Dezactivam temporar raportarea erorilor doar pentru acest request,
-            // prevenind re-intrarea in error handler daca serverul central este oprit.
             $oldErrorReporting = error_reporting(0);
             try {
-                $result = file_get_contents($url, false, $streamContext);
+                $result = file_get_contents(self::$url, false, $streamContext);
             } finally {
-                // Restauram instant comportamentul initial al aplicatiei
                 error_reporting($oldErrorReporting);
             }
 
             if ($result === false || !isset($http_response_header)) {
-                error_log("LogMonitor Alert: Central logging server at {$url} is unreachable or timed out.");
+                error_log("LogMonitor Alert: Serverul de loguri la " . self::$url . " este indisponibil.");
                 return false;
             }
 
             return str_contains($http_response_header[0], '200');
 
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             error_log(json_encode([
-                'error' => 'Critical failure inside Stream logging transmission',
-                'location' => __METHOD__,
-                'line' => __LINE__,
+                'error'             => 'Eroare critica in transmisia logului prin Stream',
                 'exception_message' => $e->getMessage(),
-                'exception_file' => $e->getFile(),
-                'exception_line' => $e->getLine(),
-                'exception_trace' => $e->getTraceAsString(),
-                'identifier' => 'LogViaStream_Transmission_Failure'
-            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+                'identifier'        => 'LogViaStream_Transmission_Failure'
+            ], JSON_UNESCAPED_SLASHES));
 
             return false;
         } finally {
             self::$isLogging = false;
         }
+    }
+
+    /**
+     * Calculeaza dinamic timeout-ul de retea ramas disponibil.
+     */
+    private static function calculateDynamicTimeout(): float
+    {
+        $maxPhpTime = (int)ini_get('max_execution_time');
+        $networkTimeout = 2.5;
+
+        if ($maxPhpTime > 0 && self::$startTime !== null) {
+            $elapsedTime = microtime(true) - self::$startTime;
+            $timeLeft = $maxPhpTime - $elapsedTime;
+
+            if ($timeLeft < 2.0) {
+                $networkTimeout = max(0.5, $timeLeft - 0.2);
+            }
+        }
+
+        return $networkTimeout;
+    }
+
+    /**
+     * Ascunde datele sensibile din string-urile de conexiune baze de date.
+     */
+    private static function maskDatabaseSecrets(string $message): string
+    {
+        if (str_contains($message, 'ORA-01017') || str_contains($message, 'logon denied')) {
+            $message = preg_replace('/for user\s+[\'"][^\'"]+[\'"]/i', "for user '******'", $message);
+            $message = "Database Failure (Oracle Auth): " . $message;
+        } 
+        
+        $patterns = [
+            '/(user|username|uid|pwd|password|pass|host|port|sid|service_name)=\s*[^\s;()"\']+/i'
+        ];
+        $message = (string)preg_replace($patterns, '$1=******', $message);
+        $message = (string)preg_replace('/(:?\/\/)[^:]+:[^@]+@/i', '$1******:******@', $message);
+
+        if (!str_contains($message, 'Database Failure')) {
+            $message = "Database Failure: " . $message;
+        }
+
+        return $message;
+    }
+
+    /**
+     * Igienizeaza recursiv structurile de date primite ca parametru.
+     */
+    private static function sanitizeData(array $data): array
+    {
+        $sensitiveKeys = ['password', 'pass', 'pwd', 'token', 'secret', 'auth', 'card', 'ccv', 'api_key'];
+        foreach ($data as $key => $value) {
+            if (is_array($value)) {
+                $data[$key] = self::sanitizeData($value);
+            } elseif (in_array(strtolower((string)$key), $sensitiveKeys, true)) {
+                $data[$key] = '******';
+            }
+        }
+        return $data;
+    }
+
+    /**
+     * Masking rapid pentru mesaje text simple.
+     */
+    private static function sanitizeMessage(string $message): string
+    {
+        return (string)preg_replace('/(password|pass|pwd|token)=\s*[^\s&]+/i', '$1=******', $message);
+    }
+
+    /**
+     * Formateaza stack trace-ul exceptiei intr-un mod lizibil.
+     */
+    private static function formatTrace(Throwable $exception): array
+    {
+        $trace = [];
+        $rawTrace = $exception->getTrace();
+        $counter = 0;
+
+        foreach ($rawTrace as $step) {
+            if ($counter++ >= 10) {
+                break; 
+            }
+            $trace[] = sprintf(
+                "#%d %s(%d): %s%s%s()",
+                $counter,
+                $step['file'] ?? 'unknown_file',
+                $step['line'] ?? 0,
+                $step['class'] ?? '',
+                $step['type'] ?? '',
+                $step['function'] ?? 'unknown_function'
+            );
+        }
+        return $trace;
+    }
+
+    /**
+     * Transforma octetii intr-un format uman lizibil.
+     */
+    private static function formatBytes(int $bytes): string
+    {
+        $units = ['B', 'KB', 'MB', 'GB'];
+        $bytes = max($bytes, 0);
+        $pow = $bytes > 0 ? (int)floor(log($bytes) / log(1024)) : 0;
+        $pow = min($pow, count($units) - 1);
+        $bytes /= (1024 ** $pow);
+
+        return round($bytes, 2) . ' ' . $units[$pow];
     }
 }
