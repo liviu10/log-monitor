@@ -28,6 +28,9 @@ if (!file_exists(__DIR__ . '/.env')) {
 $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
 $dotenv->load();
 
+// Inregistrare error handler global pentru stream logging
+\App\Utilities\LogViaStream::registerHandlers();
+
 // Determinarea scriptului curent solicitat
 $currentScript = basename($_SERVER['SCRIPT_NAME'] ?? '');
 
