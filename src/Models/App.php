@@ -8,7 +8,8 @@ use RuntimeException;
 use InvalidArgumentException;
 use PDOException;
 use App\Utilities\MySQLWrapper;
-use App\Utilities\LogViaCurl;
+use App\Utilities\LogViaStream;
+use App\Enums\LogLevel;
 
 /**
  * App Class
@@ -64,7 +65,7 @@ class App
             }
             return $results[0];
         } catch (PDOException $e) {
-            LogViaCurl::send('ERROR', 'Query execution failure event', [
+            LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
                 'exception_message' => $e->getMessage(),
@@ -89,7 +90,7 @@ class App
         try {
             return $this->db->read('apps', [], ['*']) ?: [];
         } catch (PDOException $e) {
-            LogViaCurl::send('ERROR', 'Query execution failure event', [
+            LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
                 'exception_message' => $e->getMessage(),
@@ -132,7 +133,7 @@ class App
             }
             return (int)$result;
         } catch (PDOException $e) {
-            LogViaCurl::send('ERROR', 'Query execution failure event', [
+            LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
                 'exception_message' => $e->getMessage(),
@@ -172,7 +173,7 @@ class App
                 throw new RuntimeException(__('Failed to update application'));
             }
         } catch (PDOException $e) {
-            LogViaCurl::send('ERROR', 'Query execution failure event', [
+            LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
                 'exception_message' => $e->getMessage(),
@@ -210,7 +211,7 @@ class App
                 throw new RuntimeException(__('Application deletion failed or record does not exist'));
             }
         } catch (PDOException $e) {
-            LogViaCurl::send('ERROR', 'Query execution failure event', [
+            LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
                 'exception_message' => $e->getMessage(),

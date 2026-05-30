@@ -8,7 +8,8 @@ use RuntimeException;
 use InvalidArgumentException;
 use PDOException;
 use App\Utilities\MySQLWrapper;
-use App\Utilities\LogViaCurl;
+use App\Utilities\LogViaStream;
+use App\Enums\LogLevel;
 
 /**
  * AppSetting Class
@@ -56,7 +57,7 @@ class AppSetting
         try {
             return $this->db->read('app_settings', ['app_id' => $appId]) ?: [];
         } catch (PDOException $e) {
-            LogViaCurl::send('ERROR', 'Query execution failure event', [
+            LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
                 'exception_message' => $e->getMessage(),
@@ -92,7 +93,7 @@ class AppSetting
             ]);
             return $results ? $results[0] : null;
         } catch (PDOException $e) {
-            LogViaCurl::send('ERROR', 'Query execution failure event', [
+            LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
                 'exception_message' => $e->getMessage(),
@@ -149,7 +150,7 @@ class AppSetting
                     throw new RuntimeException(__('Failed to update existing setting'));
                 }
             } catch (PDOException $e) {
-                LogViaCurl::send('ERROR', 'Query execution failure event', [
+                LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                     'location' => __METHOD__,
                     'line' => __LINE__,
                     'exception_message' => $e->getMessage(),
@@ -177,7 +178,7 @@ class AppSetting
                     throw new RuntimeException(__('Failed to create new setting'));
                 }
             } catch (PDOException $e) {
-                LogViaCurl::send('ERROR', 'Query execution failure event', [
+                LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                     'location' => __METHOD__,
                     'line' => __LINE__,
                     'exception_message' => $e->getMessage(),
@@ -242,7 +243,7 @@ class AppSetting
                 throw new RuntimeException(__('Setting update operation failed'));
             }
         } catch (PDOException $e) {
-            LogViaCurl::send('ERROR', 'Query execution failure event', [
+            LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
                 'exception_message' => $e->getMessage(),
@@ -285,7 +286,7 @@ class AppSetting
                 throw new RuntimeException(__('Setting not found or deletion failed'));
             }
         } catch (PDOException $e) {
-            LogViaCurl::send('ERROR', 'Query execution failure event', [
+            LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
                 'exception_message' => $e->getMessage(),

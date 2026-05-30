@@ -6,7 +6,8 @@ namespace App\Controllers;
 
 use App\Models\AppSetting;
 use App\Utilities\Validation;
-use App\Utilities\LogViaCurl;
+use App\Utilities\LogViaStream;
+use App\Enums\LogLevel;
 
 /**
  * Clasa AppSettingController
@@ -83,7 +84,7 @@ class AppSettingController extends BaseController
                         $errors[] = __("Setting ':key': Error saving.", ['key' => $key]);
                     }
                 } catch (\Throwable $e) {
-                    LogViaCurl::send('ERROR', 'Bulk setting storage exception', [
+                    LogViaStream::send(LogLevel::ERROR->value, 'Bulk setting storage exception', [
                         'location' => __METHOD__,
                         'line' => __LINE__,
                         'exception_message' => $e->getMessage(),
@@ -165,7 +166,7 @@ class AppSettingController extends BaseController
                 ], 500);
             }
         } catch (\Throwable $e) {
-            LogViaCurl::send('ERROR', 'Single setting storage exception', [
+            LogViaStream::send(LogLevel::ERROR->value, 'Single setting storage exception', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
                 'exception_message' => $e->getMessage(),
@@ -223,7 +224,7 @@ class AppSettingController extends BaseController
                         $errors[] = __("Setting ':key': Error updating (check if the new key is not already in use).", ['key' => $key]);
                     }
                 } catch (\Throwable $e) {
-                    LogViaCurl::send('ERROR', 'Bulk setting update exception', [
+                    LogViaStream::send(LogLevel::ERROR->value, 'Bulk setting update exception', [
                         'location' => __METHOD__,
                         'line' => __LINE__,
                         'exception_message' => $e->getMessage(),
@@ -304,7 +305,7 @@ class AppSettingController extends BaseController
                 ], 400);
             }
         } catch (\Throwable $e) {
-            LogViaCurl::send('ERROR', 'Single setting update exception', [
+            LogViaStream::send(LogLevel::ERROR->value, 'Single setting update exception', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
                 'exception_message' => $e->getMessage(),
@@ -353,7 +354,7 @@ class AppSettingController extends BaseController
                 ], 500);
             }
         } catch (\Throwable $e) {
-            LogViaCurl::send('ERROR', 'Setting deletion exception', [
+            LogViaStream::send(LogLevel::ERROR->value, 'Setting deletion exception', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
                 'exception_message' => $e->getMessage(),

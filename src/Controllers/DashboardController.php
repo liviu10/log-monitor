@@ -7,6 +7,7 @@ namespace App\Controllers;
 use App\Models\Log;
 use App\Models\App;
 use App\Enums\LogLevel;
+use App\Utilities\LogViaStream;
 
 /**
  * Clasa DashboardController
@@ -73,8 +74,7 @@ class DashboardController extends BaseController
                 'limit' => $limit,
             ]);
         } catch (\Throwable $e) {
-            error_log(json_encode([
-                'error' => 'Dashboard index processing failure',
+            LogViaStream::send(LogLevel::ERROR->value, 'Dashboard index processing failure', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
                 'exception_message' => $e->getMessage(),
@@ -83,7 +83,7 @@ class DashboardController extends BaseController
                 'exception_trace' => $e->getTraceAsString(),
                 'query_params' => $queryParams,
                 'identifier' => 'DashboardController_Index_Failure'
-            ], JSON_UNESCAPED_SLASHES));
+            ]);
             
             // Fail Fast defensiv: nu se permite incarcarea paginii partiale cu date incomplete
             throw new \RuntimeException(__('Critical error loading dashboard data. Please try again later.'));

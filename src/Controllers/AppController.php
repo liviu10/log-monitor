@@ -6,6 +6,8 @@ namespace App\Controllers;
 
 use App\Models\App;
 use App\Utilities\Validation;
+use App\Utilities\LogViaStream;
+use App\Enums\LogLevel;
 
 /**
  * Clasa AppController
@@ -66,8 +68,7 @@ class AppController extends BaseController
             
             setFlash('success', __('Success'), __('Application created successfully.'));
         } catch (\Throwable $e) {
-            error_log(json_encode([
-                'error' => 'Failed to create application record',
+            LogViaStream::send(LogLevel::ERROR->value, 'Failed to create application record', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
                 'exception_message' => $e->getMessage(),
@@ -76,7 +77,7 @@ class AppController extends BaseController
                 'exception_trace' => $e->getTraceAsString(),
                 'payload' => $payload,
                 'identifier' => 'AppController_Store_Failure'
-            ], JSON_UNESCAPED_SLASHES));
+            ]);
             setFlash('danger', __('Error'), __('Failed to create application.'));
         }
         
@@ -125,8 +126,7 @@ class AppController extends BaseController
             
             setFlash('success', __('Success'), __('Application updated successfully.'));
         } catch (\Throwable $e) {
-            error_log(json_encode([
-                'error' => 'Failed to update application data',
+            LogViaStream::send(LogLevel::ERROR->value, 'Failed to update application data', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
                 'exception_message' => $e->getMessage(),
@@ -135,7 +135,7 @@ class AppController extends BaseController
                 'exception_trace' => $e->getTraceAsString(),
                 'app_id' => $appId,
                 'identifier' => 'AppController_Update_Failure'
-            ], JSON_UNESCAPED_SLASHES));
+            ]);
             setFlash('danger', __('Error'), __('Failed to update application.'));
         }
 
@@ -156,8 +156,7 @@ class AppController extends BaseController
                 $appModel->delete((int)$id);
                 setFlash('success', __('Success'), __('Application deleted successfully.'));
             } catch (\Throwable $e) {
-                error_log(json_encode([
-                    'error' => 'Failed to delete application',
+                LogViaStream::send(LogLevel::ERROR->value, 'Failed to delete application', [
                     'location' => __METHOD__,
                     'line' => __LINE__,
                     'exception_message' => $e->getMessage(),
@@ -166,7 +165,7 @@ class AppController extends BaseController
                     'exception_trace' => $e->getTraceAsString(),
                     'app_id' => $id,
                     'identifier' => 'AppController_Delete_Failure'
-                ], JSON_UNESCAPED_SLASHES));
+                ]);
                 setFlash('danger', __('Error'), __('Failed to delete application.'));
             }
         }

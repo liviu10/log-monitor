@@ -6,7 +6,8 @@ namespace App\Controllers;
 
 use App\Models\AppSetting;
 use App\Utilities\SendNotification;
-use App\Utilities\LogViaCurl;
+use App\Utilities\LogViaStream;
+use App\Enums\LogLevel;
 
 /**
  * Clasa NotificationController
@@ -103,7 +104,7 @@ class NotificationController extends BaseController
                 }
             }
         } catch (\Throwable $e) {
-            LogViaCurl::send('ERROR', 'Eroare la procesarea/trimiterea notificarii automate: ' . $e->getMessage(), [
+            LogViaStream::send(LogLevel::ERROR->value, 'Eroare la procesarea/trimiterea notificarii automate: ' . $e->getMessage(), [
                 'location' => __METHOD__,
                 'line' => __LINE__,
                 'exception_message' => $e->getMessage(),

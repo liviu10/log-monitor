@@ -6,6 +6,8 @@ namespace App\Utilities;
 
 use PHPMailer\PHPMailer\PHPMailer;
 use RuntimeException;
+use App\Enums\LogLevel;
+use App\Utilities\LogViaStream;
 
 /**
  * Clasa SendNotification
@@ -135,7 +137,7 @@ class SendNotification
                     $normalizedPath = realpath($filePath);
 
                     if ($normalizedPath === false || !is_readable($normalizedPath) || is_dir($normalizedPath)) {
-                        LogViaCurl::send('ERROR', 'The provided attachment file is inaccessible or invalid.', [
+                        LogViaStream::send(LogLevel::ERROR->value, 'The provided attachment file is inaccessible or invalid.', [
                             'file' => $filePath,
                         ]);
                         throw new RuntimeException(__('The provided attachment file is inaccessible or invalid.'));
@@ -150,7 +152,7 @@ class SendNotification
             
             return (string)$mail->getSentMIMEMessage();
         } catch (\Throwable $e) {
-            LogViaCurl::send('ERROR', 'Critical failure within PHPMailer distribution handler', [
+            LogViaStream::send(LogLevel::ERROR->value, 'Critical failure within PHPMailer distribution handler', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
                 'exception_message' => $e->getMessage(),

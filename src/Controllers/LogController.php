@@ -8,6 +8,7 @@ use App\Models\App;
 use App\Models\Log;
 use App\Enums\LogLevel;
 use App\Utilities\Validation;
+use App\Utilities\LogViaStream;
 
 /**
  * Clasa LogController
@@ -121,8 +122,7 @@ class LogController extends BaseController
             
             $this->jsonResponse(['error' => __('Failed to store log')], 500);
         } catch (\Throwable $e) {
-            error_log(json_encode([
-                'error' => 'API log storage critical failure',
+            LogViaStream::send(LogLevel::ERROR->value, 'API log storage critical failure', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
                 'exception_message' => $e->getMessage(),
@@ -131,7 +131,7 @@ class LogController extends BaseController
                 'exception_trace' => $e->getTraceAsString(),
                 'app_id' => $app['id'] ?? null,
                 'identifier' => 'LogController_Store_CriticalFailure'
-            ], JSON_UNESCAPED_SLASHES));
+            ]);
             $this->jsonResponse(['error' => __('Internal Server Error')], 500);
         }
     }
@@ -209,8 +209,7 @@ class LogController extends BaseController
                 'deleted_count' => $deletedCount
             ];
         } catch (\Throwable $e) {
-            error_log(json_encode([
-                'error' => 'Log purge task failure event',
+            LogViaStream::send(LogLevel::ERROR->value, 'Log purge task failure event', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
                 'exception_message' => $e->getMessage(),
@@ -220,7 +219,7 @@ class LogController extends BaseController
                 'retention_days' => $days,
                 'backup_destination' => $backupPath,
                 'identifier' => 'LogController_Purge_Failure'
-            ], JSON_UNESCAPED_SLASHES));
+            ]);
             throw $e;
         }
     }

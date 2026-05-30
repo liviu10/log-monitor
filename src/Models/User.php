@@ -8,7 +8,8 @@ use RuntimeException;
 use InvalidArgumentException;
 use PDOException;
 use App\Utilities\MySQLWrapper;
-use App\Utilities\LogViaCurl;
+use App\Utilities\LogViaStream;
+use App\Enums\LogLevel;
 
 /**
  * User class
@@ -60,7 +61,7 @@ class User
             $results = $this->db->read('users', ['username' => $trimmedUsername]);
             return $results ? $results[0] : null;
         } catch (PDOException $e) {
-            LogViaCurl::send('ERROR', 'Query execution failure event', [
+            LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
                 'exception_message' => $e->getMessage(),
@@ -111,7 +112,7 @@ class User
             }
             return (int)$result;
         } catch (PDOException $e) {
-            LogViaCurl::send('ERROR', 'Query execution failure event', [
+            LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
                 'exception_message' => $e->getMessage(),

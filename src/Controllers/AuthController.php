@@ -6,7 +6,8 @@ namespace App\Controllers;
 
 use App\Models\User;
 use App\Utilities\Validation;
-use App\Utilities\LogViaCurl;
+use App\Utilities\LogViaStream;
+use App\Enums\LogLevel;
 
 /**
  * Clasa AuthController
@@ -75,14 +76,14 @@ class AuthController extends BaseController
             }
             
             // Logare audit pentru esec autentificare (potential atac fortat)
-            LogViaCurl::send('WARNING', 'Failed authentication attempt', [
+            LogViaStream::send(LogLevel::WARNING->value, 'Failed authentication attempt', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
                 'username' => $payload['username'],
                 'identifier' => 'AuthController_Login_FailedAttempt'
             ]);
         } catch (\Throwable $e) {
-            LogViaCurl::send('ERROR', 'Critical authentication exception process', [
+            LogViaStream::send(LogLevel::ERROR->value, 'Critical authentication exception process', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
                 'exception_message' => $e->getMessage(),

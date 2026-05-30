@@ -7,7 +7,8 @@ namespace App\Controllers;
 use App\Models\User;
 use App\Utilities\Validation;
 use App\Utilities\MySQLWrapper;
-use App\Utilities\LogViaCurl;
+use App\Utilities\LogViaStream;
+use App\Enums\LogLevel;
 
 /**
  * Clasa UserController
@@ -40,7 +41,7 @@ class UserController extends BaseController
                 'users' => $users,
             ]);
         } catch (\Throwable $e) {
-            LogViaCurl::send('ERROR', 'Failed to fetch database users list', [
+            LogViaStream::send(LogLevel::ERROR->value, 'Failed to fetch database users list', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
                 'exception_message' => $e->getMessage(),
@@ -83,7 +84,7 @@ class UserController extends BaseController
             
             setFlash('success', __('Success'), __('User created successfully.'));
         } catch (\Throwable $e) {
-            LogViaCurl::send('ERROR', 'Admin user creation process exception', [
+            LogViaStream::send(LogLevel::ERROR->value, 'Admin user creation process exception', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
                 'exception_message' => $e->getMessage(),
@@ -122,7 +123,7 @@ class UserController extends BaseController
                 $db->delete('users', ['id' => $userId]);
                 setFlash('success', __('Success'), __('User deleted successfully.'));
             } catch (\Throwable $e) {
-                LogViaCurl::send('ERROR', 'Query execution failure event', [
+                LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                     'location' => __METHOD__,
                     'line' => __LINE__,
                     'exception_message' => $e->getMessage(),

@@ -8,6 +8,7 @@ use PDO;
 use PDOException;
 use PDOStatement;
 use RuntimeException;
+use App\Enums\LogLevel;
 
 /**
  * Clasa MySQLWrapper
@@ -88,7 +89,7 @@ class MySQLWrapper
         try {
             $this->connection = new PDO($dsn, $this->user, $this->pass, $this->options);
         } catch (PDOException $e) {
-            LogViaCurl::send('ERROR', 'Database connection initial failure', [
+            LogViaStream::send(LogLevel::ERROR->value, 'Database connection initial failure', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
                 'exception_message' => $e->getMessage(),
@@ -145,7 +146,7 @@ class MySQLWrapper
             $stmt->execute($params);
             return $stmt;
         } catch (PDOException $e) {
-            LogViaCurl::send('ERROR', 'Query execution failure event', [
+            LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
                 'exception_message' => $e->getMessage(),
