@@ -244,6 +244,44 @@ podman exec -it log-monitor-app vendor/bin/phpunit
 
 ---
 
+## 🔄 Transpilation & Multi-version Support (Rector)
+
+The application codebase is written in modern **PHP 8.4**. To deploy the application in environments running older versions of PHP (e.g., PHP 7.4.33 or PHP 8.0) without Docker/Podman access, we use **Rector** to automatically transpile and downgrade the syntax.
+
+### 1. Build and Downgrade Releases Automatically
+A custom automated build script handles the entire build pipeline:
+1. Cleans up previous builds and copies the necessary project files recursively to a build folder (`dist/php74` or `dist/php80`).
+2. Toggles Rector's configuration dynamically via environment variables.
+3. Automatically runs Rector to downgrade modern PHP 8.4 features (like Constructor Property Promotion, `match` expressions, readonly properties, union types, etc.) down to the target PHP version.
+4. Removes development and build-related scripts from the generated release folder.
+
+Run the build script inside the application container:
+
+* **Generate PHP 7.4 Release** (output in `dist/php74/`):
+  ```bash
+  podman exec log-monitor-app php bin/build-release.php 7.4
+  ```
+
+* **Generate PHP 8.0 Release** (output in `dist/php80/`):
+  ```bash
+  podman exec log-monitor-app php bin/build-release.php 8.0
+  ```
+
+### 2. Manual Commands & Dry-Run
+You can also run Rector manually or simulate the changes before writing them to the disk:
+
+* **Simulate changes (Dry-Run)**:
+  ```bash
+  podman exec log-monitor-app vendor/bin/rector process dist/php74 --dry-run
+  ```
+
+* **Apply Rector refactoring manually**:
+  ```bash
+  podman exec log-monitor-app vendor/bin/rector process dist/php74
+  ```
+
+---
+
 ## 🌍 Directory Structure
 
 ```text
