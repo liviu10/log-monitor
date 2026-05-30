@@ -102,4 +102,44 @@ class UserControllerTest extends TestCase
             $this->assertNull($user);
         }
     }
+
+    public function testStoreFailsValidationWithEmptyUsername(): void
+    {
+        try {
+            $this->userController->store([
+                'username' => '',
+                'password' => 'supersecretpassword'
+            ]);
+            $this->fail('Expected HttpRedirectException to be thrown');
+        } catch (HttpRedirectException $e) {
+            $this->assertEquals('users.php', $e->url);
+            $this->assertArrayHasKey('errors', $_SESSION);
+            $this->assertArrayHasKey('username', $_SESSION['errors']);
+        }
+    }
+
+    public function testStoreFailsValidationWithShortPassword(): void
+    {
+        try {
+            $this->userController->store([
+                'username' => 'valid_user',
+                'password' => '123'
+            ]);
+            $this->fail('Expected HttpRedirectException to be thrown');
+        } catch (HttpRedirectException $e) {
+            $this->assertEquals('users.php', $e->url);
+            $this->assertArrayHasKey('errors', $_SESSION);
+            $this->assertArrayHasKey('password', $_SESSION['errors']);
+        }
+    }
+
+    public function testDeleteWithNoIdDoesNothing(): void
+    {
+        try {
+            $this->userController->delete([]);
+            $this->fail('Expected HttpRedirectException to be thrown');
+        } catch (HttpRedirectException $e) {
+            $this->assertEquals('users.php', $e->url);
+        }
+    }
 }

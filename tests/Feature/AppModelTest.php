@@ -50,4 +50,50 @@ class AppModelTest extends TestCase
         $this->expectException(RuntimeException::class);
         $this->appModel->findByApiKey('non-existent-api-key');
     }
+
+    public function testGetAllApps(): void
+    {
+        $this->appModel->create('App 1', 'key-1');
+        $this->appModel->create('App 2', 'key-2');
+
+        $apps = $this->appModel->getAll();
+        $this->assertCount(2, $apps);
+    }
+
+    public function testUpdateApp(): void
+    {
+        $id = $this->appModel->create('Old App Name', 'key-old');
+        $this->appModel->update($id, ['name' => 'New App Name']);
+
+        $app = $this->appModel->findByApiKey('key-old');
+        $this->assertEquals('New App Name', $app['name']);
+    }
+
+    public function testUpdateAppWithInvalidIdThrowsException(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->appModel->update(0, ['name' => 'New App Name']);
+    }
+
+    public function testUpdateAppWithEmptyDataThrowsException(): void
+    {
+        $id = $this->appModel->create('App', 'key');
+        $this->expectException(InvalidArgumentException::class);
+        $this->appModel->update($id, []);
+    }
+
+    public function testDeleteApp(): void
+    {
+        $id = $this->appModel->create('App to delete', 'key-delete');
+        $this->appModel->delete($id);
+
+        $this->expectException(RuntimeException::class);
+        $this->appModel->findByApiKey('key-delete');
+    }
+
+    public function testDeleteAppWithInvalidIdThrowsException(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->appModel->delete(-1);
+    }
 }

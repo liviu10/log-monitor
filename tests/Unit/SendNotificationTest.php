@@ -49,4 +49,34 @@ class SendNotificationTest extends TestCase
             'to' => 'test@example.com'
         ]);
     }
+
+    public function testHandleThrowsExceptionOnInaccessibleAttachment(): void
+    {
+        $_ENV['APP_ENV'] = 'testing';
+        $notifier = new SendNotification();
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('The provided attachment file is inaccessible or invalid.');
+
+        $notifier->handle([
+            'to' => 'test@example.com',
+            'message' => 'Hello',
+            'attachmentPath' => '/nonexistent/file/path.txt'
+        ]);
+    }
+
+    public function testHandleThrowsExceptionOnDirectoryAttachment(): void
+    {
+        $_ENV['APP_ENV'] = 'testing';
+        $notifier = new SendNotification();
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('The provided attachment file is inaccessible or invalid.');
+
+        $notifier->handle([
+            'to' => 'test@example.com',
+            'message' => 'Hello',
+            'attachmentPath' => __DIR__ // directory path
+        ]);
+    }
 }

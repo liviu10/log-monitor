@@ -46,4 +46,12 @@ class ValidateEmailTest extends TestCase
         $this->assertCount(1, $invalid);
         $this->assertContains('test@nonexistent-domain-1234567890-test.xyz', $invalid);
     }
+
+    public function testValidateEmailHandlesConsecutiveCommasAndEmptySpaces(): void
+    {
+        $emails = 'test@gmail.com,, ,test2@google.com';
+        $invalid = $this->validator->validateEmail($emails);
+
+        $this->assertEmpty($invalid);
+    }
 }

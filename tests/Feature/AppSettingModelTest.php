@@ -63,4 +63,44 @@ class AppSettingModelTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->settingModel->saveSetting(0, '', 'val');
     }
+
+    public function testUpdateSetting(): void
+    {
+        $this->settingModel->saveSetting($this->appId, 'old_key', 'old_val');
+        $this->settingModel->updateSetting($this->appId, 'old_key', ['key' => 'new_key', 'value' => 'new_val']);
+
+        $setting = $this->settingModel->getSetting($this->appId, 'new_key');
+        $this->assertNotNull($setting);
+        $this->assertEquals('new_val', $setting['value']);
+    }
+
+    public function testUpdateSettingThrowsExceptionOnDuplicateKey(): void
+    {
+        $this->settingModel->saveSetting($this->appId, 'key1', 'val1');
+        $this->settingModel->saveSetting($this->appId, 'key2', 'val2');
+
+        $this->expectException(RuntimeException::class);
+        $this->settingModel->updateSetting($this->appId, 'key1', ['key' => 'key2']);
+    }
+
+    public function testUpdateSettingThrowsExceptionOnInvalidParams(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->settingModel->updateSetting(0, '', []);
+    }
+
+    public function testDeleteSetting(): void
+    {
+        $this->settingModel->saveSetting($this->appId, 'to_delete', 'val');
+        $this->settingModel->deleteSetting($this->appId, 'to_delete');
+
+        $setting = $this->settingModel->getSetting($this->appId, 'to_delete');
+        $this->assertNull($setting);
+    }
+
+    public function testDeleteSettingThrowsExceptionOnInvalidParams(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->settingModel->deleteSetting(0, '');
+    }
 }

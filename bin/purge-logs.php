@@ -5,7 +5,8 @@ declare(strict_types=1);
 require_once __DIR__ . '/../bootstrap.php';
 
 use App\Controllers\LogController;
-use App\Utilities\LogViaCurl;
+use App\Utilities\LogViaStream;
+use App\Enums\LogLevel;
 
 /**
  * Script de Mentenanta: Arhivare in format TXT si curatare (purge) din baza de date.
@@ -56,7 +57,7 @@ try {
 
 } catch (\Throwable $e) {
     // Structura obligatorie de logare in caz de exceptie
-    LogViaCurl::send('ERROR', 'Query execution failure event', [
+    LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
         'location' => __METHOD__,
         'line' => __LINE__,
         'exception_message' => $e->getMessage(),
