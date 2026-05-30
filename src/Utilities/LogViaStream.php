@@ -18,6 +18,8 @@ use RuntimeException;
  * @package  App\Utilities
  * @version  5.0
  * @since    PHP 8.4
+ * @author   Voica Liviu
+ * @license  Proprietar
  */
 final class LogViaStream
 {
