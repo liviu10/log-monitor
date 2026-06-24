@@ -121,6 +121,8 @@
                     <div class="card-body p-4">
                         <form action="index.php" method="GET" class="row g-3 align-items-end">
                             <input type="hidden" name="limit" value="<?= htmlspecialchars((string)($limit ?? 10)) ?>">
+                            
+                            <!-- First row of filters -->
                             <div class="col-md-4">
                                 <label class="form-label text-secondary small fw-bold text-uppercase"><?= __('Quick search') ?></label>
                                 <div class="input-group">
@@ -130,7 +132,7 @@
                                     <input type="text" name="search" class="form-control bg-dark border-secondary border-opacity-25 text-light" placeholder="<?= __('Search in messages or context...') ?>" value="<?= htmlspecialchars($filters['search'] ?? '') ?>">
                                 </div>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-4">
                                 <label class="form-label text-secondary small fw-bold text-uppercase"><?= __('Applications') ?></label>
                                 <select name="app_id" class="form-select bg-dark border-secondary border-opacity-25 text-light">
                                     <option value=""><?= __('All Applications') ?></option>
@@ -139,7 +141,7 @@
                                     <?php endforeach; ?>
                                 </select>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-4">
                                 <label class="form-label text-secondary small fw-bold text-uppercase"><?= __('Severity Levels') ?></label>
                                 <select name="level" class="form-select bg-dark border-secondary border-opacity-25 text-light">
                                     <option value=""><?= __('All Levels') ?></option>
@@ -148,7 +150,25 @@
                                     <?php endforeach; ?>
                                 </select>
                             </div>
-                            <div class="col-md-2 d-flex gap-2">
+
+                            <!-- Second row: Sort and Actions -->
+                            <div class="col-md-4">
+                                <label class="form-label text-secondary small fw-bold text-uppercase"><?= __('Sort By') ?></label>
+                                <select name="sort_by" class="form-select bg-dark border-secondary border-opacity-25 text-light">
+                                    <option value="id" <?= ($sortBy === 'id') ? 'selected' : '' ?>><?= __('ID') ?></option>
+                                    <option value="created_at" <?= ($sortBy === 'created_at') ? 'selected' : '' ?>><?= __('Time') ?></option>
+                                    <option value="level" <?= ($sortBy === 'level') ? 'selected' : '' ?>><?= __('Severity') ?></option>
+                                    <option value="app_name" <?= ($sortBy === 'app_name') ? 'selected' : '' ?>><?= __('App Name') ?></option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label text-secondary small fw-bold text-uppercase"><?= __('Direction') ?></label>
+                                <select name="sort_dir" class="form-select bg-dark border-secondary border-opacity-25 text-light">
+                                    <option value="DESC" <?= ($sortDir === 'DESC') ? 'selected' : '' ?>><?= __('Descending') ?></option>
+                                    <option value="ASC" <?= ($sortDir === 'ASC') ? 'selected' : '' ?>><?= __('Ascending') ?></option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 d-flex gap-2">
                                 <button type="submit" class="btn btn-info w-100 fw-bold shadow-sm">
                                     <i class="fas fa-filter me-1"></i> <?= __('Filter') ?>
                                 </button>
@@ -281,6 +301,10 @@
                     $startPage = max(1, $currentPage - $range);
                     $endPage = min($totalPages ?? 1, $currentPage + $range);
                     $limitOptions = [10, 25, 50, 100];
+                    $paginationParams = array_merge(array_filter($filters ?? []), [
+                        'sort_by' => $sortBy ?? 'id',
+                        'sort_dir' => $sortDir ?? 'DESC'
+                    ]);
                 ?>
                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mt-4">
                     <!-- Page Size Selector -->
@@ -289,7 +313,7 @@
                         <select class="form-select form-select-sm bg-dark border-secondary border-opacity-25 text-light" style="width: auto; cursor: pointer;" @change="window.location.href = $event.target.value">
                             <?php foreach ($limitOptions as $l): ?>
                                 <?php
-                                    $urlParams = array_merge(array_filter($filters ?? []), [
+                                    $urlParams = array_merge($paginationParams, [
                                         'page' => 1,
                                         'limit' => $l
                                     ]);
@@ -309,7 +333,7 @@
                                 <!-- First Page -->
                                 <li class="page-item <?= ($currentPage <= 1) ? 'disabled' : '' ?>">
                                     <a class="page-link rounded bg-dark border-secondary border-opacity-25 text-light" 
-                                       href="<?= ($currentPage <= 1) ? '#' : '?' . http_build_query(array_merge(array_filter($filters ?? []), ['page' => 1, 'limit' => $limit])) ?>" 
+                                       href="<?= ($currentPage <= 1) ? '#' : '?' . http_build_query(array_merge($paginationParams, ['page' => 1, 'limit' => $limit])) ?>" 
                                        title="<?= __('First') ?>">
                                         <i class="fas fa-angle-double-left small"></i>
                                     </a>
@@ -318,7 +342,7 @@
                                 <!-- Prev Link -->
                                 <li class="page-item <?= ($currentPage <= 1) ? 'disabled' : '' ?>">
                                     <a class="page-link rounded bg-dark border-secondary border-opacity-25 text-light" 
-                                       href="<?= ($currentPage <= 1) ? '#' : '?' . http_build_query(array_merge(array_filter($filters ?? []), ['page' => $currentPage - 1, 'limit' => $limit])) ?>" 
+                                       href="<?= ($currentPage <= 1) ? '#' : '?' . http_build_query(array_merge($paginationParams, ['page' => $currentPage - 1, 'limit' => $limit])) ?>" 
                                        title="<?= __('Previous') ?>">
                                         <i class="fas fa-chevron-left small"></i>
                                     </a>
@@ -328,7 +352,7 @@
                                 <?php if ($startPage > 1): ?>
                                     <li class="page-item">
                                         <a class="page-link rounded bg-dark border-secondary border-opacity-25 text-light" 
-                                           href="?<?= http_build_query(array_merge(array_filter($filters ?? []), ['page' => 1, 'limit' => $limit])) ?>">1</a>
+                                           href="?<?= http_build_query(array_merge($paginationParams, ['page' => 1, 'limit' => $limit])) ?>">1</a>
                                     </li>
                                     <?php if ($startPage > 2): ?>
                                         <li class="page-item disabled"><span class="page-link rounded bg-dark border-secondary border-opacity-25 text-secondary">...</span></li>
@@ -339,7 +363,7 @@
                                 <?php for ($i = $startPage; $i <= $endPage; $i++): ?>
                                     <li class="page-item <?= ($currentPage === $i) ? 'active' : '' ?>">
                                         <a class="page-link rounded bg-dark border-secondary border-opacity-25 text-light" 
-                                           href="?<?= http_build_query(array_merge(array_filter($filters ?? []), ['page' => $i, 'limit' => $limit])) ?>">
+                                           href="?<?= http_build_query(array_merge($paginationParams, ['page' => $i, 'limit' => $limit])) ?>">
                                             <?= $i ?>
                                         </a>
                                     </li>
@@ -352,14 +376,14 @@
                                     <?php endif; ?>
                                     <li class="page-item">
                                         <a class="page-link rounded bg-dark border-secondary border-opacity-25 text-light" 
-                                           href="?<?= http_build_query(array_merge(array_filter($filters ?? []), ['page' => $totalPages, 'limit' => $limit])) ?>"><?= $totalPages ?></a>
+                                           href="?<?= http_build_query(array_merge($paginationParams, ['page' => $totalPages, 'limit' => $limit])) ?>"><?= $totalPages ?></a>
                                     </li>
                                 <?php endif; ?>
 
                                 <!-- Next Link -->
                                 <li class="page-item <?= ($currentPage >= $totalPages) ? 'disabled' : '' ?>">
                                     <a class="page-link rounded bg-dark border-secondary border-opacity-25 text-light" 
-                                       href="<?= ($currentPage >= $totalPages) ? '#' : '?' . http_build_query(array_merge(array_filter($filters ?? []), ['page' => $currentPage + 1, 'limit' => $limit])) ?>" 
+                                       href="<?= ($currentPage >= $totalPages) ? '#' : '?' . http_build_query(array_merge($paginationParams, ['page' => $currentPage + 1, 'limit' => $limit])) ?>" 
                                        title="<?= __('Next') ?>">
                                         <i class="fas fa-chevron-right small"></i>
                                     </a>
@@ -368,7 +392,7 @@
                                 <!-- Last Page -->
                                 <li class="page-item <?= ($currentPage >= $totalPages) ? 'disabled' : '' ?>">
                                     <a class="page-link rounded bg-dark border-secondary border-opacity-25 text-light" 
-                                       href="<?= ($currentPage >= $totalPages) ? '#' : '?' . http_build_query(array_merge(array_filter($filters ?? []), ['page' => $totalPages, 'limit' => $limit])) ?>" 
+                                       href="<?= ($currentPage >= $totalPages) ? '#' : '?' . http_build_query(array_merge($paginationParams, ['page' => $totalPages, 'limit' => $limit])) ?>" 
                                        title="<?= __('Last') ?>">
                                         <i class="fas fa-angle-double-right small"></i>
                                     </a>

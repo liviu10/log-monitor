@@ -14,6 +14,10 @@
                 <i class="fas fa-list-ul me-2"></i> <?= __('Logs') ?>
             </a>
             
+            <a href="queue.php" class="nav-link rounded-3 px-3 py-2 <?= $currentPage === 'queue.php' ? 'active bg-info bg-opacity-10 text-info' : 'text-secondary hover-bg-light' ?>">
+                <i class="fas fa-tasks me-2"></i> <?= __('Queue') ?>
+            </a>
+            
             <a href="apps.php" class="nav-link rounded-3 px-3 py-2 <?= $currentPage === 'apps.php' ? 'active bg-info bg-opacity-10 text-info' : 'text-secondary hover-bg-light' ?>">
                 <i class="fas fa-microchip me-2"></i> <?= __('Apps') ?>
             </a>
