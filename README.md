@@ -242,7 +242,7 @@ LogMonitor provides a fast, server-to-server endpoint to submit logs. Frontend l
   ```
 * **Run a realistic stress-test load simulation** (Generates 500,000 logs across 4 virtual applications with realistic traffic cycles, spikes, and jitter pacing):
   ```bash
-  podman exec log-monitor-app php bin/simulate_logs.php
+  podman exec log-monitor-app php bin/simulate-logs.php
   ```
 
 ---
@@ -315,7 +315,7 @@ You can also run Rector manually or simulate the changes before writing them to 
 
 ```text
 log-monitor/
-├── bin/                 # CLI Utilities (purge-logs.php, worker.php, simulate_logs.php)
+├── bin/                 # CLI Utilities (purge-logs.php, worker.php, simulate-logs.php)
 ├── db/                  # Phinx migrations and data seeds
 ├── docker/              # Container configuration (Dockerfile, Caddyfile, php.ini)
 ├── lang/                # Translation dictionary files (en.json, ro.json)
