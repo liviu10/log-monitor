@@ -9,13 +9,19 @@ This repository is optimized for **PHP 8.4** and runs containerized in a secure 
 ## 🚀 Key Features
 
 * **Centralized API Logging**: Securely collect logs from multiple external applications via server-to-server HTTP POST requests.
+* **Database-Backed Async Queue**: High-throughput ingestion. Payloads are instantly queued as raw strings in the database, avoiding overhead in the HTTP thread path and preventing data loss during traffic spikes.
 * **Modern Administration Dashboard**:
   * Real-time metrics overview (Total Logs, Active Applications, Critical Alerts, Warnings).
   * Auto-refreshing timeline (Live tailing powered by **Alpine.js**).
   * Advanced full-text search across log messages and JSON context metadata.
   * Filters for severe log levels and specific applications.
+* **Queue Manager Dashboard**:
+  * Real-time queue volume metrics and worker status visualization (Active/Inactive).
+  * Detailed payload inspection (interactive JSON formatting) and clipboard copying.
+  * Individual job deletions and database queue purging capabilities.
 * **Granular Alerts**: Instant automatic alerts dispatched via **SMTP Email** or **Microsoft Teams** webhook channels for critical errors.
 * **CLI Maintenance Utility**: Automatic log archiving to `.txt` files and database cleanup (`bin/purge-logs.php`) for retention management.
+* **CLI Queue Worker**: A high-efficiency daemon (`bin/worker.php`) utilizing SQL transaction locks (`FOR UPDATE SKIP LOCKED`) to consume queued payloads concurrently without race conditions.
 * **Robust Security Suite**:
   * Strict Content Security Policy (CSP) with cryptographically secure inline nonces.
   * Clickjacking defense (`X-Frame-Options: DENY`) and MIME Sniffing protection.
@@ -113,9 +119,9 @@ LogMonitor provides a fast, server-to-server endpoint to submit logs. Frontend l
 
 * **Endpoint**: `POST http://localhost:8080/log.php`
 * **Headers**:
-  * `X-API-KEY`: `<your_application_api_key>`
+  * `X-API-KEY`: `<your_global_api_key>` (default seed: `e7c6b541234567890abcdef1234567890`)
+  * `X-APP-KEY`: `<your_application_api_key>`
   * `Content-Type`: `application/json`
-  * `User-Agent`: `YourBackendServer/1.0` (must not resemble a browser agent)
 
 ### Request Payload Example:
 ```json
@@ -133,17 +139,26 @@ LogMonitor provides a fast, server-to-server endpoint to submit logs. Frontend l
 ```
 
 ### Response Formats:
-* **Success (200 OK)**:
+* **Success (202 Accepted)**:
   ```json
-  {"status": true, "message": "Log recorded"}
+  {"status": "queued"}
   ```
-* **Invalid Input (422 Unprocessable Entity)**:
-  ```json
-  {"errors": ["The message field is required."]}
-  ```
+* **Invalid Input (400 Bad Request)**:
+  - Missing key header:
+    ```json
+    {"error": "X-APP-KEY header is missing or empty."}
+    ```
+  - Empty request body:
+    ```json
+    {"error": "Empty request body."}
+    ```
 * **Invalid Authorization (403 Forbidden)**:
   ```json
-  {"error": "Invalid or inactive API Key"}
+  {"error": "Invalid or inactive client API Key."}
+  ```
+* **System Failure (500 Internal Server Error)**:
+  ```json
+  {"error": "Database connection or query failed."}
   ```
 
 ---
@@ -216,6 +231,20 @@ LogMonitor provides a fast, server-to-server endpoint to submit logs. Frontend l
   podman exec -it log-monitor-app composer install --no-dev --optimize-autoloader
   ```
 
+### 4. Asynchronous Queue & Worker Management
+* **Start a new queue worker daemon (detached)**:
+  ```bash
+  podman exec -d log-monitor-app php bin/worker.php
+  ```
+* **Check active worker processes in the container**:
+  ```bash
+  podman exec log-monitor-app ps aux | grep worker.php
+  ```
+* **Run a realistic stress-test load simulation** (Generates 500,000 logs across 4 virtual applications with realistic traffic cycles, spikes, and jitter pacing):
+  ```bash
+  podman exec log-monitor-app php bin/simulate_logs.php
+  ```
+
 ---
 
 ## 🧪 Testing
@@ -246,7 +275,7 @@ podman exec -it log-monitor-app vendor/bin/phpunit
 
 ## 🔄 Transpilation & Multi-version Support (Rector)
 
-The application codebase is written in modern **PHP 8.4**. To deploy the application in environments running older versions of PHP (e.g., PHP 7.4.33 or PHP 8.0) without Docker/Podman access, we use **Rector** to automatically transpile and downgrade the syntax.
+The codebase is written in modern **PHP 8.4**. To deploy in environments running older versions of PHP (e.g., PHP 7.4.33 or PHP 8.0) without Docker/Podman access, we use **Rector** to automatically transpile and downgrade the syntax.
 
 ### 1. Build and Downgrade Releases Automatically
 A custom automated build script handles the entire build pipeline:
@@ -286,17 +315,18 @@ You can also run Rector manually or simulate the changes before writing them to 
 
 ```text
 log-monitor/
-├── bin/                 # CLI Maintenance utilities (purge-logs.php)
+├── bin/                 # CLI Utilities (purge-logs.php, worker.php, simulate_logs.php)
 ├── db/                  # Phinx migrations and data seeds
 ├── docker/              # Container configuration (Dockerfile, Caddyfile, php.ini)
 ├── lang/                # Translation dictionary files (en.json, ro.json)
+├── queue.php            # Queue Manager router/entrypoint
 ├── src/                 # Application Core
-│   ├── Controllers/     # Logic handlers (Auth, App, Log, Settings, etc.)
+│   ├── Controllers/     # Logic handlers (Auth, App, Log, Settings, QueueController)
 │   ├── Enums/           # LogLevel backed enum definitions
 │   ├── Models/          # Database Active Record Models
 │   └── Utilities/       # Helpers, MySQLWrapper, Mailers, Validations
 ├── storage/             # File storage for text log archives and system logs
-└── views/               # PHP UI Templates (layouts, dashboard, auth)
+└── views/               # PHP UI Templates (layouts, dashboard, auth, queue)
 ```
 
 ---

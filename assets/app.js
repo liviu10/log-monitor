@@ -420,5 +420,52 @@ const App = {
                     });
             }
         };
+    },
+
+    /**
+     * Constructor date Alpine.js pentru pagina de gestionare coada (Queue Manager).
+     */
+    queuePageData() {
+        return {
+            sidebarOpen: true,
+            selectedJob: null,
+            showModal: false,
+
+            viewJob(job) {
+                this.selectedJob = job;
+                this.showModal = true;
+            },
+
+            formatJson(rawJson) {
+                try {
+                    const parsed = JSON.parse(rawJson);
+                    return JSON.stringify(parsed, null, 4);
+                } catch (e) {
+                    return rawJson;
+                }
+            },
+
+            copyPayload() {
+                if (!this.selectedJob || !this.selectedJob.payload_raw) return;
+                navigator.clipboard.writeText(this.selectedJob.payload_raw)
+                    .then(() => {
+                        App.handleToast({
+                            type: 'success',
+                            title: window.__('Success'),
+                            message: window.__('Copied to clipboard!'),
+                            toastDelay: 2000
+                        });
+                    })
+                    .catch(err => {
+                        console.error('Copy failed', err);
+                        App.handleToast({
+                            type: 'danger',
+                            title: window.__('Error'),
+                            message: window.__('Copy to clipboard failed.'),
+                            toastDelay: 2000
+                        });
+                    });
+            }
+        };
     }
 };

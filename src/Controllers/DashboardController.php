@@ -55,7 +55,10 @@ class DashboardController extends BaseController
             
             $offset = ($page - 1) * $limit;
 
-            $logs = $logModel->getPaginated($filters, $limit, $offset);
+            $sortBy = (string)($queryParams['sort_by'] ?? 'id');
+            $sortDir = (string)($queryParams['sort_dir'] ?? 'DESC');
+
+            $logs = $logModel->getPaginated($filters, $limit, $offset, $sortBy, $sortDir);
             $totalLogs = $logModel->count($filters);
             $totalPages = (int)ceil($totalLogs / $limit);
             
@@ -72,6 +75,8 @@ class DashboardController extends BaseController
                 'totalPages' => $totalPages,
                 'stats' => $stats,
                 'limit' => $limit,
+                'sortBy' => $sortBy,
+                'sortDir' => $sortDir,
             ]);
         } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Dashboard index processing failure', [

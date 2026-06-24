@@ -37,6 +37,10 @@ if [ -f "docker/crontab" ]; then
     crond
 fi
 
+# Start background log queue worker
+echo "Starting background log queue worker..."
+php bin/worker.php > /dev/null 2>&1 &
+
 # Start application server
 echo "Starting Application Server..."
 exec "$@"

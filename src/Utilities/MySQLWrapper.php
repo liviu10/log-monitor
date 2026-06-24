@@ -37,6 +37,7 @@ class MySQLWrapper
         PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         PDO::ATTR_EMULATE_PREPARES   => false,
+        PDO::ATTR_PERSISTENT         => true,
     ];
 
     /**
@@ -102,7 +103,6 @@ class MySQLWrapper
             ];
 
             $this->logEmergency('Database connection initial failure', $context);
-            LogViaStream::send(LogLevel::ERROR->value, 'Database connection initial failure', $context);
             
             throw new RuntimeException(__('Database connection failed.'), 500, $e);
         }

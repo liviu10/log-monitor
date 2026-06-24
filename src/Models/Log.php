@@ -100,12 +100,14 @@ class Log
      * Returneaza o lista paginata de loguri bazata pe filtre aplicate.
      * Securizat complet impotriva atacurilor de injectare SQL prin parametri legati nativ pentru LIMIT/OFFSET.
      *
-     * @param array $filters Filtre aplicate.
-     * @param int   $limit   Numar maxim de inregistrari.
-     * @param int   $offset  Punctul de pornire al paginarii.
+     * @param array  $filters Filtre aplicate.
+     * @param int    $limit   Numar maxim de inregistrari.
+     * @param int    $offset  Punctul de pornire al paginarii.
+     * @param string $sortBy  Coloana dupa care se face sortarea.
+     * @param string $sortDir Directia de sortare (ASC sau DESC).
      * @return array Logurile gasite.
      */
-    public function getPaginated(array $filters = [], int $limit = 50, int $offset = 0): array
+    public function getPaginated(array $filters = [], int $limit = 50, int $offset = 0, string $sortBy = 'id', string $sortDir = 'DESC'): array
     {
         if ($limit < 1) {
             $limit = 50;
@@ -135,8 +137,26 @@ class Log
             $params[] = trim((string)$filters['search']) . "*";
         }
 
+        // Validare stricta a coloanelor de sortare pentru a preveni SQL Injection
+        $allowedSorts = ['id', 'created_at', 'level', 'app_name'];
+        $allowedDirections = ['ASC', 'DESC'];
+
+        $sortField = in_array($sortBy, $allowedSorts, true) ? $sortBy : 'id';
+        $sortOrder = in_array(strtoupper($sortDir), $allowedDirections, true) ? strtoupper($sortDir) : 'DESC';
+
+        if ($sortField === 'app_name') {
+            $orderClause = "ORDER BY a.name {$sortOrder}";
+        } else {
+            $orderClause = "ORDER BY l.{$sortField} {$sortOrder}";
+        }
+
+        // Adaugam l.id ca sortare secundara pentru a avea o cronologie determinista la loguri sosite in aceeasi secunda
+        if ($sortField !== 'id') {
+            $orderClause .= ", l.id {$sortOrder}";
+        }
+
         // Securizare stricta: LIMIT si OFFSET sunt interpolate direct ca intregi pentru a evita legarea lor ca string de catre PDO
-        $sql .= " ORDER BY l.created_at DESC LIMIT " . (int)$limit . " OFFSET " . (int)$offset;
+        $sql .= " {$orderClause} LIMIT " . (int)$limit . " OFFSET " . (int)$offset;
 
         try {
             $stmt = $this->db->query($sql, $params);

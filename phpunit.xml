@@ -22,14 +22,14 @@
         </include>
     </source>
     <php>
-        <env name="APP_ENV" value="testing"/>
-        <env name="DB_HOST" value="db"/>
-        <env name="DB_DATABASE" value="log_monitor_test"/>
-        <env name="DB_NAME" value="log_monitor_test"/>
-        <env name="DB_USERNAME" value="user"/>
-        <env name="DB_USER" value="user"/>
-        <env name="DB_PASSWORD" value="password"/>
-        <env name="DB_PASS" value="password"/>
-        <env name="DB_PORT" value="3306"/>
+        <env name="APP_ENV" value="testing" force="true"/>
+        <env name="DB_HOST" value="db" force="true"/>
+        <env name="DB_DATABASE" value="log_monitor_test" force="true"/>
+        <env name="DB_NAME" value="log_monitor_test" force="true"/>
+        <env name="DB_USERNAME" value="user" force="true"/>
+        <env name="DB_USER" value="user" force="true"/>
+        <env name="DB_PASSWORD" value="password" force="true"/>
+        <env name="DB_PASS" value="password" force="true"/>
+        <env name="DB_PORT" value="3306" force="true"/>
     </php>
 </phpunit>

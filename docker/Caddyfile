@@ -16,18 +16,13 @@
     # Enable compression
     encode zstd gzip 
 
-    # RATE LIMITING for log endpoint
-    # Maximum of 10 requests per minute per IP with a burst of 2
-    @log_api {
-        path /log.php 
+    # Early Authentication direct in Caddy pentru /log.php
+    # Daca header-ul X-API-KEY nu contine valoarea corecta din variabila de mediu, respinge instant cu 401
+    @unauthorized {
+        path /log.php
+        not header X-API-KEY "{$LOG_API_KEY}"
     }
-    rate_limit @log_api {
-        zone log_zone {
-            key {remote_host} 
-            rate 10m 
-            burst 2 
-        }
-    }
+    respond @unauthorized "Unauthorized" 401
 
     # Protect sensitive files and directories by faking a 404 Not Found
     @forbidden {
