@@ -1,26 +1,55 @@
 {
-	# Global options
-	frankenphp
-	order php_server before file_server
+    # Global options
+    frankenphp
+    order php_server before file_server
 }
 
 :80 {
-	# Set the root directory
-	root * /var/www/html
+    # Set the root directory
+    root * /var/www/html 
 
-	# Enable compression
-	encode zstd gzip
+    # Global security mitigation against massive payload attacks (DoS/OOM)
+    request_body {
+        max_size 2MB
+    }
 
-	# Protect sensitive files
-	@forbidden {
-		path .env*
-		path /phinx.php
-		path /composer.json
-		path /composer.lock
-		path /docker/*
-	}
-	respond @forbidden "Access Denied" 403
+    # Enable compression
+    encode zstd gzip 
 
-	# Execute PHP files
-	php_server
+    # RATE LIMITING for log endpoint
+    # Maximum of 10 requests per minute per IP with a burst of 2
+    @log_api {
+        path /log.php 
+    }
+    rate_limit @log_api {
+        zone log_zone {
+            key {remote_host} 
+            rate 10m 
+            burst 2 
+        }
+    }
+
+    # Protect sensitive files and directories by faking a 404 Not Found
+    @forbidden {
+        path /bin /bin/*
+        path /db /db/*
+        path /dist /dist/*
+        path /docker /docker/*
+		path /lang /lang/*
+		path /src /src/*
+        path /tests /tests/*
+        path /vendor /vendor/*
+        path .dockerignore
+        path .env*
+        path .gitignore
+        path /composer.json
+        path /composer.lock
+        path /phinx.php
+        path /phpunit.xml
+        path /rector.php
+    }
+    respond @forbidden "Not Found" 404
+
+    # Execute PHP files
+    php_server 
 }

@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Utilities;
 
 use PDO;
-use PDOException;
 use PDOStatement;
 use RuntimeException;
+use Throwable;
 use App\Enums\LogLevel;
 
 /**
@@ -88,8 +88,8 @@ class MySQLWrapper
 
         try {
             $this->connection = new PDO($dsn, $this->user, $this->pass, $this->options);
-        } catch (PDOException $e) {
-            LogViaStream::send(LogLevel::ERROR->value, 'Database connection initial failure', [
+        } catch (Throwable $e) {
+            $context = [
                 'location' => __METHOD__,
                 'line' => __LINE__,
                 'exception_message' => $e->getMessage(),
@@ -99,7 +99,10 @@ class MySQLWrapper
                 'db_host' => $this->host,
                 'db_name' => $this->db,
                 'identifier' => 'MySQLWrapper_Connection_Failure'
-            ]);
+            ];
+
+            $this->logEmergency('Database connection initial failure', $context);
+            LogViaStream::send(LogLevel::ERROR->value, 'Database connection initial failure', $context);
             
             throw new RuntimeException(__('Database connection failed.'), 500, $e);
         }
@@ -145,8 +148,8 @@ class MySQLWrapper
             $stmt = $conn->prepare($sql);
             $stmt->execute($params);
             return $stmt;
-        } catch (PDOException $e) {
-            LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
+        } catch (Throwable $e) {
+            $context = [
                 'location' => __METHOD__,
                 'line' => __LINE__,
                 'exception_message' => $e->getMessage(),
@@ -156,7 +159,10 @@ class MySQLWrapper
                 'sql_statement' => $sql,
                 'sql_parameters' => $params,
                 'identifier' => 'MySQLWrapper_Query_Failure'
-            ]);
+            ];
+
+            $this->logEmergency('Query execution failure event', $context);
+            LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', $context);
 
             throw new RuntimeException(__('Internal query execution error.'), 500, $e);
         }
@@ -278,5 +284,51 @@ class MySQLWrapper
 
         $stmt = $this->query($sql, $params);
         return $stmt->rowCount();
+    }
+
+    /**
+     * Scrie un log de urgenta in caz de esec al bazei de date.
+     *
+     * @param string $message Mesajul de eroare.
+     * @param array $context Informatiile suplimentare de context.
+     * @return void
+     */
+    private function logEmergency(string $message, array $context): void
+    {
+        try {
+            $dir = dirname(__DIR__, 2) . '/storage/logs';
+            
+            if (!is_dir($dir)) {
+                if (file_exists($dir)) {
+                    throw new RuntimeException("Path '{$dir}' exists but is not a directory.");
+                }
+                if (!mkdir($dir, 0777, true) && !is_dir($dir)) {
+                    throw new RuntimeException("Failed to create directory '{$dir}'.");
+                }
+            }
+
+            if (!is_writable($dir)) {
+                throw new RuntimeException("Directory '{$dir}' is not writable.");
+            }
+
+            $filePath = $dir . '/emergency-logs-' . date('Ymd') . '.log';
+            $timestamp = date('Y-m-d H:i:s');
+            
+            $logEntry = sprintf(
+                "[%s] [%s] %s\nContext: %s\n%s\n",
+                $timestamp,
+                'ERROR',
+                $message,
+                json_encode($context, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+                str_repeat('-', 80)
+            );
+
+            if (file_put_contents($filePath, $logEntry, FILE_APPEND | LOCK_EX) === false) {
+                throw new RuntimeException("Failed to write to file '{$filePath}'.");
+            }
+        } catch (Throwable $logException) {
+            // Trimitem eroarea catre logul nativ de sistem (error_log) ca fallback de ultima instanta
+            error_log("Emergency logging failed: " . $logException->getMessage());
+        }
     }
 }

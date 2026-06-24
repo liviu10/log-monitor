@@ -51,23 +51,6 @@ if (!function_exists('injectRuntimeSecurityHeaders')) {
     }
 }
 
-// Validare si pornire securizata a sesiunii
-if (session_id() === '') {
-    ini_set('session.gc_maxlifetime', '86400');
-    session_set_cookie_params([
-        'lifetime' => 86400,
-        'path' => '/',
-        'domain' => '',
-        'secure' => true,
-        'httponly' => true,
-        'samesite' => 'Lax'
-    ]);
-    session_start();
-    
-    // Apelam injectarea la nivel de runtime pentru a acoperi ambele scenarii
-    injectRuntimeSecurityHeaders();
-}
-
 /** @const string ROLE_ADMIN Identificatorul pentru rolul de administrator. */
 define('ROLE_ADMIN', 'admin');
 

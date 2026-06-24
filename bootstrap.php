@@ -7,11 +7,14 @@ require_once __DIR__ . '/vendor/autoload.php';
 // Includere utilitare globale mai devreme pentru a avea acces la functia __()
 require_once __DIR__ . '/src/Utilities/helpers.php';
 
+// Determinarea scriptului curent solicitat
+$currentScript = basename($_SERVER['SCRIPT_NAME'] ?? '');
+
 // Abordare Fail Fast: Oprirea imediata a executiei daca fisierul .env lipseste
 if (!file_exists(__DIR__ . '/.env')) {
     http_response_code(500);
     
-    $isApi = (basename($_SERVER['SCRIPT_NAME'] ?? '') === 'log.php');
+    $isApi = ($currentScript === 'log.php');
     $errorMessage = __('Critical: Configuration file (.env) is missing. Application cannot initialize.');
     
     if ($isApi) {
@@ -31,17 +34,23 @@ $dotenv->load();
 // Inregistrare error handler global pentru stream logging
 \App\Utilities\LogViaStream::registerHandlers();
 
-// Determinarea scriptului curent solicitat
-$currentScript = basename($_SERVER['SCRIPT_NAME'] ?? '');
-
 // Sesiunea se porneste DOAR daca nu suntem pe endpoint-ul de logare prin cURL (API)
-if ($currentScript !== 'log.php' && session_status() === PHP_SESSION_NONE) {
-    session_start([
-        'cookie_lifetime' => 0,
-        'cookie_secure' => true,
-        'cookie_httponly' => true,
-        'cookie_samesite' => 'Lax'
-    ]);
+if ($currentScript !== 'log.php') {
+    if (session_status() === PHP_SESSION_NONE) {
+        ini_set('session.gc_maxlifetime', '86400');
+        session_set_cookie_params([
+            'lifetime' => 86400,
+            'path' => '/',
+            'domain' => '',
+            'secure' => true,
+            'httponly' => true,
+            'samesite' => 'Lax'
+        ]);
+        session_start();
+    }
+    
+    // Injectam headerele de securitate runtime specifice aplicatiei web/dashboard
+    injectRuntimeSecurityHeaders();
 }
 
 // Configurare aplicatie securizata contra atacurilor de tip Injection
