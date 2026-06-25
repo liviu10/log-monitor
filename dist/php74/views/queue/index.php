@@ -47,14 +47,6 @@
             </header>
 
             <main class="p-4">
-                <!-- Flash Messages -->
-                <?php if ($flash = getFlash()): ?>
-                    <div class="alert alert-<?= $flash['type'] ?? 'info' ?> alert-dismissible fade show" role="alert">
-                        <strong><?= $flash['title'] ?? 'Notificare' ?></strong>: <?= $flash['message'] ?? '' ?>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                <?php endif; ?>
-
                 <!-- Metric Cards -->
                 <div class="row g-3 mb-4">
                     <div class="col-md-6">

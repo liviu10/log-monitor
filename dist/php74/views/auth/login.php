@@ -33,13 +33,6 @@
                 <p class="text-secondary small"><?= __('Secure Admin Panel Access') ?></p>
             </div>
 
-            <!-- Flash Messages -->
-            <?php if ($flash = getFlash()): ?>
-                <div class="alert alert-<?= $flash['type'] ?? 'info' ?> small mb-4" role="alert">
-                    <?= $flash['message'] ?? '' ?>
-                </div>
-            <?php endif; ?>
-
             <form action="login.php" method="POST">
                 <?= csrf_field() ?>
                 <div class="mb-3">

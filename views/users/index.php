@@ -46,14 +46,6 @@
             </header>
 
             <main class="p-4">
-                <!-- Flash Messages -->
-                <?php if ($flash = getFlash()): ?>
-                    <div class="alert alert-<?= $flash['type'] ?? 'info' ?> alert-dismissible fade show" role="alert">
-                        <strong><?= $flash['title'] ?? __('Notification') ?></strong>: <?= $flash['message'] ?? '' ?>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                <?php endif; ?>
-
                 <div class="row g-4">
                     <!-- Create User Form -->
                     <div class="col-md-4">
