@@ -39,7 +39,11 @@
                                 <i class="far fa-user-circle me-2 text-info"></i> <?= htmlspecialchars($_SESSION['auth.user']['username'] ?? 'User') ?>
                             </button>
                             <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow">
-                                <li><a class="dropdown-item" href="login.php?action=logout"><?= __('Logout') ?></a></li>
+                                <li>
+                                    <a class="dropdown-item text-danger" href="login.php?action=logout">
+                                        <i class="fas fa-sign-out-alt me-2"></i> <?= __('Logout') ?>
+                                    </a>
+                                </li>
                             </ul>
                         </div>
                     </div>
