@@ -22,8 +22,9 @@
     </div>
 </div>
 
-<div class="d-flex align-items-center justify-content-center vh-100 p-3">
-    <div class="card shadow-lg border-0 bg-slate-800" style="max-width: 400px; width: 100%;">
+<div class="d-flex align-items-center justify-content-center vh-100 p-3 position-relative overflow-hidden">
+    <div class="login-bg-glow"></div>
+    <div class="card shadow-lg border-0" style="max-width: 400px; width: 100%;">
         <div class="card-body p-4 p-md-5">
             <div class="text-center mb-4">
                 <div class="d-inline-flex align-items-center justify-content-center bg-info bg-opacity-10 rounded-4 mb-3" style="width: 64px; height: 64px;">

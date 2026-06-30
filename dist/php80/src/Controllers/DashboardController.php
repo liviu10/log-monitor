@@ -1,0 +1,97 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Controllers;
+
+use App\Models\Log;
+use App\Models\App;
+use App\Enums\LogLevel;
+use App\Utilities\LogViaStream;
+
+/**
+ * Clasa DashboardController
+ *
+ * Responsabila pentru afisarea si gestionarea paginii principale a panoului de control (Dashboard).
+ * Gestioneaza preluarea filtrelor de cautare, configurarea paginatiei si recuperarea datelor
+ * necesare pentru vizualizarea logurilor sistemului intr-un mod organizat.
+ *
+ * @category Controller
+ * @package  App\Controllers
+ * @version  1.2
+ * @since    PHP 8.4
+ * @author   Voica Liviu
+ * @license  Proprietary
+ */
+class DashboardController extends BaseController
+{
+    /**
+     * Afiseaza pagina principala de dashboard cu lista logurilor filtrate.
+     */
+    public function index(array $queryParams = []): void
+    {
+        $this->checkAuth();
+
+        try {
+            $logModel = new Log();
+            $appModel = new App();
+
+            $filters = [
+                'app_id' => $queryParams['app_id'] ?? null,
+                'level' => $queryParams['level'] ?? null,
+                'search' => $queryParams['search'] ?? null,
+            ];
+
+            $page = (int)($queryParams['page'] ?? 1);
+            if ($page < 1) {
+                $page = 1;
+            }
+            
+            $allowedLimits = [10, 25, 50, 100];
+            $limit = (int)($queryParams['limit'] ?? 10);
+            if (!in_array($limit, $allowedLimits, true)) {
+                $limit = 10;
+            }
+            
+            $offset = ($page - 1) * $limit;
+
+            $sortBy = (string)($queryParams['sort_by'] ?? 'id');
+            $sortDir = (string)($queryParams['sort_dir'] ?? 'DESC');
+
+            $logs = $logModel->getPaginated($filters, $limit, $offset, $sortBy, $sortDir);
+            $totalLogs = $logModel->count($filters);
+            $totalPages = (int)ceil($totalLogs / $limit);
+            
+            $apps = $appModel->getAll();
+            $levels = LogLevel::all();
+            $stats = $logModel->getStats();
+
+            $this->render('dashboard/index', [
+                'logs' => $logs,
+                'apps' => $apps,
+                'levels' => $levels,
+                'filters' => $filters,
+                'page' => $page,
+                'totalPages' => $totalPages,
+                'stats' => $stats,
+                'limit' => $limit,
+                'sortBy' => $sortBy,
+                'sortDir' => $sortDir,
+            ]);
+        } catch (\Throwable $throwable) {
+            LogViaStream::send(LogLevel::ERROR, 'Dashboard index processing failure', [
+                'location' => __METHOD__,
+                'line' => __LINE__,
+                'exception_message' => $throwable->getMessage(),
+                'exception_file' => $throwable->getFile(),
+                'exception_line' => $throwable->getLine(),
+                'exception_trace' => $throwable->getTraceAsString(),
+                'query_params' => $queryParams,
+                'identifier' => 'DashboardController_Index_Failure'
+            ]);
+            
+            // Fail Fast defensiv: nu se permite incarcarea paginii partiale cu date incomplete
+            throw new \RuntimeException(__('Critical error loading dashboard data. Please try again later.'), $throwable->getCode(), $throwable);
+        }
+    }
+}
