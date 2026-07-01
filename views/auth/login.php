@@ -1,6 +1,6 @@
 <?php include __DIR__ . '/../layouts/header.php'; ?>
 
-<div class="position-absolute top-0 end-0 p-3">
+<div class="position-absolute top-0 end-0 p-3" style="z-index: 1050;">
     <!-- Language Switcher -->
     <div class="dropdown">
         <button class="btn btn-dark btn-sm dropdown-toggle d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown">
