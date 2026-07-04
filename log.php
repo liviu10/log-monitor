@@ -19,7 +19,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
 }
 
 // Extragem API Key-ul specific aplicatiei client din headere
-$appKey = $_SERVER['HTTP_X_APP_KEY'] ?? $_SERVER['X_APP_KEY'] ?? null;
+$appKey = $_SERVER['HTTP_X_APP_KEY'] ?? $_SERVER['X_APP_KEY'] ?? $_SERVER['HTTP_X_API_KEY'] ?? $_SERVER['X_API_KEY'] ?? null;
 
 if (!$appKey) {
     // Fallback case-insensitive prin getallheaders daca functia este disponibila
@@ -27,7 +27,7 @@ if (!$appKey) {
         $headers = getallheaders();
         if (is_array($headers)) {
             foreach ($headers as $key => $value) {
-                if (strcasecmp($key, 'X-APP-KEY') === 0 || strcasecmp($key, 'X-App-Key') === 0) {
+                if (strcasecmp($key, 'X-APP-KEY') === 0 || strcasecmp($key, 'X-App-Key') === 0 || strcasecmp($key, 'X-API-KEY') === 0 || strcasecmp($key, 'X-Api-Key') === 0) {
                     $appKey = $value;
                     break;
                 }
@@ -40,7 +40,7 @@ if (!$appKey) {
 if (!$appKey || trim((string)$appKey) === '') {
     header('Content-Type: application/json');
     http_response_code(400);
-    echo json_encode(['error' => __('X-APP-KEY header is missing or empty.')]);
+    echo json_encode(['error' => __('X-APP-KEY or X-API-KEY header is missing or empty.')]);
     exit;
 }
 
