@@ -362,8 +362,20 @@
                 
                 <!-- Modal Footer -->
                 <div class="card-footer border-top border-secondary border-opacity-25 p-3 d-flex justify-content-end gap-2 bg-dark bg-opacity-25">
-                    <button type="button" class="btn btn-outline-info btn-sm px-3" @click="copyPayload()" x-text="window.__('Copy Payload')"></button>
                     <button type="button" class="btn btn-secondary btn-sm px-4" @click="showModal = false" x-text="window.__('Close')"></button>
+                    <button 
+                        type="button" 
+                        class="btn px-4 btn-sm text-dark fw-bold transition-all" 
+                        :class="payloadCopied ? 'btn-success' : 'btn-info'"
+                        @click="copyJobPayload()"
+                    >
+                        <span x-show="!payloadCopied">
+                            <i class="fas fa-copy me-2"></i> <?= __('Copy Log') ?>
+                        </span>
+                        <span x-show="payloadCopied" x-cloak>
+                            <i class="fas fa-check me-2"></i> <?= __('Log Copied') ?>
+                        </span>
+                    </button>
                 </div>
             </div>
         </div>

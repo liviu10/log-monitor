@@ -80,6 +80,29 @@ const App = {
     },
 
     /**
+     * Metoda unica globala pentru copiere si feedback vizual
+     */
+    copyPayload(alpineContext, dataObject, stateKey) {
+        if (!dataObject) return;
+
+        // Daca obiectul are payload_raw (pagina queue) trimitem payload_raw, altfel intreg obiectul (pagina dashboard)
+        const textToCopy = dataObject.payload_raw ? dataObject.payload_raw : JSON.stringify(dataObject, null, 4);
+
+        navigator.clipboard.writeText(textToCopy)
+            .then(() => {
+                // Modificam starea din contextul Alpine primit ca parametru
+                alpineContext[stateKey] = true;
+
+                setTimeout(() => {
+                    alpineContext[stateKey] = false;
+                }, 2000);
+            })
+            .catch(err => {
+                console.error('Copy failed', err);
+            });
+    },
+
+    /**
      * Constructor date Alpine.js pentru pagina Dashboard.
      */
     dashboardPageData() {
@@ -90,10 +113,12 @@ const App = {
             autoRefresh: localStorage.getItem('auto_refresh') === 'true',
             countdown: 300,
             timer: null,
+            payloadCopied: false,
 
             openLog(log) {
                 this.selectedLog = log;
                 this.showModal = true;
+                this.payloadCopied = false;
             },
 
             toggleAutoRefresh() {
@@ -119,6 +144,10 @@ const App = {
                         window.location.reload();
                     }
                 }, 1000);
+            },
+
+            copyLog() {
+                App.copyPayload(this, this.selectedLog, 'payloadCopied');
             },
 
             init() {
@@ -430,10 +459,12 @@ const App = {
             sidebarOpen: true,
             selectedJob: null,
             showModal: false,
+            payloadCopied: false,
 
             viewJob(job) {
                 this.selectedJob = job;
                 this.showModal = true;
+                this.payloadCopied = false;
             },
 
             formatJson(rawJson) {
@@ -445,26 +476,8 @@ const App = {
                 }
             },
 
-            copyPayload() {
-                if (!this.selectedJob || !this.selectedJob.payload_raw) return;
-                navigator.clipboard.writeText(this.selectedJob.payload_raw)
-                    .then(() => {
-                        App.handleToast({
-                            type: 'success',
-                            title: window.__('Success'),
-                            message: window.__('Copied to clipboard!'),
-                            toastDelay: 2000
-                        });
-                    })
-                    .catch(err => {
-                        console.error('Copy failed', err);
-                        App.handleToast({
-                            type: 'danger',
-                            title: window.__('Error'),
-                            message: window.__('Copy to clipboard failed.'),
-                            toastDelay: 2000
-                        });
-                    });
+            copyJobPayload() {
+                App.copyPayload(this, this.selectedJob, 'payloadCopied');
             }
         };
     }

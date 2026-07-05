@@ -438,8 +438,18 @@
                     </div>
                     <div class="modal-footer border-secondary border-opacity-25 bg-black bg-opacity-10 p-3">
                         <button type="button" class="btn btn-secondary px-4 btn-sm" @click="showModal = false"><?= __('Close') ?></button>
-                        <button type="button" class="btn btn-info px-4 btn-sm text-dark fw-bold" @click="navigator.clipboard.writeText(JSON.stringify(selectedLog, null, 4)); alert(__('Copied to clipboard!'))">
-                            <i class="fas fa-copy me-2"></i> <?= __('Copy Log') ?>
+                        <button 
+                            type="button" 
+                            class="btn px-4 btn-sm text-dark fw-bold transition-all" 
+                            :class="payloadCopied ? 'btn-success' : 'btn-info'"
+                            @click="copyLog()"
+                        >
+                            <span x-show="!payloadCopied">
+                                <i class="fas fa-copy me-2"></i> <?= __('Copy Log') ?>
+                            </span>
+                            <span x-show="payloadCopied" x-cloak>
+                                <i class="fas fa-check me-2"></i> <?= __('Log Copied') ?>
+                            </span>
                         </button>
                     </div>
                 </div>
