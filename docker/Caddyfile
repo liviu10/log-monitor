@@ -16,8 +16,6 @@
     # Enable compression
     encode zstd gzip 
 
-
-
     # Protect sensitive files and directories by faking a 404 Not Found
     @forbidden {
         path /bin /bin/*

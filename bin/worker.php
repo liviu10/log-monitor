@@ -63,6 +63,17 @@ function sanitizeLogMessage(string $message): string
 $appsCache = [];
 
 while (true) {
+    $currentTime = time();
+    if (($currentTime - $lastHeartbeat) >= 10) {
+        try {
+            $heartbeatFile = dirname(__DIR__) . '/storage/worker.heartbeat';
+            file_put_contents($heartbeatFile, (string)$currentTime, LOCK_EX);
+            $lastHeartbeat = $currentTime;
+        } catch (\Throwable) {
+            // Executie defensiva: prevenim blocarea worker-ului daca apar probleme temporare de I/O
+        }
+    }
+    
     try {
         $db = MySQLWrapper::getInstance();
         $pdo = $db->getConnection();

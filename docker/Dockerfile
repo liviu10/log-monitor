@@ -1,51 +1,53 @@
-# Stage 1: Build dependencies
+# Etapa 1: Constructor de dependinte
 FROM docker.io/library/composer:2 AS builder
 WORKDIR /app
-COPY composer.json ./
-RUN composer install --no-dev --no-interaction --no-autoloader --no-scripts
 
-# Stage 2: Final Image
+# Copiem configuratiile de dependinte
+COPY composer.json composer.lock ./
+
+# Rulam instalarea fara scripturi si generam autoload-ul optimizat direct aici
+RUN composer install --no-dev --no-interaction --no-scripts --optimize-autoloader
+
+# Etapa 2: Imaginea Finala de Productie
 FROM docker.io/dunglas/frankenphp:php8.4-alpine
 
-# Install system packages
+# Instalam pachetele de sistem stricte si curatam cache-ul apk in aceeasi rulare
 RUN apk add --no-cache \
-    git \
     curl \
     netcat-openbsd \
     tzdata \
-    cronie \
-    bash
+    bash \
+    && rm -rf /var/cache/apk/*
 
-# Install PHP extensions (using the utility preinstalled in the image)
+# Instalam extensiile PHP necesare
 RUN install-php-extensions gd pdo_mysql mysqli zip mbstring intl bcmath opcache
 
-# PHP and Caddy settings
+# Copiem configurarile optimizate pe un singur rand (Corectat)
 COPY docker/php.ini /usr/local/etc/php/conf.d/app-optimizations.ini
 COPY docker/Caddyfile /etc/caddy/Caddyfile
 
 WORKDIR /var/www/html
 
-# Copy vendor from builder stage
-COPY --from=builder /app/vendor ./vendor
-
-# Copy source code
+# Copiem codul sursa al aplicatiei
 COPY . .
 
-# Optimize autoload and keep composer for development purposes
-COPY --from=builder /usr/bin/composer /usr/bin/composer
-RUN composer dump-autoload --optimize --no-dev
+# Copiem folderul vendor direct optimizat din builder (Fara Composer in imaginea finala)
+COPY --from=builder /app/vendor ./vendor
 
-# Permissions
-RUN chown -R root:root /var/www/html && chmod -R 755 /var/www/html
+# Pregatirea si inregistrarea fisierului Crontab (Corectat)
+COPY docker/crontab /etc/crontabs/root
 
-# Setup Entrypoint and Cron
-COPY docker/docker-entrypoint.sh /usr/local/bin/
-COPY docker/crontab /var/www/html/docker/crontab
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh && mkdir -p storage/logs
+# Pregatirea si mutarea lina a scriptului de Entrypoint in PATH (Corectat)
+COPY docker/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# Setam permisiunile in mod defensiv (www-data este utilizatorul standard non-root)
+RUN chown -R www-data:www-data /var/www/html \
+    && chmod -R 755 /var/www/html \
+    && mkdir -p storage/logs storage/backups \
+    && chown -R www-data:www-data storage
 
 EXPOSE 80
-EXPOSE 443
-EXPOSE 443/udp
 
 ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["frankenphp", "run", "--config", "/etc/caddy/Caddyfile"]

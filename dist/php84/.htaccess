@@ -1,0 +1,15 @@
+# Disable directory listing
+Options -Indexes
+
+# Block access to hidden files
+<FilesMatch "^\..*">
+  Require all denied
+</FilesMatch>
+
+# Set PHP version for this directory
+AddHandler application/x-httpd-php84 .php
+
+# Enable security headers
+Header always set X-Content-Type-Options nosniff
+Header always set X-XSS-Protection "1; mode=block"
+Header always set X-Frame-Options SAMEORIGIN

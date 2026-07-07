@@ -93,8 +93,20 @@ class QueueController extends BaseController
             // Verificam starea worker-ului in fundal executand pgrep
             $output = [];
             $returnVar = 0;
-            exec('pgrep -f "bin/worker.php"', $output, $returnVar);
-            $isWorkerRunning = ($returnVar === 0 && !empty($output));
+            $isWorkerRunning = false;
+            $heartbeatFile = dirname(__DIR__, 2) . '/storage/worker.heartbeat';
+
+            if (file_exists($heartbeatFile)) {
+                try {
+                    $lastSeenRaw = @file_get_contents($heartbeatFile);
+                    if ($lastSeenRaw !== false) {
+                        $lastSeenTimestamp = (int)$lastSeenRaw;
+                        $isWorkerRunning = (time() - $lastSeenTimestamp) <= 30;
+                    }
+                } catch (\Throwable) {
+                    $isWorkerRunning = false;
+                }
+            }
 
             $this->render('queue/index', [
                 'jobs' => $jobs,

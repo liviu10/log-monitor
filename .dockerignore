@@ -1,7 +1,6 @@
 .git
 .gitignore
 .env
-phinx.php
 README.md
 todo.txt
 .data/
