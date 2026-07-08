@@ -19,17 +19,17 @@ use Rector\Config\RectorConfig;
 $targetPhp = getenv('TARGET_PHP') ?: '74';
 
 $skips = [
-    __DIR__ . '/vendor',
-    __DIR__ . '/.phpunit.cache',
+    dirname(__DIR__) . '/vendor',
+    dirname(__DIR__) . '/.phpunit.cache',
 ];
 
 if (!getenv('TARGET_PHP')) {
-    $skips[] = __DIR__ . '/dist';
+    $skips[] = dirname(__DIR__) . '/dist';
 }
 
 return RectorConfig::configure()
     ->withPaths([
-        __DIR__,
+        dirname(__DIR__),
     ])
     ->withSkip($skips)
     ->withDowngradeSets(

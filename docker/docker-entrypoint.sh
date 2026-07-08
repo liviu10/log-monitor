@@ -51,12 +51,12 @@ if [ "$1" = "frankenphp" ]; then
     ENV_TARGET=${APP_ENV:-development}
     echo "Rulam migratiile active pentru mediul: $ENV_TARGET"
     
-    # Solutia: Adaugam flag-ul -c phinx.php pentru a forta utilizarea lui si a scoate la suprafata erorile ascunse
-    ./vendor/bin/phinx migrate -c phinx.php -e "$ENV_TARGET"
+    # Solutia: Adaugam flag-ul -c db/phinx.php pentru a forta utilizarea lui si a scoate la suprafata erorile ascunse
+    ./vendor/bin/phinx migrate -c db/phinx.php -e "$ENV_TARGET"
     
     if [ "$APP_ENV" = "development" ]; then
         echo "Mediu de dezvoltare activ. Rulam pachetele de seed..."
-        ./vendor/bin/phinx seed:run -c phinx.php -e "$ENV_TARGET"
+        ./vendor/bin/phinx seed:run -c db/phinx.php -e "$ENV_TARGET"
     fi
 fi
 

@@ -34,8 +34,8 @@ abstract class TestCase extends BaseTestCase
         $app->setAutoExit(false);
         
         // Run rollback if tables already exist to start fresh
-        $app->run(new StringInput('rollback -e production -t 0'), new NullOutput());
-        $app->run(new StringInput('migrate -e production'), new NullOutput());
+        $app->run(new StringInput('rollback -c db/phinx.php -e production -t 0'), new NullOutput());
+        $app->run(new StringInput('migrate -c db/phinx.php -e production'), new NullOutput());
     }
 
     /**
@@ -45,7 +45,7 @@ abstract class TestCase extends BaseTestCase
     {
         $app = new PhinxApplication();
         $app->setAutoExit(false);
-        $app->run(new StringInput('seed:run -e production'), new NullOutput());
+        $app->run(new StringInput('seed:run -c db/phinx.php -e production'), new NullOutput());
     }
 
     /**

@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/vendor/autoload.php';
+require_once dirname(__DIR__) . '/vendor/autoload.php';
 
-$dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
+$dotenv = Dotenv\Dotenv::createImmutable(dirname(__DIR__));
 $dotenv->safeLoad();
 
 return [
     'paths' => [
-        'migrations' => '%%PHINX_CONFIG_DIR%%/db/migrations',
-        'seeds' => '%%PHINX_CONFIG_DIR%%/db/seeds'
+        'migrations' => '%%PHINX_CONFIG_DIR%%/migrations',
+        'seeds' => '%%PHINX_CONFIG_DIR%%/seeds'
     ],
     'environments' => [
         'default_migration_table' => 'phinxlog',

@@ -6,7 +6,7 @@ declare(strict_types=1);
 set_time_limit(5);
 
 // Incarcam configuratiile de baza ale aplicatiei
-require_once __DIR__ . '/bootstrap.php';
+require_once dirname(__DIR__) . '/bootstrap.php';
 
 use App\Utilities\MySQLWrapper;
 
@@ -93,7 +93,7 @@ $handler = function () {
         return;
     }
 
-    // Inseram rapid payload-ul in tabela de coada log_queue fara validare sau decodare JSON
+    // Inseram rapid payload-ul in tabela de coada log_queue fara validare ou decodare JSON
     try {
         $db->create('log_queue', [
             'app_id' => $appId,

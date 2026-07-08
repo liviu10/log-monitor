@@ -32,14 +32,12 @@
         path .gitignore
         path /composer.json
         path /composer.lock
-        path /phinx.php
         path /phpunit.xml
-        path /rector.php
     }
     respond @forbidden "Not Found" 404
 
     # Execute PHP files
     php_server {
-        worker log.php 2
+        worker api/log.php 2
     }
 }

@@ -14,9 +14,16 @@ ini_set('memory_limit', '256M');
 // Incarcam bootstrap-ul pentru acces la baza de date
 require_once dirname(__DIR__) . '/bootstrap.php';
 
+// Limitam executia doar in mediul de development
+$appEnv = $_ENV['APP_ENV'] ?? getenv('APP_ENV') ?? 'production';
+if (strtolower($appEnv) !== 'development') {
+    fwrite(STDERR, "Error: This simulation script can only run in a 'development' environment. Current: '{$appEnv}'\n");
+    exit(1);
+}
+
 use App\Utilities\MySQLWrapper;
 
-$url = 'http://app/log.php';
+$url = 'http://app/api/log.php';
 $totalLogs = isset($argv[1]) && is_numeric($argv[1]) ? (int)$argv[1] : 50000;
 $testApiKey = 'c7c6b541234567890abcdef1234567890';
 

@@ -12,6 +12,7 @@ docker-compose.override.yml
 *.log
 /storage/logs/
 /storage/backups/
+/storage/reports/
 
 # IDEs
 .idea/

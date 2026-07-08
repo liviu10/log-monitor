@@ -6,19 +6,34 @@
 
 export LC_ALL=C
 
+# Verificare mediu (APP_ENV trebuie sa fie 'development')
+ENV_FILE="../.env"
+if [ -f "$ENV_FILE" ]; then
+    APP_ENV=$(grep -E '^APP_ENV=' "$ENV_FILE" | cut -d'=' -f2 | tr -d '"'\'' ')
+else
+    APP_ENV="production"
+fi
+
+if [ "$APP_ENV" != "development" ]; then
+    echo "EROARE: Acest script de benchmark poate fi rulat doar in mediul de 'development'."
+    echo "Valoarea curenta a APP_ENV este: '$APP_ENV'."
+    exit 1
+fi
+
 # Abordare Fail-Fast
 if ! podman ps | grep -q "log-monitor"; then
     echo "EROARE: Niciun container din proiectul log-monitor nu ruleaza."
     exit 1
 fi
 
-LOG_FILE="test_performanta_50000_loguri.txt"
+LOG_FILE="../storage/reports/test_performanta_50000_loguri.txt"
 RAW_STATS_FILE="/tmp/log_monitor_raw_stats.txt"
 START_STATS_FILE="/tmp/log_monitor_start_stats.txt"
 END_STATS_FILE="/tmp/log_monitor_end_stats.txt"
 BASELINE_FILE="/tmp/log_monitor_baseline.txt"
 
 # Curatam fisierele vechi
+mkdir -p ../storage/reports
 rm -f "$LOG_FILE" "$RAW_STATS_FILE" "$START_STATS_FILE" "$END_STATS_FILE" "$BASELINE_FILE"
 
 # Numarul de loguri de ingerat
@@ -302,7 +317,7 @@ cat "$LOG_FILE"
 
 echo ""
 echo "========================================================================"
-echo " Raportul complet de performanta a fost salvat in: $LOG_FILE"
+echo " Raportul complet de performanta a fost salvat in: ${LOG_FILE#../}"
 echo "========================================================================"
 
 # Curatam fisierele temporare

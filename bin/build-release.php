@@ -51,10 +51,9 @@ $itemsToCopy = [
     'app-settings.php',
     'apps.php',
     'change-lang.php',
-    'log.php',
+    'api',
     'login.php',
     'users.php',
-    'phinx.php',
     '.env.example'
 ];
 
@@ -213,7 +212,7 @@ CODE;
 // 4. Executarea Rector pe directorul tinta
 echo "Running Rector on target directory...\n";
 $envVar = 'TARGET_PHP=' . str_replace('.', '', $version);
-$command = "{$envVar} vendor/bin/rector process " . escapeshellarg($targetDir);
+$command = "{$envVar} vendor/bin/rector process --config bin/rector.php " . escapeshellarg($targetDir);
 passthru($command, $exitCode);
 
 if ($exitCode === 0) {
