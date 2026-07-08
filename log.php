@@ -10,7 +10,18 @@ require_once __DIR__ . '/bootstrap.php';
 
 use App\Utilities\MySQLWrapper;
 
-// Validam metoda HTTP: acceptam doar cereri de tip POST
+// Suport CORS: Permitem cererile de tip Preflight (OPTIONS) venite din browsere externe
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'OPTIONS') {
+    header('Access-Control-Allow-Origin: *');
+    header('Access-Control-Allow-Methods: POST, OPTIONS');
+    // Am lasat doar X-API-KEY in lista de headere permise
+    header('Access-Control-Allow-Headers: X-API-KEY, Content-Type, Authorization');
+    header('Access-Control-Max-Age: 86400'); // Cache la preflight pentru 24 ore
+    http_response_code(204); // No Content
+    exit;
+}
+
+// Validam metoda HTTP: acceptam doar cereri de tip POST pentru ingestia de date
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
     header('Content-Type: application/json');
     http_response_code(405);
@@ -18,17 +29,20 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
     exit;
 }
 
-// Extragem API Key-ul specific aplicatiei client din headere
-$appKey = $_SERVER['HTTP_X_APP_KEY'] ?? $_SERVER['X_APP_KEY'] ?? $_SERVER['HTTP_X_API_KEY'] ?? $_SERVER['X_API_KEY'] ?? null;
+// Adaugam header-ul de origine si pentru raspunsul request-ului de tip POST
+header('Access-Control-Allow-Origin: *');
 
-if (!$appKey) {
+// Extragem EXCLUSIV API Key-ul din headere
+$apiKey = $_SERVER['HTTP_X_API_KEY'] ?? $_SERVER['X_API_KEY'] ?? null;
+
+if (!$apiKey) {
     // Fallback case-insensitive prin getallheaders daca functia este disponibila
     if (function_exists('getallheaders')) {
         $headers = getallheaders();
         if (is_array($headers)) {
             foreach ($headers as $key => $value) {
-                if (strcasecmp($key, 'X-APP-KEY') === 0 || strcasecmp($key, 'X-App-Key') === 0 || strcasecmp($key, 'X-API-KEY') === 0 || strcasecmp($key, 'X-Api-Key') === 0) {
-                    $appKey = $value;
+                if (strcasecmp($key, 'X-API-KEY') === 0) {
+                    $apiKey = $value;
                     break;
                 }
             }
@@ -36,18 +50,18 @@ if (!$appKey) {
     }
 }
 
-// Fail-Fast: Daca lipseste cheia aplicatiei client, respingem cererea direct
-if (!$appKey || trim((string)$appKey) === '') {
+// Fail-Fast: Daca lipseste cheia API, respingem cererea direct
+if (!$apiKey || trim((string)$apiKey) === '') {
     header('Content-Type: application/json');
     http_response_code(400);
-    echo json_encode(['error' => __('X-APP-KEY or X-API-KEY header is missing or empty.')]);
+    echo json_encode(['error' => __('X-API-KEY header is missing or empty.')]);
     exit;
 }
 
-// Validare secundara interna: gasim ID-ul aplicatiei direct din baza de date
+// Validare interna: gasim ID-ul aplicatiei direct din baza de date
 try {
     $db = MySQLWrapper::getInstance();
-    $stmt = $db->query('SELECT id FROM apps WHERE api_key = ? LIMIT 1', [trim((string)$appKey)]);
+    $stmt = $db->query('SELECT id FROM apps WHERE api_key = ? LIMIT 1', [trim((string)$apiKey)]);
     $app = $stmt->fetch();
 
     if (!$app) {

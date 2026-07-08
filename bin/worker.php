@@ -61,6 +61,7 @@ function sanitizeLogMessage(string $message): string
 
 // Bucla principala infinita a worker-ului CLI
 $appsCache = [];
+$lastHeartbeat = 0;
 
 while (true) {
     $currentTime = time();

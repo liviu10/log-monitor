@@ -67,7 +67,7 @@ services:
     depends_on:
       - proxy  # Asigura ordinea corecta de rezolutie DNS in reteaua interna
 
-  # 3. Serviciul Web Principal (FrankenPHP) - Izolat in backend
+  # 3. Serviciul Web Principal (FrankenPHP) - Actualizat cu Bind Mount
   app:
     build:
       context: ..
@@ -75,7 +75,9 @@ services:
     container_name: log-monitor-app
     restart: always
     volumes:
-      - storage_data:/var/www/html/storage:z
+      - ../:/var/www/html:z                  # Sincronizeaza codul de pe gazda in container in timp real
+      - /var/www/html/vendor                 # Pastreaza folderul vendor generat in container (nu il suprascrie cu cel de pe gazda)
+      - storage_data:/var/www/html/storage:z # Volumul partajat pentru date persistente
     env_file:
       - ../.env
     environment:
@@ -90,7 +92,7 @@ services:
       retries: 3
       start_period: 20s
 
-  # 4. Worker - Consumator de cozi CLI
+  # 4. Worker - Consumator de cozi CLI - Actualizat cu Bind Mount
   worker:
     build:
       context: ..
@@ -99,6 +101,8 @@ services:
     restart: always
     command: ["php", "bin/worker.php"]
     volumes:
+      - ../:/var/www/html:z                  # Sincronizare cod
+      - /var/www/html/vendor                 # Protectie vendor
       - storage_data:/var/www/html/storage:z
     env_file:
       - ../.env
@@ -108,7 +112,7 @@ services:
       db:
         condition: service_healthy
 
-  # 5. Cron - Task-uri programate de mentenanta
+  # 5. Cron - Task-uri programate de mentenanta - Actualizat cu Bind Mount
   cron:
     build:
       context: ..
@@ -117,6 +121,8 @@ services:
     restart: always
     command: ["crond", "-f", "-l", "2"]
     volumes:
+      - ../:/var/www/html:z                  # Sincronizare cod
+      - /var/www/html/vendor                 # Protectie vendor
       - storage_data:/var/www/html/storage:z
     env_file:
       - ../.env

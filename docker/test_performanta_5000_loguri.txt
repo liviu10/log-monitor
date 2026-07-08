@@ -1,0 +1,9 @@
+=== START TEST ULTRA-SIMPLIFICAT: miercuri 8 iulie 2026, 16:39:21 +0300 ===
+--- Marcaj: 16:39:22 ---
+ID            NAME                 CPU %       MEM USAGE / LIMIT  MEM %       NET IO             BLOCK IO           PIDS        CPU TIME    AVG CPU %
+796a6533578b  log-monitor-db       0.30%       124.6MB / 30.36GB  0.41%       7.949MB / 6.519MB  5.517MB / 7.713MB  37          40.726314s  0.30%
+9ff69a4dfa76  log-monitor-app      0.19%       89.11MB / 30.36GB  0.29%       3.031MB / 3.847MB  0B / 36.86kB       54          11.49453s   0.19%
+1afda1c19943  log-monitor-cron     0.00%       311.3kB / 30.36GB  0.00%       32.53kB / 2.112kB  0B / 0B            1           121.682ms   0.00%
+6c76855915a5  log-monitor-proxy    0.02%       15.12MB / 30.36GB  0.05%       3.444MB / 244.7kB  0B / 49.15kB       19          1.244337s   0.02%
+5ee997360604  log-monitor-certbot  0.10%       1.29MB / 30.36GB   0.00%       2.621MB / 2.637MB  0B / 0B            2           23.491795s  0.10%
+=== REZULTAT FINAL SALVAT IN EXECUTIE: miercuri 8 iulie 2026, 16:39:23 +0300 ===

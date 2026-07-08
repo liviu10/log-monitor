@@ -39,5 +39,7 @@
     respond @forbidden "Not Found" 404
 
     # Execute PHP files
-    php_server 
+    php_server {
+        worker log.php 2
+    }
 }
