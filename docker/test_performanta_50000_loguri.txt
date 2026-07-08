@@ -1,79 +1,37 @@
-=== START TEST ULTRA-SIMPLIFICAT: miercuri 8 iulie 2026, 16:44:06 +0300 ===
---- Marcaj: 16:44:07 ---
-ID            NAME                 CPU %       MEM USAGE / LIMIT  MEM %       NET IO             BLOCK IO           PIDS        CPU TIME    AVG CPU %
-796a6533578b  log-monitor-db       0.32%       126.3MB / 30.36GB  0.42%       12.15MB / 9.981MB  5.517MB / 9.966MB  37          43.795071s  0.32%
-9ff69a4dfa76  log-monitor-app      0.35%       93.49MB / 30.36GB  0.31%       6.514MB / 8.542MB  0B / 36.86kB       54          22.415431s  0.35%
-1afda1c19943  log-monitor-cron     0.00%       311.3kB / 30.36GB  0.00%       32.53kB / 2.112kB  0B / 0B            1           123.33ms    0.00%
-6c76855915a5  log-monitor-proxy    0.02%       15.96MB / 30.36GB  0.05%       3.944MB / 272.9kB  0B / 49.15kB       19          1.291644s   0.02%
-5ee997360604  log-monitor-certbot  0.10%       471kB / 30.36GB    0.00%       2.654MB / 2.67MB   0B / 0B            2           23.779803s  0.10%
---- Marcaj: 16:44:09 ---
-ID            NAME                 CPU %       MEM USAGE / LIMIT  MEM %       NET IO             BLOCK IO           PIDS        CPU TIME    AVG CPU %
-796a6533578b  log-monitor-db       0.33%       127.8MB / 30.36GB  0.42%       16.1MB / 13.21MB   5.517MB / 10.17MB  37          45.926412s  0.33%
-9ff69a4dfa76  log-monitor-app      0.51%       94.36MB / 30.36GB  0.31%       9.741MB / 12.49MB  0B / 36.86kB       54          32.719444s  0.51%
-1afda1c19943  log-monitor-cron     0.00%       311.3kB / 30.36GB  0.00%       32.53kB / 2.112kB  0B / 0B            1           123.33ms    0.00%
-6c76855915a5  log-monitor-proxy    0.02%       15.96MB / 30.36GB  0.05%       3.944MB / 273kB    0B / 49.15kB       19          1.291644s   0.02%
-5ee997360604  log-monitor-certbot  0.10%       704.5kB / 30.36GB  0.00%       2.654MB / 2.67MB   0B / 0B            2           23.783095s  0.10%
---- Marcaj: 16:44:11 ---
-ID            NAME                 CPU %       MEM USAGE / LIMIT  MEM %       NET IO             BLOCK IO           PIDS        CPU TIME    AVG CPU %
-796a6533578b  log-monitor-db       0.35%       131MB / 30.36GB    0.43%       20.04MB / 16.43MB  5.517MB / 10.47MB  40          48.095538s  0.35%
-9ff69a4dfa76  log-monitor-app      0.67%       92.54MB / 30.36GB  0.30%       12.96MB / 16.43MB  0B / 36.86kB       54          43.016503s  0.67%
-1afda1c19943  log-monitor-cron     0.00%       311.3kB / 30.36GB  0.00%       32.53kB / 2.112kB  0B / 0B            1           123.33ms    0.00%
-6c76855915a5  log-monitor-proxy    0.02%       15.96MB / 30.36GB  0.05%       3.944MB / 273kB    0B / 49.15kB       19          1.291644s   0.02%
-5ee997360604  log-monitor-certbot  0.10%       700.4kB / 30.36GB  0.00%       2.654MB / 2.67MB   0B / 0B            2           23.786066s  0.10%
---- Marcaj: 16:44:12 ---
-ID            NAME                 CPU %       MEM USAGE / LIMIT  MEM %       NET IO             BLOCK IO           PIDS        CPU TIME    AVG CPU %
-796a6533578b  log-monitor-db       0.36%       130.4MB / 30.36GB  0.43%       24MB / 19.67MB     5.517MB / 10.69MB  38          50.324652s  0.36%
-9ff69a4dfa76  log-monitor-app      0.83%       92.57MB / 30.36GB  0.30%       16.2MB / 20.39MB   0B / 36.86kB       54          53.56604s   0.83%
-1afda1c19943  log-monitor-cron     0.00%       311.3kB / 30.36GB  0.00%       32.53kB / 2.112kB  0B / 0B            1           123.33ms    0.00%
-6c76855915a5  log-monitor-proxy    0.02%       15.96MB / 30.36GB  0.05%       3.944MB / 273.1kB  0B / 49.15kB       19          1.291644s   0.02%
-5ee997360604  log-monitor-certbot  0.10%       466.9kB / 30.36GB  0.00%       2.654MB / 2.67MB   0B / 0B            2           23.786066s  0.10%
---- Marcaj: 16:44:14 ---
-ID            NAME                 CPU %       MEM USAGE / LIMIT  MEM %       NET IO             BLOCK IO           PIDS        CPU TIME     AVG CPU %
-796a6533578b  log-monitor-db       0.38%       131.2MB / 30.36GB  0.43%       27.98MB / 22.92MB  5.517MB / 10.95MB  38          52.496491s   0.38%
-9ff69a4dfa76  log-monitor-app      1.00%       94.57MB / 30.36GB  0.31%       19.45MB / 24.36MB  0B / 36.86kB       56          1m4.046395s  1.00%
-1afda1c19943  log-monitor-cron     0.00%       311.3kB / 30.36GB  0.00%       32.53kB / 2.112kB  0B / 0B            1           123.33ms     0.00%
-6c76855915a5  log-monitor-proxy    0.02%       15.96MB / 30.36GB  0.05%       3.944MB / 273.1kB  0B / 49.15kB       19          1.291644s    0.02%
-5ee997360604  log-monitor-certbot  0.10%       462.8kB / 30.36GB  0.00%       2.654MB / 2.671MB  0B / 0B            2           23.788613s   0.10%
---- Marcaj: 16:44:16 ---
-ID            NAME                 CPU %       MEM USAGE / LIMIT  MEM %       NET IO             BLOCK IO           PIDS        CPU TIME      AVG CPU %
-796a6533578b  log-monitor-db       0.39%       133.1MB / 30.36GB  0.44%       31.92MB / 26.14MB  5.517MB / 11.16MB  38          54.662464s    0.39%
-9ff69a4dfa76  log-monitor-app      1.16%       95.11MB / 30.36GB  0.31%       22.68MB / 28.31MB  0B / 36.86kB       56          1m14.433623s  1.16%
-1afda1c19943  log-monitor-cron     0.00%       311.3kB / 30.36GB  0.00%       32.53kB / 2.112kB  0B / 0B            1           123.33ms      0.00%
-6c76855915a5  log-monitor-proxy    0.02%       15.96MB / 30.36GB  0.05%       3.944MB / 273.2kB  0B / 49.15kB       19          1.291644s     0.02%
-5ee997360604  log-monitor-certbot  0.10%       471kB / 30.36GB    0.00%       2.655MB / 2.671MB  0B / 0B            2           23.791449s    0.10%
---- Marcaj: 16:44:17 ---
-ID            NAME                 CPU %       MEM USAGE / LIMIT  MEM %       NET IO             BLOCK IO           PIDS        CPU TIME      AVG CPU %
-796a6533578b  log-monitor-db       0.41%       134.3MB / 30.36GB  0.44%       35.8MB / 29.32MB   5.517MB / 11.31MB  38          56.858399s    0.41%
-9ff69a4dfa76  log-monitor-app      1.32%       93.23MB / 30.36GB  0.31%       25.85MB / 32.19MB  0B / 36.86kB       56          1m24.977309s  1.32%
-1afda1c19943  log-monitor-cron     0.00%       311.3kB / 30.36GB  0.00%       32.53kB / 2.112kB  0B / 0B            1           123.33ms      0.00%
-6c76855915a5  log-monitor-proxy    0.02%       15.95MB / 30.36GB  0.05%       3.944MB / 273.2kB  0B / 49.15kB       19          1.293212s     0.02%
-5ee997360604  log-monitor-certbot  0.10%       471kB / 30.36GB    0.00%       2.655MB / 2.671MB  0B / 0B            2           23.794242s    0.10%
---- Marcaj: 16:44:19 ---
-ID            NAME                 CPU %       MEM USAGE / LIMIT  MEM %       NET IO             BLOCK IO           PIDS        CPU TIME      AVG CPU %
-796a6533578b  log-monitor-db       0.43%       135.7MB / 30.36GB  0.45%       39.74MB / 32.53MB  5.517MB / 11.38MB  38          59.017083s    0.43%
-9ff69a4dfa76  log-monitor-app      1.48%       94.36MB / 30.36GB  0.31%       29.07MB / 36.12MB  0B / 36.86kB       56          1m35.391033s  1.48%
-1afda1c19943  log-monitor-cron     0.00%       311.3kB / 30.36GB  0.00%       32.53kB / 2.112kB  0B / 0B            1           123.33ms      0.00%
-6c76855915a5  log-monitor-proxy    0.02%       15.95MB / 30.36GB  0.05%       3.944MB / 273.3kB  0B / 49.15kB       19          1.293212s     0.02%
-5ee997360604  log-monitor-certbot  0.10%       471kB / 30.36GB    0.00%       2.655MB / 2.671MB  0B / 0B            2           23.7967s      0.10%
---- Marcaj: 16:44:21 ---
-ID            NAME                 CPU %       MEM USAGE / LIMIT  MEM %       NET IO             BLOCK IO           PIDS        CPU TIME      AVG CPU %
-796a6533578b  log-monitor-db       0.44%       136.6MB / 30.36GB  0.45%       42.7MB / 34.96MB   5.517MB / 11.44MB  38          1m0.671932s   0.44%
-9ff69a4dfa76  log-monitor-app      1.60%       93.37MB / 30.36GB  0.31%       31.5MB / 39.09MB   0B / 36.86kB       56          1m43.227793s  1.60%
-1afda1c19943  log-monitor-cron     0.00%       311.3kB / 30.36GB  0.00%       32.53kB / 2.112kB  0B / 0B            1           123.33ms      0.00%
-6c76855915a5  log-monitor-proxy    0.02%       15.95MB / 30.36GB  0.05%       3.945MB / 273.3kB  0B / 49.15kB       19          1.293212s     0.02%
-5ee997360604  log-monitor-certbot  0.10%       1.343MB / 30.36GB  0.00%       2.655MB / 2.672MB  0B / 0B            2           23.79898s     0.10%
---- Marcaj: 16:44:22 ---
-ID            NAME                 CPU %       MEM USAGE / LIMIT  MEM %       NET IO             BLOCK IO           PIDS        CPU TIME      AVG CPU %
-796a6533578b  log-monitor-db       0.45%       138.1MB / 30.36GB  0.45%       46.62MB / 38.17MB  5.517MB / 11.63MB  38          1m2.934589s   0.45%
-9ff69a4dfa76  log-monitor-app      1.77%       95.7MB / 30.36GB   0.32%       34.7MB / 43.01MB   0B / 36.86kB       56          1m53.779526s  1.77%
-1afda1c19943  log-monitor-cron     0.00%       311.3kB / 30.36GB  0.00%       32.53kB / 2.112kB  0B / 0B            1           123.33ms      0.00%
-6c76855915a5  log-monitor-proxy    0.02%       15.95MB / 30.36GB  0.05%       3.945MB / 273.4kB  0B / 49.15kB       19          1.293212s     0.02%
-5ee997360604  log-monitor-certbot  0.10%       1.159MB / 30.36GB  0.00%       2.655MB / 2.672MB  0B / 0B            2           23.802122s    0.10%
---- Marcaj: 16:44:24 ---
-ID            NAME                 CPU %       MEM USAGE / LIMIT  MEM %       NET IO             BLOCK IO           PIDS        CPU TIME     AVG CPU %
-796a6533578b  log-monitor-db       0.47%       139.3MB / 30.36GB  0.46%       50.54MB / 41.37MB  5.517MB / 12.84MB  38          1m5.122703s  0.47%
-9ff69a4dfa76  log-monitor-app      1.93%       94.75MB / 30.36GB  0.31%       37.91MB / 46.93MB  0B / 36.86kB       56          2m4.322991s  1.93%
-1afda1c19943  log-monitor-cron     0.00%       311.3kB / 30.36GB  0.00%       32.53kB / 2.112kB  0B / 0B            1           123.33ms     0.00%
-6c76855915a5  log-monitor-proxy    0.02%       15.95MB / 30.36GB  0.05%       3.945MB / 273.4kB  0B / 49.15kB       19          1.293212s    0.02%
-5ee997360604  log-monitor-certbot  0.10%       471kB / 30.36GB    0.00%       2.655MB / 2.672MB  0B / 0B            2           23.802122s   0.10%
-=== REZULTAT FINAL SALVAT IN EXECUTIE: miercuri 8 iulie 2026, 16:44:26 +0300 ===
+# RAPORT DETALIAT DE PERFORMANTA - SIMULARE 50000 LOGURI
+
+## 1. TIMPI SI RATE DE INGESTIE / PROCESARE
+| Faza | Timp total (s) | Viteza medie (logs/s) |
+| :--- | :---: | :---: |
+| Ingestie (Simulator -> DB Queue) | 16.31s | 3065.5 logs/s |
+| Procesare (DB Queue -> Logs DB)  | 4.22s | 11839.1 logs/s |
+
+## 2. CONSUM RESURSE PE CONTAINER (MEDII SI PEAK)
+| Container | Faza | Avg CPU | Max CPU | Avg RAM | Max RAM |
+| :--- | :--- | :---: | :---: | :---: | :---: |
+| log-monitor-certbot | Ingestie | 0.00% | 0.00% | 0.63 MB | 1.55 MB |
+| log-monitor-certbot | Procesare | 0.00% | 0.00% | 0.73 MB | 1.07 MB |
+| log-monitor-cron | Ingestie | 0.00% | 0.00% | 0.30 MB | 0.30 MB |
+| log-monitor-cron | Procesare | 0.00% | 0.00% | 0.30 MB | 0.30 MB |
+| log-monitor-app | Ingestie | 24.33% | 48.55% | 102.24 MB | 103.90 MB |
+| log-monitor-app | Procesare | 39.42% | 39.96% | 85.66 MB | 85.66 MB |
+| log-monitor-db | Ingestie | 4.82% | 9.60% | 207.83 MB | 208.80 MB |
+| log-monitor-db | Procesare | 8.23% | 8.38% | 222.27 MB | 226.40 MB |
+| log-monitor-proxy | Ingestie | 0.00% | 0.00% | 13.86 MB | 13.86 MB |
+| log-monitor-proxy | Procesare | 0.00% | 0.00% | 13.86 MB | 13.86 MB |
+| log-monitor-worker | Procesare | 20.66% | 33.27% | 21.28 MB | 23.15 MB |
+
+## 3. STATISTICI DISK I/O (IMPACTUL ASUPRA SSD)
+| Container | Total Citit (MB) | Total Scris (MB) | Rata Medie Citire | Rata Medie Scriere |
+| :--- | :---: | :---: | :---: | :---: |
+| log-monitor-certbot | 0.00 MB | 0.00 MB | 0.00 MB/s | 0.00 MB/s |
+| log-monitor-cron | 0.00 MB | 0.00 MB | 0.00 MB/s | 0.00 MB/s |
+| log-monitor-app | 0.00 MB | 0.00 MB | 0.00 MB/s | 0.00 MB/s |
+| log-monitor-db | 0.00 MB | 5.25 MB | 0.00 MB/s | 0.26 MB/s |
+| log-monitor-proxy | 0.00 MB | 0.00 MB | 0.00 MB/s | 0.00 MB/s |
+| log-monitor-worker | 0.00 MB | 0.00 MB | 0.00 MB/s | 0.00 MB/s |
+
+## 4. CONCLUZII DE EFICIENTIZARE CPU SI RAM
+Analizati tabelul de resurse de mai sus. In mod ideal:
+- MariaDB (log-monitor-db) ar trebui sa aiba un consum echilibrat de RAM si CPU datorita noilor tranzactii bulk.
+- Worker-ul CLI (log-monitor-worker) ar trebui sa aiba un footprint CPU mult redus in comparatie cu versiunea anterioara care procesa logs unul cate unul.

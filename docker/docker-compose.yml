@@ -100,6 +100,13 @@ services:
     container_name: log-monitor-worker
     restart: always
     command: ["php", "bin/worker.php"]
+    blkio_config:
+      device_write_bps:
+        - path: /dev/nvme0n1
+          rate: 300mb
+      device_read_bps:
+        - path: /dev/nvme0n1
+          rate: 300mb
     volumes:
       - ../:/var/www/html:z                  # Sincronizare cod
       - /var/www/html/vendor                 # Protectie vendor
@@ -139,6 +146,13 @@ services:
     restart: always
     ports:
       - "33061:3306"
+    blkio_config:
+      device_write_bps:
+        - path: /dev/nvme0n1
+          rate: 300mb
+      device_read_bps:
+        - path: /dev/nvme0n1
+          rate: 300mb
     env_file:
       - ../.env
     environment:
