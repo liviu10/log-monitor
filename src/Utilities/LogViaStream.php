@@ -185,6 +185,13 @@ final class LogViaStream
      */
     public static function send(string $level, string $message, array $context = []): bool
     {
+        // Preventie recursivitate / bucla circulara pe endpoint-ul API log.php
+        $currentScript = basename($_SERVER['SCRIPT_NAME'] ?? '');
+        if ($currentScript === 'log.php') {
+            error_log(sprintf("[%s] Internal Log: %s | Context: %s", strtoupper($level), $message, json_encode($context)));
+            return true;
+        }
+
         // Preventie bucle de recursivitate
         if (self::$isLogging) {
             return false;

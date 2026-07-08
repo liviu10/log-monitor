@@ -62,6 +62,7 @@ function sanitizeLogMessage(string $message): string
 // Bucla principala infinita a worker-ului CLI
 $appsCache = [];
 $lastHeartbeat = 0;
+$notificationController = new NotificationController();
 
 while (true) {
     $currentTime = time();
@@ -79,60 +80,97 @@ while (true) {
         $db = MySQLWrapper::getInstance();
         $pdo = $db->getConnection();
 
-        // Initiem o tranzactie locala pentru a garanta stergerea atomica si blocarea randului selectat
+        // Initiem o tranzactie locala pentru a garanta stergerea atomica si blocarea randurilor selectate
         $pdo->beginTransaction();
 
-        // Selectam primul job disponibil folosind FOR UPDATE SKIP LOCKED pentru a evita race conditions in mod concurent
-        $stmt = $db->query('SELECT id, app_id, payload_raw FROM log_queue ORDER BY id ASC LIMIT 1 FOR UPDATE SKIP LOCKED');
-        $job = $stmt->fetch();
+        // Selectam pana la 2000 de joburi folosind FOR UPDATE SKIP LOCKED
+        $stmt = $db->query('SELECT id, app_id, payload_raw FROM log_queue ORDER BY id ASC LIMIT 2000 FOR UPDATE SKIP LOCKED');
+        $jobs = $stmt->fetchAll();
 
-        if ($job) {
-            $jobId = (int)$job['id'];
-            $appId = (int)$job['app_id'];
-            $payloadRaw = (string)$job['payload_raw'];
+        if ($jobs) {
+            $idsToDelete = [];
+            $insertRows = [];
+            $insertValues = [];
 
-            // Validam payload-ul utilizand noua functionalitate json_validate din PHP 8.4
-            if (json_validate($payloadRaw)) {
-                $payload = json_decode($payloadRaw, true);
+            foreach ($jobs as $job) {
+                $jobId = (int)$job['id'];
+                $appId = (int)$job['app_id'];
+                $payloadRaw = (string)$job['payload_raw'];
 
-                if (is_array($payload)) {
-                    $level = strtoupper(trim((string)($payload['level'] ?? 'INFO')));
-                    $message = trim((string)($payload['message'] ?? ''));
+                $idsToDelete[] = $jobId;
 
-                    // Sanitizam datele sensibile din mesaj si context
-                    $message = sanitizeLogMessage($message);
-                    $context = isset($payload['context']) && is_array($payload['context'])
-                        ? sanitizeSensitivePayload($payload['context'])
-                        : [];
+                // Validam payload-ul utilizand functionalitatea json_validate din PHP 8.4
+                if (json_validate($payloadRaw)) {
+                    $payload = json_decode($payloadRaw, true);
 
-                    // Inseram logul in tabela principala logs
-                    $logModel = new Log();
-                    $logModel->create($appId, $level, $message, $context);
+                    if (is_array($payload)) {
+                        $level = strtoupper(trim((string)($payload['level'] ?? 'INFO')));
+                        $message = trim((string)($payload['message'] ?? ''));
 
-                    // Trimitere de alerte automate daca sunt configurate si nivelul de severitate corespunde (folosim cache-ul cu TTL 10s)
-                    $currentTime = time();
-                    if (!isset($appsCache[$appId]) || ($currentTime - $appsCache[$appId]['cached_at']) > 10) {
-                        $stmtApp = $db->query('SELECT * FROM apps WHERE id = ? LIMIT 1', [$appId]);
-                        $appsCache[$appId] = [
-                            'data' => $stmtApp->fetch() ?: null,
-                            'cached_at' => $currentTime
-                        ];
-                    }
+                        // Sanitizam datele sensibile din mesaj si context
+                        $message = sanitizeLogMessage($message);
+                        $context = isset($payload['context']) && is_array($payload['context'])
+                            ? sanitizeSensitivePayload($payload['context'])
+                            : [];
 
-                    $app = $appsCache[$appId]['data'];
-                    if ($app) {
-                        $notificationController = new NotificationController();
-                        $notificationController->sendAlert($app, [
-                            'level' => $level,
-                            'message' => $message,
-                            'context' => $context
-                        ]);
+                        $jsonContext = null;
+                        if (!empty($context)) {
+                            $jsonContext = json_encode($context, JSON_THROW_ON_ERROR);
+                        }
+
+                        // Pregatim parametrii pentru insert-ul bulk
+                        $insertRows[] = '(?, ?, ?, ?)';
+                        $insertValues[] = $appId;
+                        $insertValues[] = $level;
+                        $insertValues[] = $message;
+                        $insertValues[] = $jsonContext;
+
+                        // Trimitem alerte automate daca sunt configurate
+                        $currentTime = time();
+                        if (!isset($appsCache[$appId]) || ($currentTime - $appsCache[$appId]['cached_at']) > 10) {
+                            $stmtApp = $db->query('SELECT * FROM apps WHERE id = ? LIMIT 1', [$appId]);
+                            $appData = $stmtApp->fetch() ?: null;
+                            $settings = [];
+                            if ($appData) {
+                                $stmtSettings = $db->query('SELECT `key`, `value` FROM app_settings WHERE app_id = ?', [$appId]);
+                                foreach ($stmtSettings->fetchAll() as $row) {
+                                    $settings[$row['key']] = $row['value'];
+                                }
+                            }
+                            $appsCache[$appId] = [
+                                'data' => $appData,
+                                'settings' => $settings,
+                                'cached_at' => $currentTime
+                            ];
+                        }
+
+                        $app = $appsCache[$appId]['data'];
+                        if ($app) {
+                            $notificationController->sendAlert($app, [
+                                'level' => $level,
+                                'message' => $message,
+                                'context' => $context
+                            ], $appsCache[$appId]['settings']);
+                        }
                     }
                 }
             }
 
-            // Stergem jobul din coada dupa procesarea completa cu succes
-            $db->delete('log_queue', ['id' => $jobId]);
+            // Inserare bulk in logs
+            if (!empty($insertRows)) {
+                $sqlInsert = 'INSERT INTO logs (app_id, level, message, context) VALUES ' . implode(', ', $insertRows);
+                $stmtInsert = $pdo->prepare($sqlInsert);
+                $stmtInsert->execute($insertValues);
+            }
+
+            // Stergerea batch din coada log_queue
+            if (!empty($idsToDelete)) {
+                $placeholders = implode(', ', array_fill(0, count($idsToDelete), '?'));
+                $sqlDelete = "DELETE FROM log_queue WHERE id IN ({$placeholders})";
+                $stmtDelete = $pdo->prepare($sqlDelete);
+                $stmtDelete->execute($idsToDelete);
+            }
+
             $pdo->commit();
 
         } else {

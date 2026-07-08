@@ -26,6 +26,8 @@ use App\Enums\LogLevel;
  */
 class AppSetting
 {
+    /** @var array Cache static in memorie pentru setari, foarte util pentru daemon worker */
+    protected static array $settingsCache = [];
     /**
      * Constructorul clasei AppSetting.
      * Injectare dependinta prin Constructor Property Promotion.
@@ -54,8 +56,18 @@ class AppSetting
             return [];
         }
 
+        $currentTime = time();
+        if (isset(self::$settingsCache[$appId]) && ($currentTime - self::$settingsCache[$appId]['cached_at']) < 10) {
+            return self::$settingsCache[$appId]['data'];
+        }
+
         try {
-            return $this->db->read('app_settings', ['app_id' => $appId]) ?: [];
+            $data = $this->db->read('app_settings', ['app_id' => $appId]) ?: [];
+            self::$settingsCache[$appId] = [
+                'data' => $data,
+                'cached_at' => $currentTime
+            ];
+            return $data;
         } catch (PDOException $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,
@@ -192,6 +204,7 @@ class AppSetting
                 throw new RuntimeException(__('Database error while creating setting'), 0, $e);
             }
         }
+        unset(self::$settingsCache[$appId]);
     }
 
     /**
@@ -242,6 +255,7 @@ class AppSetting
             if ($result === false) {
                 throw new RuntimeException(__('Setting update operation failed'));
             }
+            unset(self::$settingsCache[$appId]);
         } catch (PDOException $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,
@@ -285,6 +299,7 @@ class AppSetting
             if (!$result) {
                 throw new RuntimeException(__('Setting not found or deletion failed'));
             }
+            unset(self::$settingsCache[$appId]);
         } catch (PDOException $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,

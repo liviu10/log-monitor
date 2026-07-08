@@ -17,7 +17,7 @@ require_once dirname(__DIR__) . '/bootstrap.php';
 use App\Utilities\MySQLWrapper;
 
 $url = 'http://app/log.php';
-$totalLogs = 500000;
+$totalLogs = isset($argv[1]) && is_numeric($argv[1]) ? (int)$argv[1] : 50000;
 $testApiKey = 'c7c6b541234567890abcdef1234567890';
 
 // Pasul 1: Fortam existenta aplicatiei de test in DB, no matter what
@@ -68,8 +68,8 @@ $createHandle = function() use ($url, $testApiKey, $payload) {
     return $ch;
 };
 
-// Umplem initial coada cu o concurenta moderata de 20 de conexiuni
-$concurrencyLimit = 20;
+// Umplem initial coada cu o concurenta echilibrata de 40 de conexiuni (sigura pentru VPS-uri limitate)
+$concurrencyLimit = 40;
 for ($i = 0; $i < $concurrencyLimit && $sent < $totalLogs; $i++) {
     $sent++;
     curl_multi_add_handle($mh, $createHandle());
@@ -99,8 +99,8 @@ do {
         if ($sent < $totalLogs) {
             $sent++;
             curl_multi_add_handle($mh, $createHandle());
-            // Introducem un mic jitter de 100 microsecunde pentru a proteja stiva TCP locala contra blocajelor 502
-            usleep(100);
+            // Un mic delay de 20 microsecunde pentru a proteja stiva TCP si CPU pe VPS-uri limitate
+            usleep(20);
             while (($execrun = curl_multi_exec($mh, $running)) === CURLM_CALL_MULTI_PERFORM);
         }
 

@@ -30,16 +30,19 @@ class NotificationController extends BaseController
      *
      * @param array $app        Datele aplicatiei procesate.
      * @param array $logPayload Datele continutului din logul generat.
+     * @param array|null $settings Setarile aplicatiei pre-incarcate (optional).
      */
-    public function sendAlert(array $app, array $logPayload): void
+    public function sendAlert(array $app, array $logPayload, ?array $settings = null): void
     {
         try {
-            $appSettingModel = new AppSetting();
-            $settingsRaw = $appSettingModel->getSettingsForApp((int)$app['id']);
-            
-            $settings = [];
-            foreach ($settingsRaw as $row) {
-                $settings[$row['key']] = $row['value'];
+            if ($settings === null) {
+                $appSettingModel = new AppSetting();
+                $settingsRaw = $appSettingModel->getSettingsForApp((int)$app['id']);
+                
+                $settings = [];
+                foreach ($settingsRaw as $row) {
+                    $settings[$row['key']] = $row['value'];
+                }
             }
 
             $channels = array_map('trim', explode(',', strtolower($settings['notification_channel'] ?? '')));

@@ -268,6 +268,9 @@ if (!function_exists('getFlash')) {
 if (!function_exists('getLang')) {
     function getLang(): string
     {
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            return 'en';
+        }
         if (!isset($_SESSION['app_lang'])) {
             $_SESSION['app_lang'] = 'en';
         }
