@@ -60,7 +60,7 @@ final class LogViaStream
         $envUrl = $_ENV['LOG_SERVER_URL'] ?? null;
 
         if (!is_string($envApiKey) || trim($envApiKey) === '') {
-            throw new RuntimeException('Configuratie invalida: LOG_API_KEY lipseste sau este visa.');
+            throw new RuntimeException('Configuratie invalida: LOG_API_KEY lipseste sau este lipsa.');
         }
 
         if (!is_string($envUrl) || filter_var($envUrl, FILTER_VALIDATE_URL) === false) {

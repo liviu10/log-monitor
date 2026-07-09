@@ -22,7 +22,6 @@
         path /db /db/*
         path /dist /dist/*
         path /docker /docker/*
-        path /integrations /integrations/*
 		path /lang /lang/*
 		path /src /src/*
         path /tests /tests/*

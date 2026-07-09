@@ -20,7 +20,7 @@ use App\Enums\LogLevel;
  * @license  Proprietar
  */
 
-// Validarea argumentelor din linia de comanda si aplicarea filozofiei Fail Fast
+// Validarea argumentelor din linia de comanda
 $daysArgument = $argv[1] ?? '30';
 if (!is_numeric($daysArgument) || (int)$daysArgument < 1) {
     echo json_encode([
@@ -56,22 +56,23 @@ try {
     exit(0);
 
 } catch (\Throwable $e) {
-    // Structura obligatorie de logare in caz de exceptie
-    LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
-        'location' => __METHOD__,
-        'line' => __LINE__,
-        'exception_message' => $e->getMessage(),
-        'exception_file' => $e->getFile(),
-        'exception_line' => $e->getLine(),
-        'exception_trace' => $e->getTraceAsString(),
-        'sql_statement' => 'CLI Maintenance Purge Execution Failure',
-        'sql_parameters' => [
-            'purge_days' => $days,
-            'cutoff_date' => $cutoffDate,
-            'backup_file_path' => $backupPath
-        ],
-        'identifier' => 'MySQLWrapper_Query_Failure'
-    ]);
+    if (class_exists('App\\Utilities\\LogViaStream')) {
+        LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
+            'location' => __METHOD__,
+            'line' => __LINE__,
+            'exception_message' => $e->getMessage(),
+            'exception_file' => $e->getFile(),
+            'exception_line' => $e->getLine(),
+            'exception_trace' => $e->getTraceAsString(),
+            'sql_statement' => 'CLI Maintenance Purge Execution Failure',
+            'sql_parameters' => [
+                'purge_days' => $days,
+                'cutoff_date' => $cutoffDate,
+                'backup_file_path' => $backupPath
+            ],
+            'identifier' => 'MySQLWrapper_Query_Failure'
+        ]);
+    }
 
     echo json_encode([
         'status' => 'error',

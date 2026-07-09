@@ -8,7 +8,6 @@ class CreateLogQueueTable extends AbstractMigration
 {
     /**
      * Creaza tabela log_queue pentru coada de mesaje asincrona.
-     * Toate comentariile sunt scrise in limba romana, fara diacritice.
      */
     public function change(): void
     {
