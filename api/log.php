@@ -9,6 +9,8 @@ set_time_limit(5);
 require_once dirname(__DIR__).'/bootstrap.php';
 
 use App\Utilities\MySQLWrapper;
+use App\Utilities\LogViaStream;
+use App\Enums\LogLevel;
 
 // Determine if we are running in the context of a FrankenPHP worker
 $isFrankenPhpWorker = function_exists('frankenphp_handle_request');
@@ -45,9 +47,9 @@ $handler = function () {
         // Case-insensitive fallback via getallheaders if the function is available
         if (function_exists('getallheaders')) {
             $headers = getallheaders();
-            if (is_array($headers)) {
+            if ($headers) {
                 foreach ($headers as $key => $value) {
-                    if (strcasecmp($key, 'X-API-KEY') === 0) {
+                    if (strcasecmp((string) $key, 'X-API-KEY') === 0) {
                         $apiKey = $value;
                         break;
                     }
@@ -56,8 +58,10 @@ $handler = function () {
         }
     }
 
+    $apiKeyStr = is_string($apiKey) ? trim($apiKey) : '';
+
     // Fail-Fast: If the API key is missing, reject the request directly
-    if (! $apiKey || trim((string) $apiKey) === '') {
+    if ($apiKeyStr === '') {
         header('Content-Type: application/json');
         http_response_code(400);
         echo json_encode(['error' => __('X-API-KEY header is missing or empty.')]);
@@ -68,10 +72,10 @@ $handler = function () {
     // Internal validation: find application ID directly from the database
     try {
         $db = MySQLWrapper::getInstance();
-        $stmt = $db->query('SELECT id FROM apps WHERE api_key = ? LIMIT 1', [trim((string) $apiKey)]);
+        $stmt = $db->query('SELECT id FROM apps WHERE api_key = ? LIMIT 1', [$apiKeyStr]);
         $app = $stmt->fetch();
 
-        if (! $app) {
+        if (! is_array($app) || ! isset($app['id'])) {
             header('Content-Type: application/json');
             http_response_code(403);
             echo json_encode(['error' => __('Invalid or inactive client API Key.')]);
@@ -79,7 +83,16 @@ $handler = function () {
             return;
         }
 
-        $appId = (int) $app['id'];
+        $appIdVal = $app['id'];
+        if (! is_int($appIdVal) && ! is_string($appIdVal)) {
+            header('Content-Type: application/json');
+            http_response_code(500);
+            echo json_encode(['error' => __('Invalid application structure in database.')]);
+
+            return;
+        }
+
+        $appId = (int) $appIdVal;
     } catch (Throwable $e) {
         if (class_exists('App\\Utilities\\LogViaStream')) {
             LogViaStream::send(LogLevel::ERROR->value, 'Log API query failure event', [
@@ -91,7 +104,7 @@ $handler = function () {
                 'exception_trace' => $e->getTraceAsString(),
                 'sql_statement' => 'Log API query failure event',
                 'sql_parameters' => [
-                    'api_key' => $apiKey,
+                    'api_key' => $apiKeyStr,
                 ],
                 'identifier' => 'Log_API_Query_Failure',
             ]);
@@ -169,7 +182,7 @@ if ($isFrankenPhpWorker) {
         } else {
             if (class_exists('App\\Utilities\\LogViaStream')) {
                 LogViaStream::send(LogLevel::ERROR->value, 'FrankenPHP worker loop execution failure', [
-                    'location' => __METHOD__,
+                    'location' => __FILE__,
                     'line' => __LINE__,
                     'exception_message' => $e->getMessage(),
                     'exception_file' => $e->getFile(),

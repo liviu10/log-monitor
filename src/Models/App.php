@@ -49,7 +49,7 @@ class App
      * Finds an application in the database using the unique API key.
      *
      * @param  string  $apiKey  API key for lookup.
-     * @return array The found application.
+     * @return array<string, mixed> The found application.
      *
      * @throws InvalidArgumentException If the key is empty.
      * @throws RuntimeException If the application is not found.
@@ -63,11 +63,13 @@ class App
 
         try {
             $results = $this->db->read('apps', ['api_key' => $trimmedKey]);
-            if (empty($results)) {
+            $first = $results[0] ?? null;
+            if (! is_array($first)) {
                 throw new RuntimeException(__('Application not found for the provided API key'));
             }
 
-            return $results[0];
+            /** @var array<string, mixed> $first */
+            return $first;
         } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,
@@ -87,12 +89,14 @@ class App
     /**
      * Retrieves all registered applications.
      *
-     * @return array List of applications.
+     * @return array<int, array<string, mixed>> List of applications.
      */
     public function getAll(): array
     {
         try {
-            return $this->db->read('apps', [], ['*']) ?: [];
+            $results = $this->db->read('apps', [], ['*']) ?: [];
+            /** @var array<int, array<string, mixed>> $results */
+            return $results;
         } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,
@@ -134,7 +138,7 @@ class App
 
         try {
             $result = $this->db->create('apps', $params);
-            if ($result === false) {
+            if ($result === 0 || $result === '') {
                 throw new RuntimeException(__('Failed to create application record'));
             }
 
@@ -159,7 +163,7 @@ class App
      * Updates an application's data.
      *
      * @param  int  $id  Application ID.
-     * @param  array  $data  Data for update.
+     * @param  array<string, mixed>  $data  Data for update.
      *
      * @throws InvalidArgumentException If the data is empty.
      * @throws RuntimeException If update fails.
@@ -175,10 +179,7 @@ class App
 
         $sql = 'UPDATE apps SET ... WHERE id = ?';
         try {
-            $result = $this->db->update('apps', $data, ['id' => $id]);
-            if ($result === false) {
-                throw new RuntimeException(__('Failed to update application'));
-            }
+            $this->db->update('apps', $data, ['id' => $id]);
         } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,

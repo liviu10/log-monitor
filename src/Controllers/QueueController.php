@@ -30,7 +30,7 @@ class QueueController extends BaseController
     /**
      * Displays the active queue view page.
      *
-     * @param  array  $queryParams  Filtering and pagination parameters.
+     * @param  array<array-key, mixed>  $queryParams  Filtering and pagination parameters.
      */
     public function index(array $queryParams = []): void
     {
@@ -40,21 +40,25 @@ class QueueController extends BaseController
             $db = MySQLWrapper::getInstance();
 
             // Pagination configuration
-            $page = (int) ($queryParams['page'] ?? 1);
+            $rawPage = $queryParams['page'] ?? 1;
+            $page = (is_int($rawPage) || is_string($rawPage)) ? (int) $rawPage : 1;
             if ($page < 1) {
                 $page = 1;
             }
 
             $allowedLimits = [10, 25, 50, 100];
-            $limit = (int) ($queryParams['limit'] ?? 10);
+            $rawLimit = $queryParams['limit'] ?? 10;
+            $limit = (is_int($rawLimit) || is_string($rawLimit)) ? (int) $rawLimit : 10;
             if (! in_array($limit, $allowedLimits, true)) {
                 $limit = 10;
             }
             $offset = ($page - 1) * $limit;
 
             // Get sorting parameters from URL
-            $sortBy = (string) ($queryParams['sort_by'] ?? 'id');
-            $sortDir = (string) ($queryParams['sort_dir'] ?? 'DESC');
+            $rawSortBy = $queryParams['sort_by'] ?? 'id';
+            $sortBy = is_string($rawSortBy) ? $rawSortBy : 'id';
+            $rawSortDir = $queryParams['sort_dir'] ?? 'DESC';
+            $sortDir = is_string($rawSortDir) ? $rawSortDir : 'DESC';
 
             $allowedSorts = ['id', 'created_at', 'app_name'];
             $allowedDirections = ['ASC', 'DESC'];
@@ -137,14 +141,15 @@ class QueueController extends BaseController
     /**
      * Deletes a single specific job from the queue.
      *
-     * @param  array  $postData  The array of data passed via POST.
+     * @param  array<array-key, mixed>  $postData  The array of data passed via POST.
      * @return never Redirects back to the queue page.
      */
     public function delete(array $postData): never
     {
         $this->checkAuth();
 
-        $id = (int) ($postData['id'] ?? 0);
+        $rawId = $postData['id'] ?? 0;
+        $id = (is_int($rawId) || is_string($rawId)) ? (int) $rawId : 0;
         if ($id <= 0) {
             setFlash('danger', __('Error'), __('Invalid job ID.'));
             $this->redirect('queue.php');

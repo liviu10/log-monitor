@@ -86,13 +86,17 @@ if (file_exists($targetBuildScript)) {
 echo "Pre-processing enums in target directory...\n";
 $di = new RecursiveDirectoryIterator($targetDir);
 foreach (new RecursiveIteratorIterator($di) as $filename => $file) {
-    if ($file->isFile() && $file->getExtension() === 'php') {
-        $content = file_get_contents($filename);
+    if ($file instanceof \SplFileInfo && $file->isFile() && $file->getExtension() === 'php') {
+        $pathname = $file->getPathname();
+        $content = file_get_contents($pathname);
+        if ($content === false) {
+            continue;
+        }
 
         // Detect if the file defines an Enum
         if (preg_match('/enum\s+([a-zA-Z0-9_]+)/', $content, $matches)) {
             $enumName = $matches[1];
-            echo "Dynamically converting enum {$enumName} in ".basename($filename)."...\n";
+            echo "Dynamically converting enum {$enumName} in ".basename($pathname)."...\n";
 
             // Determine backing type (string or int)
             $backingType = 'string'; // Implicit
@@ -103,9 +107,15 @@ foreach (new RecursiveIteratorIterator($di) as $filename => $file) {
             // 1. Transform definitions of type "case KEY = 'value';" to "public const KEY = 'value';" in-place
             // This preserves the associated comments directly above the constants!
             $content = preg_replace('/case\s+([a-zA-Z0-9_]+\s*=\s*.+?;)/', 'public const $1', $content);
+            if ($content === null) {
+                continue;
+            }
 
             // 2. Transform "enum Name: string/int" definition to "class Name"
             $content = preg_replace('/enum\s+'.$enumName.'\s*(:\s*(string|int))?/', 'class '.$enumName, $content);
+            if ($content === null) {
+                continue;
+            }
 
             // 3. Inject mock native methods (cases, tryFrom, from) with comments in English and correct type-hints
             $mockMethods = <<<CODE
@@ -206,7 +216,7 @@ CODE;
                 $content = substr_replace($content, $mockMethods."\n", $pos, 0);
             }
 
-            file_put_contents($filename, $content);
+            file_put_contents($pathname, $content);
         }
     }
 }
@@ -226,15 +236,22 @@ if ($exitCode === 0) {
     // accessing the ->value property on them would throw a Notice/Error.
     $di = new RecursiveDirectoryIterator($targetDir);
     foreach (new RecursiveIteratorIterator($di) as $filename => $file) {
-        if ($file->isFile() && $file->getExtension() === 'php') {
-            $content = file_get_contents($filename);
+        if ($file instanceof \SplFileInfo && $file->isFile() && $file->getExtension() === 'php') {
+            $pathname = $file->getPathname();
+            $content = file_get_contents($pathname);
+            if ($content === false) {
+                continue;
+            }
 
             // Replace any ClassName::CONSTANT->value construction with ClassName::CONSTANT
             $updatedContent = preg_replace('/([A-Za-z0-9_\\\\]+)::([A-Z0-9_]+)->value/', '$1::$2', $content);
+            if ($updatedContent === null) {
+                continue;
+            }
 
             if ($content !== $updatedContent) {
-                echo 'Fixed Enum-constant->value access in: '.basename($filename)."\n";
-                file_put_contents($filename, $updatedContent);
+                echo 'Fixed Enum-constant->value access in: '.basename($pathname)."\n";
+                file_put_contents($pathname, $updatedContent);
             }
         }
     }
@@ -243,22 +260,29 @@ if ($exitCode === 0) {
     $composerJsonPath = $targetDir.'/composer.json';
     if (file_exists($composerJsonPath)) {
         echo "Updating composer.json dependencies for PHP {$version}...\n";
-        $composerData = json_decode(file_get_contents($composerJsonPath), true);
-        if (is_array($composerData)) {
-            // Set the correct PHP version
-            $composerData['require']['php'] = '^'.$version;
-            // Downgrade symfony/var-dumper to ^5.4 (compatible with PHP 7.4 and 8.0)
-            if (isset($composerData['require']['symfony/var-dumper'])) {
-                $composerData['require']['symfony/var-dumper'] = '^5.4';
-            }
-            // Delete rector/rector and downgrade phpunit if the version is 7.4
-            if (isset($composerData['require-dev'])) {
-                unset($composerData['require-dev']['rector/rector']);
-                if ($version === '7.4' && isset($composerData['require-dev']['phpunit/phpunit'])) {
-                    $composerData['require-dev']['phpunit/phpunit'] = '^9.6';
+        $rawComposer = file_get_contents($composerJsonPath);
+        if ($rawComposer !== false) {
+            $composerData = json_decode($rawComposer, true);
+            if (is_array($composerData)) {
+                // Ensure 'require' exists and is an array
+                if (! isset($composerData['require']) || ! is_array($composerData['require'])) {
+                    $composerData['require'] = [];
                 }
+                // Set the correct PHP version
+                $composerData['require']['php'] = '^'.$version;
+                // Downgrade symfony/var-dumper to ^5.4 (compatible with PHP 7.4 and 8.0)
+                if (isset($composerData['require']['symfony/var-dumper'])) {
+                    $composerData['require']['symfony/var-dumper'] = '^5.4';
+                }
+                // Delete rector/rector and downgrade phpunit if the version is 7.4
+                if (isset($composerData['require-dev']) && is_array($composerData['require-dev'])) {
+                    unset($composerData['require-dev']['rector/rector']);
+                    if ($version === '7.4' && isset($composerData['require-dev']['phpunit/phpunit'])) {
+                        $composerData['require-dev']['phpunit/phpunit'] = '^9.6';
+                    }
+                }
+                file_put_contents($composerJsonPath, json_encode($composerData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
             }
-            file_put_contents($composerJsonPath, json_encode($composerData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
         }
     }
 

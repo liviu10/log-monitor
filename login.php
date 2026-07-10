@@ -23,7 +23,7 @@ try {
 } catch (Throwable $e) {
     if (class_exists('App\\Utilities\\LogViaStream')) {
         LogViaStream::send(LogLevel::ERROR->value, 'Authentication action execution failure', [
-            'location' => __METHOD__,
+            'location' => __FILE__,
             'line' => __LINE__,
             'exception_message' => $e->getMessage(),
             'exception_file' => $e->getFile(),

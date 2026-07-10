@@ -9,7 +9,8 @@ require_once __DIR__.'/vendor/autoload.php';
 require_once __DIR__.'/src/Utilities/helpers.php';
 
 // Determine the currently requested script
-$currentScript = basename($_SERVER['SCRIPT_NAME'] ?? '');
+$scriptNameVal = $_SERVER['SCRIPT_NAME'] ?? '';
+$currentScript = basename(is_string($scriptNameVal) ? $scriptNameVal : '');
 
 // Fail Fast approach: Terminate execution immediately if the .env file is missing
 if (! file_exists(__DIR__.'/.env')) {
@@ -56,7 +57,8 @@ if ($currentScript !== 'log.php') {
 }
 
 // Configure application, secured against injection attacks
-define('APP_NAME', htmlspecialchars($_ENV['APP_NAME'] ?? 'LogMonitor', ENT_QUOTES, 'UTF-8'));
+$appNameVal = $_ENV['APP_NAME'] ?? 'LogMonitor';
+define('APP_NAME', htmlspecialchars(is_string($appNameVal) ? $appNameVal : 'LogMonitor', ENT_QUOTES, 'UTF-8'));
 define('APP_URL', constructUrl());
 
 // Generate a secure cryptographic nonce for inline scripts and styles (CSP protection)

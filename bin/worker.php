@@ -17,8 +17,8 @@ use App\Utilities\MySQLWrapper;
 /**
  * Recursively sanitizes the context array to mask confidential/sensitive data.
  *
- * @param  array  $data  The context data array.
- * @return array The sanitized array.
+ * @param  array<array-key, mixed>  $data  The context data array.
+ * @return array<array-key, mixed> The sanitized array.
  */
 function sanitizeSensitivePayload(array $data): array
 {
@@ -66,6 +66,7 @@ $appsCache = [];
 $lastHeartbeat = 0;
 $notificationController = new NotificationController;
 
+    // @phpstan-ignore while.alwaysTrue
 while (true) {
     $currentTime = time();
     if (($currentTime - $lastHeartbeat) >= 10) {
@@ -95,9 +96,23 @@ while (true) {
             $insertValues = [];
 
             foreach ($jobs as $job) {
-                $jobId = (int) $job['id'];
-                $appId = (int) $job['app_id'];
-                $payloadRaw = (string) $job['payload_raw'];
+                if (! is_array($job) || ! isset($job['id']) || ! isset($job['app_id']) || ! isset($job['payload_raw'])) {
+                    continue;
+                }
+
+                $jobIdVal = $job['id'];
+                $appIdVal = $job['app_id'];
+                $payloadRawVal = $job['payload_raw'];
+
+                if ((! is_int($jobIdVal) && ! is_string($jobIdVal)) ||
+                    (! is_int($appIdVal) && ! is_string($appIdVal)) ||
+                    ! is_string($payloadRawVal)) {
+                    continue;
+                }
+
+                $jobId = (int) $jobIdVal;
+                $appId = (int) $appIdVal;
+                $payloadRaw = $payloadRawVal;
 
                 $idsToDelete[] = $jobId;
 
@@ -106,8 +121,14 @@ while (true) {
                     $payload = json_decode($payloadRaw, true);
 
                     if (is_array($payload)) {
-                        $level = strtoupper(trim((string) ($payload['level'] ?? 'INFO')));
-                        $message = trim((string) ($payload['message'] ?? ''));
+                        $levelVal = $payload['level'] ?? 'INFO';
+                        $messageVal = $payload['message'] ?? '';
+
+                        $levelStr = is_string($levelVal) ? $levelVal : 'INFO';
+                        $messageStr = is_string($messageVal) ? $messageVal : '';
+
+                        $level = strtoupper(trim($levelStr));
+                        $message = trim($messageStr);
 
                         // Sanitize sensitive data from the message and context
                         $message = sanitizeLogMessage($message);
@@ -136,7 +157,9 @@ while (true) {
                             if ($appData) {
                                 $stmtSettings = $db->query('SELECT `key`, `value` FROM app_settings WHERE app_id = ?', [$appId]);
                                 foreach ($stmtSettings->fetchAll() as $row) {
-                                    $settings[$row['key']] = $row['value'];
+                                    if (is_array($row) && isset($row['key']) && isset($row['value']) && is_string($row['key'])) {
+                                        $settings[$row['key']] = $row['value'];
+                                    }
                                 }
                             }
                             $appsCache[$appId] = [
@@ -147,7 +170,7 @@ while (true) {
                         }
 
                         $app = $appsCache[$appId]['data'];
-                        if ($app) {
+                        if (is_array($app)) {
                             $notificationController->sendAlert($app, [
                                 'level' => $level,
                                 'message' => $message,
@@ -184,7 +207,7 @@ while (true) {
     } catch (Throwable $e) {
         if (class_exists('App\\Utilities\\LogViaStream')) {
             LogViaStream::send(LogLevel::ERROR->value, 'CLI Worker execution failure', [
-                'location' => __METHOD__,
+                'location' => __FILE__,
                 'line' => __LINE__,
                 'exception_message' => $e->getMessage(),
                 'exception_file' => $e->getFile(),
@@ -196,7 +219,7 @@ while (true) {
 
         // Ensure defensive rollback in case of active transaction failure
         try {
-            if (isset($pdo) && $pdo->inTransaction()) {
+            if (isset($pdo) && $pdo instanceof \PDO && $pdo->inTransaction()) {
                 $pdo->rollBack();
             }
         } catch (Throwable) {

@@ -45,6 +45,8 @@ class AppController extends BaseController
     /**
      * Processes adding a new application to the system.
      * Automatically generates a secure 64-character API key.
+     *
+     * @param array<string, mixed> $postData
      */
     public function store(array $postData): never
     {
@@ -66,7 +68,8 @@ class AppController extends BaseController
             $appModel = new App;
             $apiKey = bin2hex(random_bytes(32));
 
-            $appModel->create(trim($payload['name']), $apiKey);
+            $nameVal = $payload['name'] ?? '';
+            $appModel->create(trim(is_string($nameVal) ? $nameVal : ''), $apiKey);
 
             setFlash('success', __('Success'), __('Application created successfully.'));
         } catch (\Throwable $e) {
@@ -88,19 +91,22 @@ class AppController extends BaseController
 
     /**
      * Processes updating an application name or regenerating the API key.
+     *
+     * @param array<string, mixed> $postData
+     * @param array<string, mixed> $getData
      */
     public function update(array $postData, array $getData = []): never
     {
         $this->checkAuth();
 
-        $id = $postData['id'] ?? null;
-        if (! $id) {
-            setFlash('danger', __('Error'), __('Missing application ID.'));
+        $idVal = $postData['id'] ?? null;
+        if (! $idVal || (! is_int($idVal) && ! is_string($idVal))) {
+            setFlash('danger', __('Error'), __('Missing or invalid application ID.'));
             $this->redirect('apps.php');
         }
 
         $appModel = new App;
-        $appId = (int) $id;
+        $appId = (int) $idVal;
 
         try {
             if (isset($getData['sub_action']) && $getData['sub_action'] === 'regenerate-key') {
@@ -122,8 +128,9 @@ class AppController extends BaseController
                 $this->redirect('apps.php');
             }
 
+            $nameVal = $payload['name'] ?? '';
             $appModel->update($appId, [
-                'name' => trim($payload['name']),
+                'name' => trim(is_string($nameVal) ? $nameVal : ''),
             ]);
 
             setFlash('success', __('Success'), __('Application updated successfully.'));
@@ -146,16 +153,18 @@ class AppController extends BaseController
 
     /**
      * Deletes an application from the system based on the ID provided via POST.
+     *
+     * @param array<string, mixed> $postData
      */
     public function delete(array $postData): never
     {
         $this->checkAuth();
 
-        $id = $postData['id'] ?? null;
-        if ($id) {
+        $idVal = $postData['id'] ?? null;
+        if ($idVal && (is_int($idVal) || is_string($idVal))) {
             try {
                 $appModel = new App;
-                $appModel->delete((int) $id);
+                $appModel->delete((int) $idVal);
                 setFlash('success', __('Success'), __('Application deleted successfully.'));
             } catch (\Throwable $e) {
                 LogViaStream::send(LogLevel::ERROR->value, 'Failed to delete application', [
@@ -165,7 +174,7 @@ class AppController extends BaseController
                     'exception_file' => $e->getFile(),
                     'exception_line' => $e->getLine(),
                     'exception_trace' => $e->getTraceAsString(),
-                    'app_id' => $id,
+                    'app_id' => $idVal,
                     'identifier' => 'AppController_Delete_Failure',
                 ]);
                 setFlash('danger', __('Error'), __('Failed to delete application.'));

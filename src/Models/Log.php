@@ -79,7 +79,7 @@ class Log
 
         try {
             $result = $this->db->create('logs', $params);
-            if ($result === false) {
+            if ($result === 0 || $result === '') {
                 throw new RuntimeException(__('Failed to write log to database'));
             }
 
@@ -104,12 +104,12 @@ class Log
      * Returns a paginated list of logs based on applied filters.
      * Fully secured against SQL injection attacks via natively bound parameters for LIMIT/OFFSET.
      *
-     * @param  array  $filters  Applied filters.
+     * @param  array<string, mixed>  $filters  Applied filters.
      * @param  int  $limit  Maximum number of records.
      * @param  int  $offset  Pagination starting offset.
      * @param  string  $sortBy  Column to sort by.
      * @param  string  $sortDir  Sort direction (ASC or DESC).
-     * @return array Found logs.
+     * @return array<int, array<string, mixed>> Found logs.
      */
     public function getPaginated(array $filters = [], int $limit = 50, int $offset = 0, string $sortBy = 'id', string $sortDir = 'DESC'): array
     {
@@ -128,17 +128,20 @@ class Log
 
         if (! empty($filters['app_id'])) {
             $sql .= ' AND l.app_id = ?';
-            $params[] = (int) $filters['app_id'];
+            $rawAppId = $filters['app_id'];
+            $params[] = (is_int($rawAppId) || is_string($rawAppId)) ? (int) $rawAppId : 0;
         }
 
         if (! empty($filters['level'])) {
             $sql .= ' AND l.level = ?';
-            $params[] = strtoupper(trim((string) $filters['level']));
+            $rawLevel = $filters['level'];
+            $params[] = strtoupper(trim(is_string($rawLevel) ? $rawLevel : ''));
         }
 
         if (! empty($filters['search'])) {
             $sql .= ' AND MATCH(l.message, l.context) AGAINST(? IN BOOLEAN MODE)';
-            $params[] = trim((string) $filters['search']).'*';
+            $rawSearch = $filters['search'];
+            $params[] = trim(is_string($rawSearch) ? $rawSearch : '').'*';
         }
 
         // Strict validation of sort columns to prevent SQL Injection
@@ -164,8 +167,9 @@ class Log
 
         try {
             $stmt = $this->db->query($sql, $params);
-
-            return $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            /** @var array<int, array<string, mixed>> $rows */
+            return $rows;
         } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,
@@ -186,7 +190,7 @@ class Log
     /**
      * Counts the total logs matching the selected filters.
      *
-     * @param  array  $filters  Applied filters.
+     * @param  array<string, mixed>  $filters  Applied filters.
      * @return int Total number of matching logs found.
      */
     public function count(array $filters = []): int
@@ -196,23 +200,26 @@ class Log
 
         if (! empty($filters['app_id'])) {
             $sql .= ' AND l.app_id = ?';
-            $params[] = (int) $filters['app_id'];
+            $rawAppId = $filters['app_id'];
+            $params[] = (is_int($rawAppId) || is_string($rawAppId)) ? (int) $rawAppId : 0;
         }
 
         if (! empty($filters['level'])) {
             $sql .= ' AND l.level = ?';
-            $params[] = strtoupper(trim((string) $filters['level']));
+            $rawLevel = $filters['level'];
+            $params[] = strtoupper(trim(is_string($rawLevel) ? $rawLevel : ''));
         }
 
         if (! empty($filters['search'])) {
             $sql .= ' AND MATCH(l.message, l.context) AGAINST(? IN BOOLEAN MODE)';
-            $params[] = trim((string) $filters['search']).'*';
+            $rawSearch = $filters['search'];
+            $params[] = trim(is_string($rawSearch) ? $rawSearch : '').'*';
         }
 
         try {
             $stmt = $this->db->query($sql, $params);
 
-            return $stmt ? (int) $stmt->fetchColumn() : 0;
+            return (int) $stmt->fetchColumn();
         } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,
@@ -244,7 +251,7 @@ class Log
         try {
             $stmt = $this->db->query($sql, $params);
 
-            return $stmt ? (int) $stmt->fetchColumn() : 0;
+            return (int) $stmt->fetchColumn();
         } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,
@@ -268,7 +275,7 @@ class Log
      * @param  string  $date  Cutoff date.
      * @param  int  $limit  Number of logs per chunk.
      * @param  int  $offset  Pagination starting point.
-     * @return array List of results.
+     * @return array<int, array<string, mixed>> List of results.
      */
     public function getBeforeDate(string $date, int $limit, int $offset): array
     {
@@ -289,8 +296,9 @@ class Log
 
         try {
             $stmt = $this->db->query($sql, $params);
-
-            return $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            /** @var array<int, array<string, mixed>> $rows */
+            return $rows;
         } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,
@@ -324,7 +332,7 @@ class Log
         try {
             $stmt = $this->db->query($sql, $params);
 
-            return $stmt ? (int) $stmt->rowCount() : 0;
+            return (int) $stmt->rowCount();
         } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,
@@ -350,9 +358,9 @@ class Log
     {
         $sql = 'OPTIMIZE TABLE logs';
         try {
-            $stmt = $this->db->query($sql);
+            $this->db->query($sql);
 
-            return $stmt !== false;
+            return true;
         } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,

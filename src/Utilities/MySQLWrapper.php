@@ -34,7 +34,7 @@ class MySQLWrapper
     /** @var PDO|null Active PDO connection object. */
     private ?PDO $connection = null;
 
-    /** @var array Standard security and behavior configurations for PDO. */
+    /** @var array<int, mixed> Standard security and behavior configurations for PDO. */
     private array $options = [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
@@ -70,12 +70,18 @@ class MySQLWrapper
      */
     public static function getInstance(): self
     {
+        $host = $_ENV['DB_HOST'] ?? 'db';
+        $db = $_ENV['DB_DATABASE'] ?? 'log_monitor';
+        $user = $_ENV['DB_USERNAME'] ?? 'user';
+        $pass = $_ENV['DB_PASSWORD'] ?? 'password';
+        $port = $_ENV['DB_PORT'] ?? '3306';
+
         return self::$instance ??= new self(
-            host: $_ENV['DB_HOST'] ?? 'db',
-            db: $_ENV['DB_DATABASE'] ?? 'log_monitor',
-            user: $_ENV['DB_USERNAME'] ?? 'user',
-            pass: $_ENV['DB_PASSWORD'] ?? 'password',
-            port: $_ENV['DB_PORT'] ?? '3306',
+            host: is_string($host) ? $host : 'db',
+            db: is_string($db) ? $db : 'log_monitor',
+            user: is_string($user) ? $user : 'user',
+            pass: is_string($pass) ? $pass : 'password',
+            port: is_string($port) ? $port : '3306',
         );
     }
 
@@ -137,7 +143,7 @@ class MySQLWrapper
      * Executes a secure SQL query and dispatches full technical details via cURL on failure.
      *
      * @param  string  $sql  SQL statement to execute.
-     * @param  array  $params  Parameters associated with placeholders.
+     * @param  array<int|string, mixed>  $params  Parameters associated with placeholders.
      * @return PDOStatement The statement object on successful execution.
      *
      * @throws RuntimeException When execution encounters syntax or network errors.
@@ -175,7 +181,7 @@ class MySQLWrapper
      * Inserts a new record into a specified table.
      *
      * @param  string  $table  Name of target table.
-     * @param  array  $data  Dataset in column => value format.
+     * @param  array<string, mixed>  $data  Dataset in column => value format.
      * @return string|int ID of the last inserted record or row count of affected rows.
      */
     public function create(string $table, array $data): string|int
@@ -192,7 +198,7 @@ class MySQLWrapper
         $stmt = $this->query($sql, array_values($data));
 
         $lastId = $this->getConnection()->lastInsertId();
-        if ($lastId && $lastId !== '0') {
+        if (is_string($lastId) && $lastId !== '0' && $lastId !== '') {
             return $lastId;
         }
 
@@ -203,14 +209,14 @@ class MySQLWrapper
      * Queries the database and returns all matches found.
      *
      * @param  string  $table  Table name.
-     * @param  array  $conditions  Filtering conditions of type column => value.
-     * @param  array  $columns  List of selected columns.
+     * @param  array<string, mixed>  $conditions  Filtering conditions of type column => value.
+     * @param  array<int, string>  $columns  List of selected columns.
      * @param  string  $logic  Logical operator used between filters (AND/OR).
-     * @return array Multidimensional array with matching results.
+     * @return array<int, array<string, mixed>> Multidimensional array with matching results.
      */
     public function read(string $table, array $conditions = [], array $columns = ['*'], string $logic = 'AND'): array
     {
-        $escapedSelectColumns = array_map(fn ($col) => $col === '*' ? '*' : "`{$col}`", $columns);
+        $escapedSelectColumns = array_map(fn (string $col) => $col === '*' ? '*' : "`{$col}`", $columns);
         $sql = 'SELECT '.implode(', ', $escapedSelectColumns)." FROM `{$table}`";
         $params = [];
 
@@ -225,16 +231,17 @@ class MySQLWrapper
         }
 
         $stmt = $this->query($sql, $params);
-
-        return $stmt->fetchAll();
+        $results = $stmt->fetchAll();
+        /** @var array<int, array<string, mixed>> $results */
+        return $results;
     }
 
     /**
      * Modifies records in a table based on clear criteria.
      *
      * @param  string  $table  Affected table.
-     * @param  array  $data  New information to be saved.
-     * @param  array  $conditions  Conditions determining modified rows.
+     * @param  array<string, mixed>  $data  New information to be saved.
+     * @param  array<string, mixed>  $conditions  Conditions determining modified rows.
      * @param  string  $logic  Logical relation between filters.
      * @return int Total number of rows modified by the operation.
      */
@@ -268,7 +275,7 @@ class MySQLWrapper
      * Deletes records from the table, protecting against accidental global deletes.
      *
      * @param  string  $table  Target table.
-     * @param  array  $conditions  Mandatory row deletion conditions.
+     * @param  array<string, mixed>  $conditions  Mandatory row deletion conditions.
      * @param  string  $logic  Linking operator for the WHERE clause.
      * @return int Number of permanently deleted rows.
      */
@@ -296,7 +303,7 @@ class MySQLWrapper
      * Writes an emergency log in case of database failure.
      *
      * @param  string  $message  Error message.
-     * @param  array  $context  Additional context information.
+     * @param  array<string, mixed>  $context  Additional context information.
      */
     private function logEmergency(string $message, array $context): void
     {

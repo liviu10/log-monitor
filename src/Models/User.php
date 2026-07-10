@@ -49,7 +49,7 @@ class User
      * Finds a user in the database based on the username.
      *
      * @param  string  $username  The username to look for.
-     * @return array|null The user's data or null if they do not exist.
+     * @return array<string, mixed>|null The user's data or null if they do not exist.
      *
      * @throws InvalidArgumentException If the provided username is empty.
      */
@@ -62,8 +62,12 @@ class User
 
         try {
             $results = $this->db->read('users', ['username' => $trimmedUsername]);
-
-            return $results ? $results[0] : null;
+            $first = $results[0] ?? null;
+            if (is_array($first)) {
+                /** @var array<string, mixed> $first */
+                return $first;
+            }
+            return null;
         } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,
@@ -101,9 +105,6 @@ class User
 
         // Use PASSWORD_ARGON2ID - The top standard in modern password security (PHP 8+)
         $hash = password_hash($password, PASSWORD_ARGON2ID);
-        if ($hash === false) {
-            throw new RuntimeException(__('Secure password hashing hashing failed internally'));
-        }
 
         $sql = 'INSERT INTO users (username, password_hash)';
         $params = [
@@ -113,7 +114,7 @@ class User
 
         try {
             $result = $this->db->create('users', $params);
-            if ($result === false) {
+            if ($result === 0 || $result === '') {
                 throw new RuntimeException(__('Failed to save administrative user record'));
             }
 

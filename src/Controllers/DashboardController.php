@@ -29,6 +29,8 @@ class DashboardController extends BaseController
 {
     /**
      * Displays the main dashboard page with the list of filtered logs.
+     *
+     * @param array<array-key, mixed> $queryParams
      */
     public function index(array $queryParams = []): void
     {
@@ -44,21 +46,25 @@ class DashboardController extends BaseController
                 'search' => $queryParams['search'] ?? null,
             ];
 
-            $page = (int) ($queryParams['page'] ?? 1);
+            $rawPage = $queryParams['page'] ?? 1;
+            $page = (is_int($rawPage) || is_string($rawPage)) ? (int) $rawPage : 1;
             if ($page < 1) {
                 $page = 1;
             }
 
             $allowedLimits = [10, 25, 50, 100];
-            $limit = (int) ($queryParams['limit'] ?? 10);
+            $rawLimit = $queryParams['limit'] ?? 10;
+            $limit = (is_int($rawLimit) || is_string($rawLimit)) ? (int) $rawLimit : 10;
             if (! in_array($limit, $allowedLimits, true)) {
                 $limit = 10;
             }
 
             $offset = ($page - 1) * $limit;
 
-            $sortBy = (string) ($queryParams['sort_by'] ?? 'id');
-            $sortDir = (string) ($queryParams['sort_dir'] ?? 'DESC');
+            $rawSortBy = $queryParams['sort_by'] ?? 'id';
+            $sortBy = is_string($rawSortBy) ? $rawSortBy : 'id';
+            $rawSortDir = $queryParams['sort_dir'] ?? 'DESC';
+            $sortDir = is_string($rawSortDir) ? $rawSortDir : 'DESC';
 
             $logs = $logModel->getPaginated($filters, $limit, $offset, $sortBy, $sortDir);
             $totalLogs = $logModel->count($filters);

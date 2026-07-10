@@ -1,5 +1,7 @@
 parameters:
     level: 10
+    bootstrapFiles:
+        - bootstrap.php
     paths:
         - src
         - api

@@ -23,13 +23,13 @@ class Validation
 {
     use ValidateEmail;
 
-    /** @var array Errors collected during the current validation process. */
+    /** @var array<string, array<int, string>> Errors collected during the current validation process. */
     private array $errors = [];
 
     /**
      * Class constructor. Promotes passed properties.
      *
-     * @param  array  $fieldNames  Aliases for fields used in rendering messages.
+     * @param  array<string, string>  $fieldNames  Aliases for fields used in rendering messages.
      */
     public function __construct(
         private array $fieldNames = []
@@ -38,9 +38,9 @@ class Validation
     /**
      * Runs the set of rules over the payload passed as an argument.
      *
-     * @param  array  $rules  Validation rules (e.g. ['email' => ['required', 'email']]).
-     * @param  array  $payload  Data received from HTTP request.
-     * @return array Final array with errors structured by fields.
+     * @param  array<string, array<int, string>>  $rules  Validation rules (e.g. ['email' => ['required', 'email']]).
+     * @param  array<array-key, mixed>  $payload  Data received from HTTP request.
+     * @return array<string, array<int, string>> Final array with errors structured by fields.
      */
     public function validate(array $rules, array $payload): array
     {
@@ -64,7 +64,8 @@ class Validation
                 }
 
                 if ($rule === 'email') {
-                    if (! empty($this->validateEmail((string) $value))) {
+                    $rawVal = is_string($value) || is_numeric($value) || is_bool($value) ? (string) $value : '';
+                    if (! empty($this->validateEmail($rawVal))) {
                         $this->errors[$field][] = 'email';
                     }
 
@@ -91,11 +92,11 @@ class Validation
             $rule === 'int' => is_numeric($value),
             $rule === 'string' => is_string($value),
             $rule === 'array' => is_array($value),
-            $rule === 'date' => strtotime((string) $value) !== false,
+            $rule === 'date' => is_string($value) && strtotime($value) !== false,
             str_starts_with($rule, 'min:') => $this->checkMin($rule, $value),
             str_starts_with($rule, 'max:') => $this->checkMax($rule, $value),
-            str_starts_with($rule, 'in:') => in_array((string) $value, explode(',', substr($rule, 3)), true),
-            str_starts_with($rule, 'regex:') => (preg_match(substr($rule, 6), (string) $value) === 1),
+            str_starts_with($rule, 'in:') => in_array(is_scalar($value) ? (string) $value : '', explode(',', substr($rule, 3)), true),
+            str_starts_with($rule, 'regex:') => is_string($value) && (preg_match(substr($rule, 6), $value) === 1),
             default => true,
         };
 
@@ -114,7 +115,7 @@ class Validation
     private function checkMin(string $rule, mixed $value): bool
     {
         $min = (int) substr($rule, 4);
-        $checkValue = is_array($value) ? count($value) : (is_numeric($value) ? (float) $value : mb_strlen((string) $value));
+        $checkValue = is_array($value) ? count($value) : (is_numeric($value) ? (float) $value : mb_strlen(is_string($value) ? $value : ''));
 
         return $checkValue >= $min;
     }
@@ -129,7 +130,7 @@ class Validation
     private function checkMax(string $rule, mixed $value): bool
     {
         $max = (int) substr($rule, 4);
-        $checkValue = is_numeric($value) ? (float) $value : mb_strlen((string) $value);
+        $checkValue = is_numeric($value) ? (float) $value : mb_strlen(is_string($value) ? $value : '');
 
         return $checkValue <= $max;
     }
@@ -143,7 +144,8 @@ class Validation
      */
     public function messages(string $field, string $rule): string
     {
-        $label = __($this->fieldNames[$field] ?? ucfirst($field));
+        $rawLabel = $this->fieldNames[$field] ?? ucfirst($field);
+        $label = __($rawLabel);
 
         return match (true) {
             $rule === 'required' => __('The :field field is required.', ['field' => $label]),

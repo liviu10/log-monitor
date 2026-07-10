@@ -200,6 +200,27 @@ podman exec -it log-monitor-app vendor/bin/phpunit
 
 ---
 
+## 🎨 Code Quality & Static Analysis
+
+To maintain code styling consistency and capture type issues, you can run formatting and static analysis inside the container (from the root of the project):
+
+* **Format Code with Laravel Pint**:
+  ```bash
+  podman compose -f docker/docker-compose.yml exec app ./vendor/bin/pint
+  ```
+
+* **Run PHPStan (Static Analysis Level 10)**:
+  ```bash
+  podman compose -f docker/docker-compose.yml exec app ./vendor/bin/phpstan analyse --memory-limit=1G
+  ```
+
+* **Run PHPStan and export report to a JSON file**:
+  ```bash
+  podman compose -f docker/docker-compose.yml exec -T app ./vendor/bin/phpstan analyse --memory-limit=1G --error-format=json --no-progress > phpstan-report.json
+  ```
+
+---
+
 ## 🔄 Transpilation Pipeline (Rector Downgrade)
 
 To generate standalone release bundles for environments running older PHP versions:

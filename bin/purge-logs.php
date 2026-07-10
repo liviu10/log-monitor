@@ -60,7 +60,7 @@ try {
 } catch (Throwable $e) {
     if (class_exists('App\\Utilities\\LogViaStream')) {
         LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
-            'location' => __METHOD__,
+            'location' => __FILE__,
             'line' => __LINE__,
             'exception_message' => $e->getMessage(),
             'exception_file' => $e->getFile(),

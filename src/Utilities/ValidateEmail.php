@@ -25,7 +25,7 @@ trait ValidateEmail
      * Performs format checks and DNS lookup (MX/A) queries for domains.
      *
      * @param  string  $emailsToVerify  The compound string of emails to verify.
-     * @return array Array with all addresses that failed the validation tests.
+     * @return array<int, string> Array with all addresses that failed the validation tests.
      */
     public function validateEmail(string $emailsToVerify): array
     {

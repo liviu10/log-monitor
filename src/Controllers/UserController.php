@@ -59,6 +59,8 @@ class UserController extends BaseController
     /**
      * Processes the creation of a new administrator user account.
      * Validates the minimum complexity of the password and uniqueness of the username.
+     *
+     * @param  array<array-key, mixed>  $data
      */
     public function store(array $data): never
     {
@@ -82,9 +84,15 @@ class UserController extends BaseController
 
         try {
             $userModel = new User;
-            $userModel->create(trim($payload['username']), $payload['password']);
+            $usernameVal = $payload['username'] ?? '';
+            $passwordVal = $payload['password'] ?? '';
 
-            setFlash('success', __('Success'), __('User created successfully.'));
+            if (is_string($usernameVal) && is_string($passwordVal)) {
+                $userModel->create(trim($usernameVal), $passwordVal);
+                setFlash('success', __('Success'), __('User created successfully.'));
+            } else {
+                setFlash('danger', __('Error'), __('Invalid username or password format.'));
+            }
         } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Admin user creation process exception', [
                 'location' => __METHOD__,
@@ -105,6 +113,8 @@ class UserController extends BaseController
     /**
      * Deletes a user from the system based on the ID sent via POST.
      * Includes a strict check to block the self-deletion of the current user.
+     *
+     * @param  array<array-key, mixed>  $data
      */
     public function delete(array $data): never
     {
@@ -112,8 +122,13 @@ class UserController extends BaseController
 
         $id = $data['id'] ?? null;
         if ($id) {
-            $userId = (int) $id;
-            $currentAuthId = (int) ($_SESSION['auth.user']['id'] ?? 0);
+            $userId = (is_int($id) || is_string($id)) ? (int) $id : 0;
+            $authUser = $_SESSION['auth.user'] ?? null;
+            $currentAuthId = 0;
+            if (is_array($authUser)) {
+                $rawAuthId = $authUser['id'] ?? null;
+                $currentAuthId = (is_int($rawAuthId) || is_string($rawAuthId)) ? (int) $rawAuthId : 0;
+            }
 
             if ($userId === $currentAuthId) {
                 setFlash('danger', __('Error'), __('You cannot delete your own account.'));

@@ -42,6 +42,8 @@ class AuthController extends BaseController
     /**
      * Processes a user authentication attempt.
      * Validates input data and verifies password using native secure functions.
+     *
+     * @param array<array-key, mixed> $data
      */
     public function login(array $data): never
     {
@@ -64,9 +66,13 @@ class AuthController extends BaseController
 
         try {
             $userModel = new User;
-            $user = $userModel->findByUsername(trim($payload['username']));
+            $usernameVal = $payload['username'] ?? '';
+            $user = $userModel->findByUsername(trim(is_string($usernameVal) ? $usernameVal : ''));
 
-            if ($user && password_verify($payload['password'], $user['password_hash'])) {
+            $passwordVal = $payload['password'] ?? null;
+            $passwordHashVal = $user['password_hash'] ?? null;
+
+            if ($user && is_string($passwordVal) && is_string($passwordHashVal) && password_verify($passwordVal, $passwordHashVal)) {
                 // Prevent Session Fixation attacks by regenerating the session ID
                 session_regenerate_id(true);
 
@@ -111,15 +117,18 @@ class AuthController extends BaseController
         // 2. Erase and fully invalidate the session cookie on the client (browser)
         if (ini_get('session.use_cookies')) {
             $params = session_get_cookie_params();
-            setcookie(
-                session_name(),
-                '',
-                time() - 42000,
-                $params['path'],
-                $params['domain'],
-                (bool) $params['secure'],
-                (bool) $params['httponly']
-            );
+            $sessionName = session_name();
+            if (is_string($sessionName)) {
+                setcookie(
+                    $sessionName,
+                    '',
+                    time() - 42000,
+                    $params['path'],
+                    $params['domain'],
+                    (bool) $params['secure'],
+                    (bool) $params['httponly']
+                );
+            }
         }
 
         // 3. Physically destroy session data on the server

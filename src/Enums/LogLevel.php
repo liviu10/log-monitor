@@ -47,7 +47,7 @@ enum LogLevel: string
     /**
      * Returns all raw (string) values of the logging levels.
      *
-     * * @return array<int, string>
+     * @return array<int, string>
      */
     public static function all(): array
     {

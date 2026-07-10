@@ -18,12 +18,12 @@ try {
             default => throw new InvalidArgumentException(__('Invalid or unsupported POST action for queue.')),
         },
         'GET' => $controller->index($_GET),
-        default => throw new RuntimeException(__('Unsupported HTTP method: ').htmlspecialchars($_SERVER['REQUEST_METHOD'] ?? 'UNKNOWN', ENT_QUOTES, 'UTF-8')),
+        default => throw new RuntimeException(__('Unsupported HTTP method: ').htmlspecialchars(is_string($_SERVER['REQUEST_METHOD'] ?? null) ? $_SERVER['REQUEST_METHOD'] : 'UNKNOWN', ENT_QUOTES, 'UTF-8')),
     };
 } catch (Throwable $e) {
     if (class_exists('App\\Utilities\\LogViaStream')) {
         LogViaStream::send(LogLevel::ERROR->value, 'Queue action execution failure', [
-            'location' => __METHOD__,
+            'location' => __FILE__,
             'line' => __LINE__,
             'exception_message' => $e->getMessage(),
             'exception_file' => $e->getFile(),

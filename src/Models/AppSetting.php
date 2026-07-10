@@ -27,7 +27,7 @@ use RuntimeException;
  */
 class AppSetting
 {
-    /** @var array Static in-memory settings cache, useful for the daemon worker */
+    /** @var array<int, array{data: array<int, array<string, mixed>>, cached_at: int}> Static in-memory settings cache, useful for the daemon worker */
     protected static array $settingsCache = [];
 
     /**
@@ -51,7 +51,7 @@ class AppSetting
      * Retrieves all settings for an application.
      *
      * @param  int  $appId  Application ID.
-     * @return array List of found settings.
+     * @return array<int, array<string, mixed>> List of found settings.
      */
     public function getSettingsForApp(int $appId): array
     {
@@ -60,12 +60,16 @@ class AppSetting
         }
 
         $currentTime = time();
-        if (isset(self::$settingsCache[$appId]) && ($currentTime - self::$settingsCache[$appId]['cached_at']) < 10) {
-            return self::$settingsCache[$appId]['data'];
+        if (isset(self::$settingsCache[$appId])) {
+            $cached = self::$settingsCache[$appId];
+            if (($currentTime - $cached['cached_at']) < 10) {
+                return $cached['data'];
+            }
         }
 
         try {
             $data = $this->db->read('app_settings', ['app_id' => $appId]) ?: [];
+            /** @var array<int, array<string, mixed>> $data */
             self::$settingsCache[$appId] = [
                 'data' => $data,
                 'cached_at' => $currentTime,
@@ -94,7 +98,7 @@ class AppSetting
      *
      * @param  int  $appId  Application ID.
      * @param  string  $key  Setting key.
-     * @return array|null Setting data or null if it does not exist.
+     * @return array<string, mixed>|null Setting data or null if it does not exist.
      */
     public function getSetting(int $appId, string $key): ?array
     {
@@ -109,7 +113,12 @@ class AppSetting
                 'key' => $trimmedKey,
             ]);
 
-            return $results ? $results[0] : null;
+            $first = $results[0] ?? null;
+            if (is_array($first)) {
+                /** @var array<string, mixed> $first */
+                return $first;
+            }
+            return null;
         } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,
@@ -157,17 +166,13 @@ class AppSetting
             ];
 
             try {
-                $result = $this->db->update('app_settings', [
+                $this->db->update('app_settings', [
                     'value' => $value,
                     'updated_at' => $currentTime,
                 ], [
                     'app_id' => $appId,
                     'key' => $trimmedKey,
                 ]);
-
-                if ($result === false) {
-                    throw new RuntimeException(__('Failed to update existing setting'));
-                }
             } catch (\Throwable $e) {
                 LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                     'location' => __METHOD__,
@@ -193,7 +198,7 @@ class AppSetting
 
             try {
                 $result = $this->db->create('app_settings', $params);
-                if ($result === false) {
+                if ($result === 0 || $result === '') {
                     throw new RuntimeException(__('Failed to create new setting'));
                 }
             } catch (\Throwable $e) {
@@ -219,7 +224,7 @@ class AppSetting
      *
      * @param  int  $appId  Application ID.
      * @param  string  $oldKey  The old setting key.
-     * @param  array  $data  Data to update ('key' and/or 'value').
+     * @param  array<string, mixed>  $data  Data to update ('key' and/or 'value').
      *
      * @throws InvalidArgumentException If the provided keys are invalid.
      * @throws RuntimeException If the new key is a duplicate or the operation fails.
@@ -231,7 +236,8 @@ class AppSetting
             throw new InvalidArgumentException(__('Invalid master keys for setting update'));
         }
 
-        $newKey = trim($data['key'] ?? $trimmedOldKey);
+        $rawNewKey = $data['key'] ?? $trimmedOldKey;
+        $newKey = trim(is_string($rawNewKey) ? $rawNewKey : '');
         $value = $data['value'] ?? '';
 
         if ($trimmedOldKey !== $newKey) {
@@ -250,18 +256,14 @@ class AppSetting
         ];
 
         try {
-            $result = $this->db->update('app_settings', [
+            $this->db->update('app_settings', [
                 'key' => $newKey,
-                'value' => $value,
+                'value' => is_string($value) ? $value : '',
                 'updated_at' => date('Y-m-d H:i:s'),
             ], [
                 'app_id' => $appId,
                 'key' => $trimmedOldKey,
             ]);
-
-            if ($result === false) {
-                throw new RuntimeException(__('Setting update operation failed'));
-            }
             unset(self::$settingsCache[$appId]);
         } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [

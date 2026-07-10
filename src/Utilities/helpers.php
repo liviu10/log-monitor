@@ -91,7 +91,8 @@ if (! function_exists('constructUrl')) {
             $host = 'localhost';
         }
 
-        $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? ''));
+        $rawScriptName = $_SERVER['SCRIPT_NAME'] ?? '';
+        $scriptDir = str_replace('\\', '/', dirname(is_string($rawScriptName) ? $rawScriptName : ''));
         $basePath = rtrim($scriptDir, '/\\');
 
         $isHttps = (! empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||
@@ -127,7 +128,8 @@ if (! function_exists('checkAuthUser')) {
             exit;
         }
 
-        $currentPage = basename($_SERVER['PHP_SELF'] ?? '');
+        $rawPhpSelf = $_SERVER['PHP_SELF'] ?? '';
+        $currentPage = basename(is_string($rawPhpSelf) ? $rawPhpSelf : '');
 
         if ($currentPage === 'login.php') {
             return true;
@@ -149,17 +151,22 @@ if (! function_exists('checkAuthUser')) {
     }
 }
 
-/**
- * Returns the authenticated user's data from the current session.
- *
- * @return array|null Array of user data or null if not authenticated.
- */
 if (! function_exists('getCurrentAuthUser')) {
+    /**
+     * Returns the authenticated user's data from the current session.
+     *
+     * @return array<string, mixed>|null Array of user data or null if not authenticated.
+     */
     function getCurrentAuthUser(): ?array
     {
         $user = $_SESSION['auth.user'] ?? null;
 
-        return is_array($user) ? $user : null;
+        if (is_array($user)) {
+            /** @var array<string, mixed> $user */
+            return $user;
+        }
+
+        return null;
     }
 }
 
@@ -203,7 +210,8 @@ if (! function_exists('generateCsrfToken')) {
             $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
         }
 
-        return (string) $_SESSION['csrf_token'];
+        $token = $_SESSION['csrf_token'] ?? '';
+        return is_string($token) ? $token : '';
     }
 }
 
@@ -220,7 +228,8 @@ if (! function_exists('verifyCsrfToken')) {
             return false;
         }
 
-        return hash_equals((string) $_SESSION['csrf_token'], $token);
+        $sessionToken = $_SESSION['csrf_token'];
+        return hash_equals(is_string($sessionToken) ? $sessionToken : '', $token);
     }
 }
 
@@ -247,19 +256,22 @@ if (! function_exists('setFlash')) {
     }
 }
 
-/**
- * Extracts and deletes the existing flash message in the session (single consumption).
- *
- * @return array|null Flash message data or null if not present.
- */
 if (! function_exists('getFlash')) {
+    /**
+     * Extracts and deletes the existing flash message in the session (single consumption).
+     *
+     * @return array<string, mixed>|null Flash message data or null if not present.
+     */
     function getFlash(): ?array
     {
         if (isset($_SESSION['app_flash'])) {
             $flash = $_SESSION['app_flash'];
             unset($_SESSION['app_flash']);
 
-            return is_array($flash) ? $flash : null;
+            if (is_array($flash)) {
+                /** @var array<string, mixed> $flash */
+                return $flash;
+            }
         }
 
         return null;
@@ -281,19 +293,20 @@ if (! function_exists('getLang')) {
             $_SESSION['app_lang'] = 'en';
         }
 
-        return (string) $_SESSION['app_lang'];
+        $lang = $_SESSION['app_lang'];
+        return is_string($lang) ? $lang : 'en';
     }
 }
 
-/**
- * Translates a text key and safely replaces dynamic parameters to prevent XSS.
- * Uses native PHP 8.4 json_validate for enhanced safety.
- *
- * @param  string  $key  Translation frame key.
- * @param  array  $replacements  Associative array of replacement parameters.
- * @return string Final translated and sanitized text.
- */
 if (! function_exists('__')) {
+    /**
+     * Translates a text key and safely replaces dynamic parameters to prevent XSS.
+     * Uses native PHP 8.4 json_validate for enhanced safety.
+     *
+     * @param  string  $key  Translation frame key.
+     * @param  array<string, string|int|float|bool>  $replacements  Associative array of replacement parameters.
+     * @return string Final translated and sanitized text.
+     */
     function __(string $key, array $replacements = []): string
     {
         static $translations = null;
@@ -314,7 +327,12 @@ if (! function_exists('__')) {
             }
         }
 
+        if (! is_array($translations)) {
+            $translations = [];
+        }
+
         $text = $translations[$key] ?? $key;
+        $text = is_string($text) ? $text : $key;
 
         foreach ($replacements as $placeholder => $value) {
             $safeValue = htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');

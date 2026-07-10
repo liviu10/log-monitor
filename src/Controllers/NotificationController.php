@@ -30,27 +30,34 @@ class NotificationController extends BaseController
      * Sends an alert based on application settings and log data.
      * Supports the use of multiple channels (e.g., "email,teams").
      *
-     * @param  array  $app  The processed application data.
-     * @param  array  $logPayload  The content data of the generated log.
-     * @param  array|null  $settings  Pre-loaded application settings (optional).
+     * @param  array<array-key, mixed>  $app  The processed application data.
+     * @param  array<array-key, mixed>  $logPayload  The content data of the generated log.
+     * @param  array<array-key, mixed>|null  $settings  Pre-loaded application settings (optional).
      */
     public function sendAlert(array $app, array $logPayload, ?array $settings = null): void
     {
         try {
             if ($settings === null) {
                 $appSettingModel = new AppSetting;
-                $settingsRaw = $appSettingModel->getSettingsForApp((int) $app['id']);
+                $rawAppId = $app['id'] ?? null;
+                $appId = (is_int($rawAppId) || is_string($rawAppId)) ? (int) $rawAppId : 0;
+                $settingsRaw = $appSettingModel->getSettingsForApp($appId);
 
                 $settings = [];
                 foreach ($settingsRaw as $row) {
-                    $settings[$row['key']] = $row['value'];
+                    $rowKey = $row['key'] ?? null;
+                    if (is_string($rowKey) || is_int($rowKey)) {
+                        $settings[$rowKey] = $row['value'] ?? null;
+                    }
                 }
             }
 
-            $channels = array_map('trim', explode(',', strtolower($settings['notification_channel'] ?? '')));
+            $rawChannel = $settings['notification_channel'] ?? '';
+            $channels = array_map('trim', explode(',', strtolower(is_string($rawChannel) ? $rawChannel : '')));
             $levelsRaw = $settings['notification_levels'] ?? '';
-            $levels = array_map('trim', explode(',', strtolower($levelsRaw)));
-            $currentLevel = strtolower($logPayload['level']);
+            $levels = array_map('trim', explode(',', strtolower(is_string($levelsRaw) ? $levelsRaw : '')));
+            $rawLevel = $logPayload['level'] ?? '';
+            $currentLevel = strtolower(is_string($rawLevel) ? $rawLevel : '');
 
             if (! in_array($currentLevel, $levels, true)) {
                 return;
@@ -69,12 +76,23 @@ class NotificationController extends BaseController
                 $contextStr = json_encode($logPayload['context'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
             }
 
-            $subject = sprintf('[%s] Log Alert %s - %s', strtoupper($logPayload['level']), $app['name'], APP_NAME);
+            $rawLevelStr = $logPayload['level'] ?? '';
+            $appNameStr = $app['name'] ?? '';
+            $subject = sprintf(
+                '[%s] Log Alert %s - %s',
+                strtoupper(is_string($rawLevelStr) ? $rawLevelStr : ''),
+                is_string($appNameStr) ? $appNameStr : '',
+                APP_NAME
+            );
+
+            $appNameVal = $app['name'] ?? '';
+            $levelVal = $logPayload['level'] ?? '';
+            $messageVal = $logPayload['message'] ?? '';
 
             $emailMessage = "A high-level log was recorded:\n\n"
-                .'Application: '.$app['name']."\n"
-                .'Level: '.strtoupper($logPayload['level'])."\n"
-                .'Message: '.$logPayload['message']."\n"
+                .'Application: '.(is_string($appNameVal) ? $appNameVal : '')."\n"
+                .'Level: '.strtoupper(is_string($levelVal) ? $levelVal : '')."\n"
+                .'Message: '.(is_string($messageVal) ? $messageVal : '')."\n"
                 .'Date: '.date('Y-m-d H:i:s')."\n";
 
             if ($contextStr !== '') {
@@ -84,7 +102,7 @@ class NotificationController extends BaseController
             // 1. Standard Email communication channel
             if (in_array('email', $channels, true)) {
                 $emailRecipient = $settings['notification_email'] ?? null;
-                if (! empty($emailRecipient)) {
+                if (is_string($emailRecipient) && $emailRecipient !== '') {
                     $notifier = new SendNotification;
                     $notifier->handle([
                         'to' => $emailRecipient,
@@ -98,7 +116,7 @@ class NotificationController extends BaseController
             // 2. Microsoft Teams communication channel directly to the dedicated channel address
             if (in_array('teams', $channels, true)) {
                 $teamsEmail = $settings['notification_teams_email'] ?? null;
-                if (! empty($teamsEmail)) {
+                if (is_string($teamsEmail) && $teamsEmail !== '') {
                     $notifier = new SendNotification;
                     $notifier->handle([
                         'to' => $teamsEmail,

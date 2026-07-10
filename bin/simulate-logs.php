@@ -14,7 +14,8 @@ ini_set('memory_limit', '256M');
 require_once dirname(__DIR__).'/bootstrap.php';
 
 // Limit execution to the development environment only
-$appEnv = $_ENV['APP_ENV'] ?? getenv('APP_ENV') ?? 'production';
+$envVal = $_ENV['APP_ENV'] ?? getenv('APP_ENV');
+$appEnv = is_string($envVal) ? $envVal : 'production';
 if (strtolower($appEnv) !== 'development') {
     fwrite(STDERR, "Error: This simulation script can only run in a 'development' environment. Current: '{$appEnv}'\n");
     exit(1);
@@ -41,7 +42,7 @@ try {
 } catch (Throwable $e) {
     if (class_exists('App\\Utilities\\LogViaStream')) {
         LogViaStream::send(LogLevel::ERROR->value, 'CLI Benchmark App creation failure', [
-            'location' => __METHOD__,
+            'location' => __FILE__,
             'line' => __LINE__,
             'exception_message' => $e->getMessage(),
             'exception_file' => $e->getFile(),
@@ -73,6 +74,9 @@ $payload = json_encode([
     'message' => '[Benchmark] Log de test generat automat pentru analiza de performanta',
     'context' => ['user_id' => rand(1, 1000), 'status' => 'active', 'gateway' => 'podman-rootless'],
 ]);
+if ($payload === false) {
+    $payload = '';
+}
 
 // Helper for rapid generation of cURL handles
 $createHandle = function () use ($url, $testApiKey, $payload) {
@@ -106,17 +110,19 @@ do {
     }
 
     while ($done = curl_multi_info_read($mh)) {
-        $ch = $done['handle'];
-        $info = curl_getinfo($ch);
+        $ch = $done['handle'] ?? null;
+        if ($ch instanceof \CurlHandle) {
+            $info = curl_getinfo($ch);
 
-        if ($info['http_code'] === 202) {
-            $success++;
-        } else {
-            $errors++;
+            if ($info['http_code'] === 202) {
+                $success++;
+            } else {
+                $errors++;
+            }
+
+            curl_multi_remove_handle($mh, $ch);
+            curl_close($ch);
         }
-
-        curl_multi_remove_handle($mh, $ch);
-        curl_close($ch);
 
         // Add a new request to the queue if there are more logs to send
         if ($sent < $totalLogs) {

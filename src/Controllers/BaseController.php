@@ -25,7 +25,7 @@ class BaseController
     /**
      * Sends a JSON response to the client and stops execution.
      *
-     * @param  array  $data  The data to be encoded in JSON format.
+     * @param  array<array-key, mixed>  $data  The data to be encoded in JSON format.
      * @param  int  $status  The HTTP status code (default 200).
      */
     protected function jsonResponse(array $data, int $status = 200): never
@@ -40,7 +40,7 @@ class BaseController
      * Renders a view file and extracts the provided data.
      *
      * @param  string  $view  Name or path of the view file.
-     * @param  array  $data  Data that will be available in the view.
+     * @param  array<array-key, mixed>  $data  Data that will be available in the view.
      */
     protected function render(string $view, array $data = []): void
     {
@@ -62,7 +62,7 @@ class BaseController
     /**
      * Verifies if the user is authenticated and applies OWASP security headers.
      *
-     * @return array|null The user's data if authenticated.
+     * @return array<array-key, mixed>|null The user's data if authenticated.
      */
     protected function checkAuth(): ?array
     {

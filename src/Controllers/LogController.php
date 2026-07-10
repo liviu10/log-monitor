@@ -70,7 +70,7 @@ class LogController extends BaseController
 
         // 4. Use native PHP 8.4 json_validate for performance and protection
         $rawPayload = file_get_contents('php://input');
-        if (! json_validate($rawPayload)) {
+        if ($rawPayload === false || ! json_validate($rawPayload)) {
             $this->jsonResponse(['error' => 'Invalid JSON payload structure'], 400);
         }
 
@@ -95,7 +95,7 @@ class LogController extends BaseController
             $errorMessages = [];
             foreach ($errors as $field => $rules) {
                 foreach ($rules as $rule) {
-                    $errorMessages[] = $validator->messages($field, $rule);
+                    $errorMessages[] = $validator->messages((string) $field, $rule);
                 }
             }
             $this->jsonResponse(['errors' => $errorMessages], 422);
@@ -104,19 +104,31 @@ class LogController extends BaseController
         // 5. Record log in database and send automatic alerts
         try {
             $logModel = new Log;
+            $rawAppId = $app['id'] ?? null;
+            $rawLevel = $payload['level'] ?? null;
+            $rawMessage = $payload['message'] ?? null;
+            $rawContext = $payload['context'] ?? null;
+
+            if ((! is_int($rawAppId) && ! is_string($rawAppId)) ||
+                ! is_string($rawLevel) ||
+                ! is_string($rawMessage) ||
+                ($rawContext !== null && ! is_array($rawContext))) {
+                $this->jsonResponse(['error' => __('Invalid data types for log entry')], 400);
+            }
+
             $result = $logModel->create(
-                $app['id'],
-                $payload['level'],
-                $payload['message'],
-                $payload['context'] ?? null,
+                (int) $rawAppId,
+                $rawLevel,
+                $rawMessage,
+                $rawContext,
             );
 
             if ($result) {
                 $notificationController = new NotificationController;
                 $notificationController->sendAlert($app, [
-                    'level' => $payload['level'],
-                    'message' => $payload['message'],
-                    'context' => $payload['context'] ?? null,
+                    'level' => $rawLevel,
+                    'message' => $rawMessage,
+                    'context' => $rawContext,
                 ]);
 
                 $this->jsonResponse(['status' => true, 'message' => __('Log recorded')]);
@@ -143,11 +155,16 @@ class LogController extends BaseController
      *
      * @param  int  $days  The number of days saved as retention cutoff.
      * @param  string  $backupPath  The absolute path to the saved backup file.
+     * @return array<string, mixed>
      */
     public function purge(int $days, string $backupPath): array
     {
         try {
-            $cutoffDate = date('Y-m-d H:i:s', strtotime("-{$days} days"));
+            $timestamp = strtotime("-{$days} days");
+            if ($timestamp === false) {
+                throw new \RuntimeException(__('Failed to calculate the retention cutoff date boundary.'));
+            }
+            $cutoffDate = date('Y-m-d H:i:s', $timestamp);
             $logModel = new Log;
 
             $totalToArchive = $logModel->countBeforeDate($cutoffDate);
@@ -168,7 +185,7 @@ class LogController extends BaseController
 
             $fileHandle = fopen($backupPath, 'w');
             if (! $fileHandle) {
-                throw new \RuntimeException(__('Failed to create backup file at path: %s', $backupPath));
+                throw new \RuntimeException(sprintf(__('Failed to create backup file at path: %s'), $backupPath));
             }
 
             fwrite($fileHandle, 'LOG MONITOR BACKUP - GENERATED AT '.date('Y-m-d H:i:s')."\n");
@@ -181,13 +198,19 @@ class LogController extends BaseController
                 $rows = $logModel->getBeforeDate($cutoffDate, $chunkSize, $offset);
 
                 foreach ($rows as $row) {
+                    $createdAt = $row['created_at'] ?? '';
+                    $appName = $row['app_name'] ?? '';
+                    $level = $row['level'] ?? '';
+                    $message = $row['message'] ?? '';
+                    $context = $row['context'] ?? '{}';
+
                     $line = sprintf(
                         "[%s] [%s] [%s]: %s | Context: %s\n",
-                        $row['created_at'],
-                        $row['app_name'],
-                        $row['level'],
-                        $row['message'],
-                        $row['context'] ?? '{}'
+                        is_string($createdAt) ? $createdAt : '',
+                        is_string($appName) ? $appName : '',
+                        is_string($level) ? $level : '',
+                        is_string($message) ? $message : '',
+                        is_string($context) ? $context : '{}'
                     );
                     fwrite($fileHandle, $line);
                 }
@@ -234,9 +257,9 @@ class LogController extends BaseController
 
         if (function_exists('getallheaders')) {
             $headers = getallheaders();
-            if (is_array($headers)) {
-                foreach ($headers as $key => $value) {
-                    if (strtolower((string) $key) === $normalizedName) {
+            foreach ($headers as $key => $value) {
+                if (strtolower((string) $key) === $normalizedName) {
+                    if (is_string($value) || is_numeric($value) || is_bool($value)) {
                         return (string) $value;
                     }
                 }
@@ -245,12 +268,18 @@ class LogController extends BaseController
 
         $serverKey = 'HTTP_'.strtoupper(str_replace('-', '_', $name));
         if (isset($_SERVER[$serverKey])) {
-            return (string) $_SERVER[$serverKey];
+            $srvVal = $_SERVER[$serverKey];
+            if (is_string($srvVal) || is_numeric($srvVal) || is_bool($srvVal)) {
+                return (string) $srvVal;
+            }
         }
 
         $directServerKey = strtoupper(str_replace('-', '_', $name));
         if (isset($_SERVER[$directServerKey])) {
-            return (string) $_SERVER[$directServerKey];
+            $dirSrvVal = $_SERVER[$directServerKey];
+            if (is_string($dirSrvVal) || is_numeric($dirSrvVal) || is_bool($dirSrvVal)) {
+                return (string) $dirSrvVal;
+            }
         }
 
         return null;

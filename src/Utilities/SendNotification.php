@@ -61,8 +61,8 @@ class SendNotification
             throw new RuntimeException(__('Notification system is disabled in this runtime environment.'));
         }
 
-        $to = $emailData['to'] ?? throw new RuntimeException(__('The recipient field is required.'));
-        $message = $emailData['message'] ?? throw new RuntimeException(__('The message body field is required.'));
+        $to = $emailData['to'];
+        $message = $emailData['message'];
         $priority = $emailData['priority'] ?? 3;
         $attachmentPath = $emailData['attachmentPath'] ?? null;
         $from = $emailData['from'] ?? null;
@@ -86,7 +86,9 @@ class SendNotification
             ];
 
             if (! empty($_ENV['PROXY_HOST']) && ! empty($_ENV['PROXY_PORT'])) {
-                $proxyUrl = "tcp://{$_ENV['PROXY_HOST']}:{$_ENV['PROXY_PORT']}";
+                $proxyHost = $_ENV['PROXY_HOST'];
+                $proxyPort = $_ENV['PROXY_PORT'];
+                $proxyUrl = sprintf('tcp://%s:%s', is_string($proxyHost) ? $proxyHost : '', is_string($proxyPort) || is_int($proxyPort) ? (string) $proxyPort : '');
                 $smtpOptions['ssl'] = [
                     'proxy' => $proxyUrl,
                     'verify_peer' => false,

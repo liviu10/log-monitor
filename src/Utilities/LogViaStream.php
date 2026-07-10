@@ -57,7 +57,8 @@ final class LogViaStream
      */
     public static function registerHandlers(): void
     {
-        self::$startTime = (float) ($_SERVER['REQUEST_TIME_FLOAT'] ?? microtime(true));
+        $rawRequestTime = $_SERVER['REQUEST_TIME_FLOAT'] ?? null;
+        self::$startTime = (is_float($rawRequestTime) || is_numeric($rawRequestTime)) ? (float) $rawRequestTime : microtime(true);
 
         // Allocate memory reserve (500 KB) for emergency situations (OOM)
         self::$memoryReserve = str_repeat('x', 1024 * 500);
@@ -91,7 +92,9 @@ final class LogViaStream
 
         // 3. Intercept fatal errors (Shutdown Function) with buffer protection
         register_shutdown_function(static function (): void {
+            $reserved = self::$memoryReserve;
             self::$memoryReserve = null; // Immediate release of RAM space
+            unset($reserved);
 
             $error = error_get_last();
             $bufferContent = '';
@@ -102,13 +105,16 @@ final class LogViaStream
                     $status = ob_get_status(true);
                     $currentBuffer = end($status);
 
-                    if (isset($currentBuffer['flags']) && ! ($currentBuffer['flags'] & PHP_OUTPUT_HANDLER_REMOVABLE)) {
-                        ob_end_flush();
-                        break;
+                    if (is_array($currentBuffer) && isset($currentBuffer['flags'])) {
+                        $flags = $currentBuffer['flags'];
+                        if ((is_int($flags) || is_string($flags)) && ! ((int) $flags & PHP_OUTPUT_HANDLER_REMOVABLE)) {
+                            ob_end_flush();
+                            break;
+                        }
                     }
 
                     $content = ob_get_clean();
-                    if (is_string($content)) {
+                    if ($content) {
                         $bufferContent = $content.$bufferContent;
                     }
                 }
@@ -125,7 +131,7 @@ final class LogViaStream
                 }
 
                 if ($hasFatalError) {
-                    $message = $error['message'] ?? 'Unknown Fatal Error';
+                    $message = $error['message'];
                     $type = match (true) {
                         str_contains($message, 'Allowed memory size') => 'Fatal Out Of Memory (RAM Exceeded)',
                         str_contains($message, 'Maximum execution time') => 'Fatal Execution Timeout',
@@ -133,8 +139,8 @@ final class LogViaStream
                     };
 
                     self::send('CRITICAL', 'Fatal Error: '.$message, [
-                        'file' => $error['file'] ?? 'unknown',
-                        'line' => $error['line'] ?? 0,
+                        'file' => $error['file'],
+                        'line' => $error['line'],
                         'type' => $type,
                         'captured_output_buffer' => substr($bufferContent, 0, 4000),
                     ]);
@@ -188,11 +194,14 @@ final class LogViaStream
 
     /**
      * Dispatches the log to the centralized server in a controlled and secure manner.
+     *
+     * @param  array<string, mixed>  $context
      */
     public static function send(string $level, string $message, array $context = []): bool
     {
         // Prevent recursion / circular loop on the API log.php endpoint
-        $currentScript = basename($_SERVER['SCRIPT_NAME'] ?? '');
+        $rawScriptName = $_SERVER['SCRIPT_NAME'] ?? '';
+        $currentScript = basename(is_string($rawScriptName) ? $rawScriptName : '');
         if ($currentScript === 'log.php') {
             error_log(sprintf('[%s] Internal Log: %s | Context: %s', strtoupper($level), $message, json_encode($context)));
 
@@ -265,7 +274,7 @@ final class LogViaStream
             $oldErrorReporting = error_reporting(0);
             try {
                 $result = file_get_contents(self::$url, false, $streamContext);
-                $headers = $http_response_header ?? []; // Capturam variabila nativa imediat local
+                $headers = $http_response_header; // Capturam variabila nativa imediat local
             } finally {
                 error_reporting($oldErrorReporting);
             }
@@ -276,14 +285,17 @@ final class LogViaStream
                 return false;
             }
 
-            return isset($headers[0]) && str_contains($headers[0], '200');
+            return str_contains($headers[0], '200');
 
         } catch (Throwable $e) {
-            error_log(json_encode([
+            $logMsg = json_encode([
                 'error' => 'Critical error in log transmission via Stream',
                 'exception_message' => $e->getMessage(),
                 'identifier' => 'LogViaStream_Transmission_Failure',
-            ], JSON_UNESCAPED_SLASHES));
+            ], JSON_UNESCAPED_SLASHES);
+            if (is_string($logMsg)) {
+                error_log($logMsg);
+            }
 
             return false;
         } finally {
@@ -318,7 +330,8 @@ final class LogViaStream
                 // The minute has changed or the structure is invalid -> reset the time window
                 $data = ['window' => $minuteWindow, 'count' => 1];
             } else {
-                $data['count']++;
+                $count = $data['count'] ?? 0;
+                $data['count'] = (is_int($count) ? $count : 0) + 1;
             }
 
             if ($data['count'] > self::MAX_LOGS_PER_MINUTE) {
@@ -331,7 +344,10 @@ final class LogViaStream
             // Actualizam fisierul
             ftruncate($fp, 0);
             rewind($fp);
-            fwrite($fp, json_encode($data));
+            $encodedData = json_encode($data);
+            if (is_string($encodedData)) {
+                fwrite($fp, $encodedData);
+            }
             fflush($fp);
             flock($fp, LOCK_UN);
         }
@@ -386,6 +402,9 @@ final class LogViaStream
 
     /**
      * Recursively sanitizes data structures received as parameters (Including hidden JSON).
+     *
+     * @param  array<array-key, mixed>  $data  Data to sanitize.
+     * @return array<array-key, mixed> Sanitized data.
      */
     private static function sanitizeData(array $data): array
     {
@@ -428,6 +447,8 @@ final class LogViaStream
 
     /**
      * Formats the exception stack trace in a readable format.
+     *
+     * @return array<int, string> Formatted trace.
      */
     private static function formatTrace(Throwable $exception): array
     {
@@ -446,7 +467,7 @@ final class LogViaStream
                 $step['line'] ?? 0,
                 $step['class'] ?? '',
                 $step['type'] ?? '',
-                $step['function'] ?? 'unknown_function'
+                $step['function']
             );
         }
 
