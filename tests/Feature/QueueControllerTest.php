@@ -4,18 +4,18 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
 use App\Controllers\QueueController;
 use App\Models\App;
+use Tests\TestCase;
 
-if (!class_exists(\Tests\Feature\HttpRedirectException::class, false)) {
+if (! class_exists(HttpRedirectException::class, false)) {
     class HttpRedirectException extends \Exception
     {
         public string $url;
 
         public function __construct(string $url)
         {
-            parent::__construct("HTTP Redirect to: " . $url);
+            parent::__construct('HTTP Redirect to: '.$url);
             $this->url = $url;
         }
     }
@@ -27,7 +27,9 @@ if (!class_exists(\Tests\Feature\HttpRedirectException::class, false)) {
 class TestableQueueController extends QueueController
 {
     public string $renderedView = '';
+
     public array $renderedData = [];
+
     public ?string $redirectUrl = null;
 
     protected function redirect(string $url): never
@@ -46,14 +48,16 @@ class TestableQueueController extends QueueController
 class QueueControllerTest extends TestCase
 {
     private App $appModel;
+
     private TestableQueueController $controller;
+
     private int $appId;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->appModel = new App();
-        $this->controller = new TestableQueueController();
+        $this->appModel = new App;
+        $this->controller = new TestableQueueController;
 
         $this->db()->getConnection()->exec('SET FOREIGN_KEY_CHECKS=0;');
         $this->db()->getConnection()->exec('TRUNCATE TABLE logs;');
@@ -65,16 +69,16 @@ class QueueControllerTest extends TestCase
         $this->appId = $this->appModel->create('Queue App', 'queue-key');
     }
 
-    public function testIndexRendersQueueWithCorrectData(): void
+    public function test_index_renders_queue_with_correct_data(): void
     {
         // Insert some jobs
         $this->db()->create('log_queue', [
             'app_id' => $this->appId,
-            'payload_raw' => json_encode(['level' => 'INFO', 'message' => 'Job 1'])
+            'payload_raw' => json_encode(['level' => 'INFO', 'message' => 'Job 1']),
         ]);
         $this->db()->create('log_queue', [
             'app_id' => $this->appId,
-            'payload_raw' => json_encode(['level' => 'ERROR', 'message' => 'Job 2'])
+            'payload_raw' => json_encode(['level' => 'ERROR', 'message' => 'Job 2']),
         ]);
 
         $this->controller->index();
@@ -87,11 +91,11 @@ class QueueControllerTest extends TestCase
         $this->assertIsBool($this->controller->renderedData['isWorkerRunning']);
     }
 
-    public function testDeleteRemovesSpecificJobFromQueue(): void
+    public function test_delete_removes_specific_job_from_queue(): void
     {
         $this->db()->create('log_queue', [
             'app_id' => $this->appId,
-            'payload_raw' => json_encode(['level' => 'INFO', 'message' => 'Job to delete'])
+            'payload_raw' => json_encode(['level' => 'INFO', 'message' => 'Job to delete']),
         ]);
 
         $jobs = $this->db()->read('log_queue');
@@ -108,15 +112,15 @@ class QueueControllerTest extends TestCase
         $this->assertCount(0, $this->db()->read('log_queue'));
     }
 
-    public function testPurgeClearsAllJobsFromQueue(): void
+    public function test_purge_clears_all_jobs_from_queue(): void
     {
         $this->db()->create('log_queue', [
             'app_id' => $this->appId,
-            'payload_raw' => json_encode(['level' => 'INFO', 'message' => 'Job 1'])
+            'payload_raw' => json_encode(['level' => 'INFO', 'message' => 'Job 1']),
         ]);
         $this->db()->create('log_queue', [
             'app_id' => $this->appId,
-            'payload_raw' => json_encode(['level' => 'ERROR', 'message' => 'Job 2'])
+            'payload_raw' => json_encode(['level' => 'ERROR', 'message' => 'Job 2']),
         ]);
 
         $this->assertCount(2, $this->db()->read('log_queue'));

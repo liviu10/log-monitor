@@ -4,13 +4,12 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use PDO;
-use PDOException;
-use RuntimeException;
-use InvalidArgumentException;
-use App\Utilities\MySQLWrapper;
-use App\Utilities\LogViaStream;
 use App\Enums\LogLevel;
+use App\Utilities\LogViaStream;
+use App\Utilities\MySQLWrapper;
+use InvalidArgumentException;
+use PDO;
+use RuntimeException;
 
 /**
  * Log Class
@@ -20,9 +19,11 @@ use App\Enums\LogLevel;
  * Uses FULLTEXT indexing for efficient searches.
  *
  * @category Model
- * @package  App\Models
+ *
  * @version  1.3
+ *
  * @since    PHP 8.4
+ *
  * @author   Voica Liviu
  * @license  Proprietary
  */
@@ -31,6 +32,7 @@ class Log
     /**
      * Constructor for the Log class.
      * Property promotion for database dependency injection.
+     *
      * * @param MySQLWrapper $db Database wrapper instance.
      */
     public function __construct(
@@ -47,11 +49,12 @@ class Log
     /**
      * Creates a new log entry in the database.
      *
-     * @param int    $appId   Source application ID.
-     * @param string $level   Severity level.
-     * @param string $message Descriptive message.
-     * @param mixed  $context Additional context data (will be JSON).
+     * @param  int  $appId  Source application ID.
+     * @param  string  $level  Severity level.
+     * @param  string  $message  Descriptive message.
+     * @param  mixed  $context  Additional context data (will be JSON).
      * @return int Created log ID.
+     *
      * @throws InvalidArgumentException If required data is missing.
      * @throws RuntimeException If operation fails.
      */
@@ -79,7 +82,8 @@ class Log
             if ($result === false) {
                 throw new RuntimeException(__('Failed to write log to database'));
             }
-            return (int)$result;
+
+            return (int) $result;
         } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,
@@ -90,7 +94,7 @@ class Log
                 'exception_trace' => $e->getTraceAsString(),
                 'sql_statement' => $sql,
                 'sql_parameters' => $params,
-                'identifier' => 'MySQLWrapper_Query_Failure'
+                'identifier' => 'MySQLWrapper_Query_Failure',
             ]);
             throw new RuntimeException(__('Database error saving log entry'), 0, $e);
         }
@@ -100,11 +104,11 @@ class Log
      * Returns a paginated list of logs based on applied filters.
      * Fully secured against SQL injection attacks via natively bound parameters for LIMIT/OFFSET.
      *
-     * @param array  $filters Applied filters.
-     * @param int    $limit   Maximum number of records.
-     * @param int    $offset  Pagination starting offset.
-     * @param string $sortBy  Column to sort by.
-     * @param string $sortDir Sort direction (ASC or DESC).
+     * @param  array  $filters  Applied filters.
+     * @param  int  $limit  Maximum number of records.
+     * @param  int  $offset  Pagination starting offset.
+     * @param  string  $sortBy  Column to sort by.
+     * @param  string  $sortDir  Sort direction (ASC or DESC).
      * @return array Found logs.
      */
     public function getPaginated(array $filters = [], int $limit = 50, int $offset = 0, string $sortBy = 'id', string $sortDir = 'DESC'): array
@@ -116,25 +120,25 @@ class Log
             $offset = 0;
         }
 
-        $sql = "SELECT l.*, a.name as app_name 
+        $sql = 'SELECT l.*, a.name as app_name 
                 FROM logs l 
                 JOIN apps a ON l.app_id = a.id 
-                WHERE 1=1";
+                WHERE 1=1';
         $params = [];
 
-        if (!empty($filters['app_id'])) {
-            $sql .= " AND l.app_id = ?";
-            $params[] = (int)$filters['app_id'];
+        if (! empty($filters['app_id'])) {
+            $sql .= ' AND l.app_id = ?';
+            $params[] = (int) $filters['app_id'];
         }
 
-        if (!empty($filters['level'])) {
-            $sql .= " AND l.level = ?";
-            $params[] = strtoupper(trim((string)$filters['level']));
+        if (! empty($filters['level'])) {
+            $sql .= ' AND l.level = ?';
+            $params[] = strtoupper(trim((string) $filters['level']));
         }
 
-        if (!empty($filters['search'])) {
-            $sql .= " AND MATCH(l.message, l.context) AGAINST(? IN BOOLEAN MODE)";
-            $params[] = trim((string)$filters['search']) . "*";
+        if (! empty($filters['search'])) {
+            $sql .= ' AND MATCH(l.message, l.context) AGAINST(? IN BOOLEAN MODE)';
+            $params[] = trim((string) $filters['search']).'*';
         }
 
         // Strict validation of sort columns to prevent SQL Injection
@@ -156,10 +160,11 @@ class Log
         }
 
         // Strict security: LIMIT and OFFSET are directly interpolated as integers to avoid binding them as string by PDO
-        $sql .= " {$orderClause} LIMIT " . (int)$limit . " OFFSET " . (int)$offset;
+        $sql .= " {$orderClause} LIMIT ".(int) $limit.' OFFSET '.(int) $offset;
 
         try {
             $stmt = $this->db->query($sql, $params);
+
             return $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
         } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
@@ -171,8 +176,9 @@ class Log
                 'exception_trace' => $e->getTraceAsString(),
                 'sql_statement' => $sql,
                 'sql_parameters' => $params,
-                'identifier' => 'MySQLWrapper_Query_Failure'
+                'identifier' => 'MySQLWrapper_Query_Failure',
             ]);
+
             return [];
         }
     }
@@ -180,32 +186,33 @@ class Log
     /**
      * Counts the total logs matching the selected filters.
      *
-     * @param array $filters Applied filters.
+     * @param  array  $filters  Applied filters.
      * @return int Total number of matching logs found.
      */
     public function count(array $filters = []): int
     {
-        $sql = "SELECT COUNT(*) FROM logs l WHERE 1=1";
+        $sql = 'SELECT COUNT(*) FROM logs l WHERE 1=1';
         $params = [];
 
-        if (!empty($filters['app_id'])) {
-            $sql .= " AND l.app_id = ?";
-            $params[] = (int)$filters['app_id'];
+        if (! empty($filters['app_id'])) {
+            $sql .= ' AND l.app_id = ?';
+            $params[] = (int) $filters['app_id'];
         }
 
-        if (!empty($filters['level'])) {
-            $sql .= " AND l.level = ?";
-            $params[] = strtoupper(trim((string)$filters['level']));
+        if (! empty($filters['level'])) {
+            $sql .= ' AND l.level = ?';
+            $params[] = strtoupper(trim((string) $filters['level']));
         }
 
-        if (!empty($filters['search'])) {
-            $sql .= " AND MATCH(l.message, l.context) AGAINST(? IN BOOLEAN MODE)";
-            $params[] = trim((string)$filters['search']) . "*";
+        if (! empty($filters['search'])) {
+            $sql .= ' AND MATCH(l.message, l.context) AGAINST(? IN BOOLEAN MODE)';
+            $params[] = trim((string) $filters['search']).'*';
         }
 
         try {
             $stmt = $this->db->query($sql, $params);
-            return $stmt ? (int)$stmt->fetchColumn() : 0;
+
+            return $stmt ? (int) $stmt->fetchColumn() : 0;
         } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,
@@ -216,8 +223,9 @@ class Log
                 'exception_trace' => $e->getTraceAsString(),
                 'sql_statement' => $sql,
                 'sql_parameters' => $params,
-                'identifier' => 'MySQLWrapper_Query_Failure'
+                'identifier' => 'MySQLWrapper_Query_Failure',
             ]);
+
             return 0;
         }
     }
@@ -225,17 +233,18 @@ class Log
     /**
      * Counts records created before a specific date.
      *
-     * @param string $date Cutoff date.
+     * @param  string  $date  Cutoff date.
      * @return int Total number of old logs.
      */
     public function countBeforeDate(string $date): int
     {
-        $sql = "SELECT COUNT(*) FROM logs WHERE created_at < ?";
+        $sql = 'SELECT COUNT(*) FROM logs WHERE created_at < ?';
         $params = [$date];
 
         try {
             $stmt = $this->db->query($sql, $params);
-            return $stmt ? (int)$stmt->fetchColumn() : 0;
+
+            return $stmt ? (int) $stmt->fetchColumn() : 0;
         } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,
@@ -246,8 +255,9 @@ class Log
                 'exception_trace' => $e->getTraceAsString(),
                 'sql_statement' => $sql,
                 'sql_parameters' => $params,
-                'identifier' => 'MySQLWrapper_Query_Failure'
+                'identifier' => 'MySQLWrapper_Query_Failure',
             ]);
+
             return 0;
         }
     }
@@ -255,9 +265,9 @@ class Log
     /**
      * Retrieves logs created before a specific date in a paginated manner.
      *
-     * @param string $date   Cutoff date.
-     * @param int    $limit  Number of logs per chunk.
-     * @param int    $offset Pagination starting point.
+     * @param  string  $date  Cutoff date.
+     * @param  int  $limit  Number of logs per chunk.
+     * @param  int  $offset  Pagination starting point.
      * @return array List of results.
      */
     public function getBeforeDate(string $date, int $limit, int $offset): array
@@ -269,16 +279,17 @@ class Log
             $offset = 0;
         }
 
-        $sql = "SELECT l.*, a.name as app_name 
+        $sql = 'SELECT l.*, a.name as app_name 
                 FROM logs l 
                 JOIN apps a ON l.app_id = a.id 
                 WHERE l.created_at < ? 
                 ORDER BY l.created_at ASC 
-                LIMIT " . (int)$limit . " OFFSET " . (int)$offset;
+                LIMIT '.(int) $limit.' OFFSET '.(int) $offset;
         $params = [$date];
 
         try {
             $stmt = $this->db->query($sql, $params);
+
             return $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
         } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
@@ -290,8 +301,9 @@ class Log
                 'exception_trace' => $e->getTraceAsString(),
                 'sql_statement' => $sql,
                 'sql_parameters' => $params,
-                'identifier' => 'MySQLWrapper_Query_Failure'
+                'identifier' => 'MySQLWrapper_Query_Failure',
             ]);
+
             return [];
         }
     }
@@ -299,18 +311,20 @@ class Log
     /**
      * Deletes logs created before a specific date.
      *
-     * @param string $date Cutoff date.
+     * @param  string  $date  Cutoff date.
      * @return int Number of deleted records.
+     *
      * @throws RuntimeException If deletion fails catastrophically.
      */
     public function deleteBeforeDate(string $date): int
     {
-        $sql = "DELETE FROM logs WHERE created_at < ?";
+        $sql = 'DELETE FROM logs WHERE created_at < ?';
         $params = [$date];
 
         try {
             $stmt = $this->db->query($sql, $params);
-            return $stmt ? (int)$stmt->rowCount() : 0;
+
+            return $stmt ? (int) $stmt->rowCount() : 0;
         } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,
@@ -321,7 +335,7 @@ class Log
                 'exception_trace' => $e->getTraceAsString(),
                 'sql_statement' => $sql,
                 'sql_parameters' => $params,
-                'identifier' => 'MySQLWrapper_Query_Failure'
+                'identifier' => 'MySQLWrapper_Query_Failure',
             ]);
             throw new RuntimeException(__('Failed to clear old logs from storage'), 0, $e);
         }
@@ -334,9 +348,10 @@ class Log
      */
     public function optimize(): bool
     {
-        $sql = "OPTIMIZE TABLE logs";
+        $sql = 'OPTIMIZE TABLE logs';
         try {
             $stmt = $this->db->query($sql);
+
             return $stmt !== false;
         } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
@@ -348,8 +363,9 @@ class Log
                 'exception_trace' => $e->getTraceAsString(),
                 'sql_statement' => $sql,
                 'sql_parameters' => [],
-                'identifier' => 'MySQLWrapper_Query_Failure'
+                'identifier' => 'MySQLWrapper_Query_Failure',
             ]);
+
             return false;
         }
     }
@@ -363,18 +379,18 @@ class Log
     {
         try {
             $total = $this->count();
-            
+
             $critical = 0;
             foreach (['ERROR', 'CRITICAL', 'EMERGENCY', 'ALERT'] as $lvl) {
                 $critical += $this->count(['level' => $lvl]);
             }
-            
+
             $warning = $this->count(['level' => 'WARNING']);
-            
+
             return [
                 'total' => $total,
                 'critical' => $critical,
-                'warning' => $warning
+                'warning' => $warning,
             ];
         } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
@@ -386,8 +402,9 @@ class Log
                 'exception_trace' => $e->getTraceAsString(),
                 'sql_statement' => 'Dashboard Statistics Aggregation',
                 'sql_parameters' => [],
-                'identifier' => 'MySQLWrapper_Query_Failure'
+                'identifier' => 'MySQLWrapper_Query_Failure',
             ]);
+
             return ['total' => 0, 'critical' => 0, 'warning' => 0];
         }
     }

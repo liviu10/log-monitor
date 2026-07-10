@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Utilities;
 
-use Throwable;
 use ErrorException;
 use RuntimeException;
+use Throwable;
 
 /**
  * LogViaStream Class
@@ -15,34 +15,40 @@ use RuntimeException;
  * Includes protection against internal DDoS and infinite loops (Local and Global Rate Limiting).
  *
  * @category Utilities
- * @package  App\Utilities
+ *
  * @version  5.0
+ *
  * @since    PHP 8.4
+ *
  * @author   Voica Liviu
  * @license  Proprietary
  */
 final class LogViaStream
 {
     private static bool $isLogging = false;
+
     private static ?string $requestId = null;
+
     private static ?string $memoryReserve = null;
+
     private static ?float $startTime = null;
+
     private static string $apiKey = '';
+
     private static string $url = '';
-    
+
     // Internal counter for the current request (Infinite Loop / Foreach Protection)
     private static int $logCountInRequest = 0;
-    
+
     // Strict safety limits (Architecturally configurable)
     private const int MAX_LOGS_PER_REQUEST = 30;  // Maximum logs transmitted by a single script/call
+
     private const int MAX_LOGS_PER_MINUTE = 300;  // Maximum logs accepted globally from the entire server in one minute
 
     /**
      * Private constructor to prevent instantiation of a purely static class.
      */
-    private function __construct()
-    {
-    }
+    private function __construct() {}
 
     /**
      * Registers the global handler and validates config presence (Fail-Fast).
@@ -51,7 +57,7 @@ final class LogViaStream
      */
     public static function registerHandlers(): void
     {
-        self::$startTime = (float)($_SERVER['REQUEST_TIME_FLOAT'] ?? microtime(true));
+        self::$startTime = (float) ($_SERVER['REQUEST_TIME_FLOAT'] ?? microtime(true));
 
         // Allocate memory reserve (500 KB) for emergency situations (OOM)
         self::$memoryReserve = str_repeat('x', 1024 * 500);
@@ -59,11 +65,11 @@ final class LogViaStream
         $envApiKey = $_ENV['LOG_API_KEY'] ?? null;
         $envUrl = $_ENV['LOG_SERVER_URL'] ?? null;
 
-        if (!is_string($envApiKey) || trim($envApiKey) === '') {
+        if (! is_string($envApiKey) || trim($envApiKey) === '') {
             throw new RuntimeException('Invalid configuration: LOG_API_KEY is missing or empty.');
         }
 
-        if (!is_string($envUrl) || filter_var($envUrl, FILTER_VALIDATE_URL) === false) {
+        if (! is_string($envUrl) || filter_var($envUrl, FILTER_VALIDATE_URL) === false) {
             throw new RuntimeException('Invalid configuration: LOG_SERVER_URL is missing or not a valid URL.');
         }
 
@@ -72,7 +78,7 @@ final class LogViaStream
 
         // 1. Intercept native PHP errors by converting them to ErrorException
         set_error_handler(static function (int $severity, string $message, string $file, int $line): bool {
-            if (!(error_reporting() & $severity)) {
+            if (! (error_reporting() & $severity)) {
                 return false;
             }
             throw new ErrorException($message, 0, $severity, $file, $line);
@@ -83,8 +89,6 @@ final class LogViaStream
             self::handleException($exception);
         });
 
-        // 3. Interceptare erori fatale (Shutdown Function) cu protectie de buffer
-        register_shutdown_function(static function (): void {
         // 3. Intercept fatal errors (Shutdown Function) with buffer protection
         register_shutdown_function(static function (): void {
             self::$memoryReserve = null; // Immediate release of RAM space
@@ -97,15 +101,15 @@ final class LogViaStream
                 while (ob_get_level() > 0) {
                     $status = ob_get_status(true);
                     $currentBuffer = end($status);
-                    
-                    if (isset($currentBuffer['flags']) && !($currentBuffer['flags'] & PHP_OUTPUT_HANDLER_REMOVABLE)) {
+
+                    if (isset($currentBuffer['flags']) && ! ($currentBuffer['flags'] & PHP_OUTPUT_HANDLER_REMOVABLE)) {
                         ob_end_flush();
                         break;
                     }
 
                     $content = ob_get_clean();
                     if (is_string($content)) {
-                        $bufferContent = $content . $bufferContent;
+                        $bufferContent = $content.$bufferContent;
                     }
                 }
             } catch (Throwable) {
@@ -128,16 +132,16 @@ final class LogViaStream
                         default => 'PHP Fatal Shutdown'
                     };
 
-                    self::send('CRITICAL', "Fatal Error: " . $message, [
+                    self::send('CRITICAL', 'Fatal Error: '.$message, [
                         'file' => $error['file'] ?? 'unknown',
                         'line' => $error['line'] ?? 0,
                         'type' => $type,
-                        'captured_output_buffer' => substr($bufferContent, 0, 4000)
+                        'captured_output_buffer' => substr($bufferContent, 0, 4000),
                     ]);
                 } else {
-                    self::send('WARNING', "Script terminated unexpectedly with unrendered output buffer.", [
+                    self::send('WARNING', 'Script terminated unexpectedly with unrendered output buffer.', [
                         'type' => 'Orphaned Buffer',
-                        'captured_output_buffer' => substr($bufferContent, 0, 4000)
+                        'captured_output_buffer' => substr($bufferContent, 0, 4000),
                     ]);
                 }
             }
@@ -150,10 +154,10 @@ final class LogViaStream
     private static function handleException(Throwable $exception): void
     {
         $context = [
-            'file'  => $exception->getFile(),
-            'line'  => $exception->getLine(),
-            'code'  => $exception->getCode(),
-            'trace' => self::formatTrace($exception)
+            'file' => $exception->getFile(),
+            'line' => $exception->getLine(),
+            'code' => $exception->getCode(),
+            'trace' => self::formatTrace($exception),
         ];
 
         $level = 'CRITICAL';
@@ -166,7 +170,7 @@ final class LogViaStream
                 E_NOTICE, E_USER_NOTICE, E_DEPRECATED, E_USER_DEPRECATED => 'INFO',
                 default => 'ERROR'
             };
-            
+
             $context['type'] = 'PHP Native Error';
             if (str_contains(strtolower($message), 'permission denied')) {
                 $context['type'] = 'File System Permission Error';
@@ -176,7 +180,7 @@ final class LogViaStream
             $message = self::maskDatabaseSecrets($message);
         } else {
             $context['type'] = $exception::class;
-            $message = "Exception: " . $message;
+            $message = 'Exception: '.$message;
         }
 
         self::send($level, $message, $context);
@@ -190,7 +194,8 @@ final class LogViaStream
         // Prevent recursion / circular loop on the API log.php endpoint
         $currentScript = basename($_SERVER['SCRIPT_NAME'] ?? '');
         if ($currentScript === 'log.php') {
-            error_log(sprintf("[%s] Internal Log: %s | Context: %s", strtoupper($level), $message, json_encode($context)));
+            error_log(sprintf('[%s] Internal Log: %s | Context: %s', strtoupper($level), $message, json_encode($context)));
+
             return true;
         }
 
@@ -201,13 +206,15 @@ final class LogViaStream
 
         // 1. Local Rate Limit: Stops the current script if it generated too many logs (e.g. error in foreach)
         if (self::$logCountInRequest >= self::MAX_LOGS_PER_REQUEST) {
-            error_log("LogViaStream Alert: S-a atins limita maxima de loguri per request (" . self::MAX_LOGS_PER_REQUEST . ").");
+            error_log('LogViaStream Alert: S-a atins limita maxima de loguri per request ('.self::MAX_LOGS_PER_REQUEST.').');
+
             return false;
         }
 
         // 2. Global Rate Limit: Stops flooding at the server level per minute (Multi-Process Safe)
-        if (!self::checkGlobalRateLimit()) {
-            error_log("LogViaStream Alert: Rate limit-ul global a fost depasit (" . self::MAX_LOGS_PER_MINUTE . "/min). Log blocat preventiv.");
+        if (! self::checkGlobalRateLimit()) {
+            error_log('LogViaStream Alert: Rate limit-ul global a fost depasit ('.self::MAX_LOGS_PER_MINUTE.'/min). Log blocat preventiv.');
+
             return false;
         }
 
@@ -222,39 +229,39 @@ final class LogViaStream
             $networkTimeout = self::calculateDynamicTimeout();
 
             $extendedContext = array_merge([
-                'request_id'   => self::$requestId,
-                'http_method'  => $_SERVER['REQUEST_METHOD'] ?? 'CLI',
-                'uri'          => $_SERVER['REQUEST_URI'] ?? 'N/A',
-                'ip'           => $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1',
-                'referrer'     => $_SERVER['HTTP_REFERER'] ?? 'DIRECT',
-                'query_params' => !empty($_GET) ? self::sanitizeData($_GET) : null,
-                'post_data'    => !empty($_POST) ? self::sanitizeData($_POST) : null,
+                'request_id' => self::$requestId,
+                'http_method' => $_SERVER['REQUEST_METHOD'] ?? 'CLI',
+                'uri' => $_SERVER['REQUEST_URI'] ?? 'N/A',
+                'ip' => $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1',
+                'referrer' => $_SERVER['HTTP_REFERER'] ?? 'DIRECT',
+                'query_params' => ! empty($_GET) ? self::sanitizeData($_GET) : null,
+                'post_data' => ! empty($_POST) ? self::sanitizeData($_POST) : null,
                 'memory_usage' => self::formatBytes(memory_get_usage(true)),
-                'peak_memory'  => self::formatBytes(memory_get_peak_usage(true))
+                'peak_memory' => self::formatBytes(memory_get_peak_usage(true)),
             ], $context);
 
             $payload = json_encode([
-                'level'   => strtoupper($level),
+                'level' => strtoupper($level),
                 'message' => self::sanitizeMessage($message),
-                'context' => $extendedContext
+                'context' => $extendedContext,
             ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
 
             $options = [
                 'http' => [
-                    'method'        => 'POST',
-                    'header'        => [
+                    'method' => 'POST',
+                    'header' => [
                         'Content-Type: application/json',
-                        'X-API-KEY: ' . self::$apiKey,
-                        'User-Agent: LogMonitor-Internal/1.0'
+                        'X-API-KEY: '.self::$apiKey,
+                        'User-Agent: LogMonitor-Internal/1.0',
                     ],
-                    'content'       => $payload,
+                    'content' => $payload,
                     'ignore_errors' => true,
-                    'timeout'       => $networkTimeout
-                ]
+                    'timeout' => $networkTimeout,
+                ],
             ];
 
             $streamContext = stream_context_create($options);
-            
+
             $oldErrorReporting = error_reporting(0);
             try {
                 $result = file_get_contents(self::$url, false, $streamContext);
@@ -264,7 +271,8 @@ final class LogViaStream
             }
 
             if ($result === false || empty($headers)) {
-                error_log("LogMonitor Alert: Serverul de loguri la " . self::$url . " este indisponibil.");
+                error_log('LogMonitor Alert: Serverul de loguri la '.self::$url.' este indisponibil.');
+
                 return false;
             }
 
@@ -272,9 +280,9 @@ final class LogViaStream
 
         } catch (Throwable $e) {
             error_log(json_encode([
-                'error'             => 'Critical error in log transmission via Stream',
+                'error' => 'Critical error in log transmission via Stream',
                 'exception_message' => $e->getMessage(),
-                'identifier'        => 'LogViaStream_Transmission_Failure'
+                'identifier' => 'LogViaStream_Transmission_Failure',
             ], JSON_UNESCAPED_SLASHES));
 
             return false;
@@ -288,16 +296,16 @@ final class LogViaStream
      */
     private static function checkGlobalRateLimit(): bool
     {
-        $limitFile = sys_get_temp_dir() . '/log_rate_limit.json';
+        $limitFile = sys_get_temp_dir().'/log_rate_limit.json';
         $now = time();
         $minuteWindow = $now - ($now % 60); // Unique identifier for the current minute
 
-        if (!file_exists($limitFile)) {
+        if (! file_exists($limitFile)) {
             @file_put_contents($limitFile, json_encode(['window' => $minuteWindow, 'count' => 0]));
         }
 
         $fp = @fopen($limitFile, 'c+');
-        if (!$fp) {
+        if (! $fp) {
             return true; // Fail-open principle: If we cannot read the limiter, let the log pass
         }
 
@@ -306,7 +314,7 @@ final class LogViaStream
             $content = stream_get_contents($fp);
             $data = json_decode(is_string($content) ? $content : '', true);
 
-            if (!is_array($data) || ($data['window'] ?? 0) !== $minuteWindow) {
+            if (! is_array($data) || ($data['window'] ?? 0) !== $minuteWindow) {
                 // The minute has changed or the structure is invalid -> reset the time window
                 $data = ['window' => $minuteWindow, 'count' => 1];
             } else {
@@ -316,6 +324,7 @@ final class LogViaStream
             if ($data['count'] > self::MAX_LOGS_PER_MINUTE) {
                 flock($fp, LOCK_UN);
                 fclose($fp);
+
                 return false; // Limita globala pe server a fost atinsa!
             }
 
@@ -328,6 +337,7 @@ final class LogViaStream
         }
 
         fclose($fp);
+
         return true;
     }
 
@@ -336,7 +346,7 @@ final class LogViaStream
      */
     private static function calculateDynamicTimeout(): float
     {
-        $maxPhpTime = (int)ini_get('max_execution_time');
+        $maxPhpTime = (int) ini_get('max_execution_time');
         $networkTimeout = 2.5;
 
         if ($maxPhpTime > 0 && self::$startTime !== null) {
@@ -357,18 +367,18 @@ final class LogViaStream
     private static function maskDatabaseSecrets(string $message): string
     {
         if (str_contains(strtolower($message), 'ora-01017') || str_contains(strtolower($message), 'logon denied')) {
-            $message = (string)preg_replace('/for user\s+[\'"][^\'"]+[\'"]/ims', "for user '******'", $message);
-            $message = "Database Failure (Oracle Auth): " . $message;
-        } 
-        
-        $patterns = [
-            '/(user|username|uid|pwd|password|pass|host|port|sid|service_name)\s*=\s*[^\s;()"\']+/ims'
-        ];
-        $message = (string)preg_replace($patterns, '$1=******', $message);
-        $message = (string)preg_replace('/(:?\/\/)[^:]+:[^@]+@/ims', '$1******:******@', $message);
+            $message = (string) preg_replace('/for user\s+[\'"][^\'"]+[\'"]/ims', "for user '******'", $message);
+            $message = 'Database Failure (Oracle Auth): '.$message;
+        }
 
-        if (!str_contains($message, 'Database Failure')) {
-            $message = "Database Failure: " . $message;
+        $patterns = [
+            '/(user|username|uid|pwd|password|pass|host|port|sid|service_name)\s*=\s*[^\s;()"\']+/ims',
+        ];
+        $message = (string) preg_replace($patterns, '$1=******', $message);
+        $message = (string) preg_replace('/(:?\/\/)[^:]+:[^@]+@/ims', '$1******:******@', $message);
+
+        if (! str_contains($message, 'Database Failure')) {
+            $message = 'Database Failure: '.$message;
         }
 
         return $message;
@@ -380,13 +390,13 @@ final class LogViaStream
     private static function sanitizeData(array $data): array
     {
         $sensitiveKeys = ['password', 'pass', 'pwd', 'token', 'secret', 'auth', 'card', 'ccv', 'api_key'];
-        
+
         foreach ($data as $key => $value) {
             if (is_array($value)) {
                 $data[$key] = self::sanitizeData($value);
             } elseif (is_string($value)) {
-                $lowerKey = strtolower((string)$key);
-                
+                $lowerKey = strtolower((string) $key);
+
                 if (in_array($lowerKey, $sensitiveKeys, true)) {
                     $data[$key] = '******';
                 } else {
@@ -404,6 +414,7 @@ final class LogViaStream
                 }
             }
         }
+
         return $data;
     }
 
@@ -412,7 +423,7 @@ final class LogViaStream
      */
     private static function sanitizeMessage(string $message): string
     {
-        return (string)preg_replace('/(password|pass|pwd|token)\s*=\s*[^\s&]+/ims', '$1=******', $message);
+        return (string) preg_replace('/(password|pass|pwd|token)\s*=\s*[^\s&]+/ims', '$1=******', $message);
     }
 
     /**
@@ -426,10 +437,10 @@ final class LogViaStream
 
         foreach ($rawTrace as $step) {
             if ($counter++ >= 10) {
-                break; 
+                break;
             }
             $trace[] = sprintf(
-                "#%d %s(%d): %s%s%s()",
+                '#%d %s(%d): %s%s%s()',
                 $counter,
                 $step['file'] ?? 'unknown_file',
                 $step['line'] ?? 0,
@@ -438,6 +449,7 @@ final class LogViaStream
                 $step['function'] ?? 'unknown_function'
             );
         }
+
         return $trace;
     }
 
@@ -448,10 +460,10 @@ final class LogViaStream
     {
         $units = ['B', 'KB', 'MB', 'GB'];
         $bytes = max($bytes, 0);
-        $pow = $bytes > 0 ? (int)floor(log($bytes) / log(1024)) : 0;
+        $pow = $bytes > 0 ? (int) floor(log($bytes) / log(1024)) : 0;
         $pow = min($pow, count($units) - 1);
         $bytes /= (1024 ** $pow);
 
-        return round($bytes, 2) . ' ' . $units[$pow];
+        return round($bytes, 2).' '.$units[$pow];
     }
 }

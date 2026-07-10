@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use RuntimeException;
-use InvalidArgumentException;
-use PDOException;
-use App\Utilities\MySQLWrapper;
-use App\Utilities\LogViaStream;
 use App\Enums\LogLevel;
+use App\Utilities\LogViaStream;
+use App\Utilities\MySQLWrapper;
+use InvalidArgumentException;
+use RuntimeException;
 
 /**
  * AppSetting Class
@@ -18,9 +17,11 @@ use App\Enums\LogLevel;
  * Implements strict validation and defensive Fail Fast architecture.
  *
  * @category Model
- * @package  App\Models
+ *
  * @version  1.3
+ *
  * @since    PHP 8.4
+ *
  * @author   Voica Liviu
  * @license  Proprietary
  */
@@ -28,9 +29,11 @@ class AppSetting
 {
     /** @var array Static in-memory settings cache, useful for the daemon worker */
     protected static array $settingsCache = [];
+
     /**
      * Constructor for the AppSetting class.
      * Dependency injection via Constructor Property Promotion.
+     *
      * * @param MySQLWrapper $db Database wrapper instance.
      */
     public function __construct(
@@ -47,7 +50,7 @@ class AppSetting
     /**
      * Retrieves all settings for an application.
      *
-     * @param int $appId Application ID.
+     * @param  int  $appId  Application ID.
      * @return array List of found settings.
      */
     public function getSettingsForApp(int $appId): array
@@ -65,8 +68,9 @@ class AppSetting
             $data = $this->db->read('app_settings', ['app_id' => $appId]) ?: [];
             self::$settingsCache[$appId] = [
                 'data' => $data,
-                'cached_at' => $currentTime
+                'cached_at' => $currentTime,
             ];
+
             return $data;
         } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
@@ -78,8 +82,9 @@ class AppSetting
                 'exception_trace' => $e->getTraceAsString(),
                 'sql_statement' => 'SELECT FROM app_settings WHERE app_id = ?',
                 'sql_parameters' => ['app_id' => $appId],
-                'identifier' => 'MySQLWrapper_Query_Failure'
+                'identifier' => 'MySQLWrapper_Query_Failure',
             ]);
+
             return [];
         }
     }
@@ -87,8 +92,8 @@ class AppSetting
     /**
      * Finds a specific setting based on app_id and key.
      *
-     * @param int    $appId Application ID.
-     * @param string $key   Setting key.
+     * @param  int  $appId  Application ID.
+     * @param  string  $key  Setting key.
      * @return array|null Setting data or null if it does not exist.
      */
     public function getSetting(int $appId, string $key): ?array
@@ -103,6 +108,7 @@ class AppSetting
                 'app_id' => $appId,
                 'key' => $trimmedKey,
             ]);
+
             return $results ? $results[0] : null;
         } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
@@ -114,8 +120,9 @@ class AppSetting
                 'exception_trace' => $e->getTraceAsString(),
                 'sql_statement' => 'SELECT FROM app_settings WHERE app_id = ? AND key = ?',
                 'sql_parameters' => ['app_id' => $appId, 'key' => $trimmedKey],
-                'identifier' => 'MySQLWrapper_Query_Failure'
+                'identifier' => 'MySQLWrapper_Query_Failure',
             ]);
+
             return null;
         }
     }
@@ -123,10 +130,10 @@ class AppSetting
     /**
      * Saves or updates a setting for an application.
      *
-     * @param int    $appId Application ID.
-     * @param string $key   Setting key.
-     * @param string $value Setting value.
-     * @return void
+     * @param  int  $appId  Application ID.
+     * @param  string  $key  Setting key.
+     * @param  string  $value  Setting value.
+     *
      * @throws InvalidArgumentException If parameters are invalid.
      * @throws RuntimeException If saving fails.
      */
@@ -171,7 +178,7 @@ class AppSetting
                     'exception_trace' => $e->getTraceAsString(),
                     'sql_statement' => $sql,
                     'sql_parameters' => $params,
-                    'identifier' => 'MySQLWrapper_Query_Failure'
+                    'identifier' => 'MySQLWrapper_Query_Failure',
                 ]);
                 throw new RuntimeException(__('Database error while updating setting'), 0, $e);
             }
@@ -199,7 +206,7 @@ class AppSetting
                     'exception_trace' => $e->getTraceAsString(),
                     'sql_statement' => $sql,
                     'sql_parameters' => $params,
-                    'identifier' => 'MySQLWrapper_Query_Failure'
+                    'identifier' => 'MySQLWrapper_Query_Failure',
                 ]);
                 throw new RuntimeException(__('Database error while creating setting'), 0, $e);
             }
@@ -210,10 +217,10 @@ class AppSetting
     /**
      * Updates the key and/or value of an existing setting.
      *
-     * @param int    $appId  Application ID.
-     * @param string $oldKey The old setting key.
-     * @param array  $data   Data to update ('key' and/or 'value').
-     * @return void
+     * @param  int  $appId  Application ID.
+     * @param  string  $oldKey  The old setting key.
+     * @param  array  $data  Data to update ('key' and/or 'value').
+     *
      * @throws InvalidArgumentException If the provided keys are invalid.
      * @throws RuntimeException If the new key is a duplicate or the operation fails.
      */
@@ -266,7 +273,7 @@ class AppSetting
                 'exception_trace' => $e->getTraceAsString(),
                 'sql_statement' => $sql,
                 'sql_parameters' => $params,
-                'identifier' => 'MySQLWrapper_Query_Failure'
+                'identifier' => 'MySQLWrapper_Query_Failure',
             ]);
             throw new RuntimeException(__('Database error during settings update modification'), 0, $e);
         }
@@ -275,9 +282,9 @@ class AppSetting
     /**
      * Deletes a setting of an application.
      *
-     * @param int    $appId Application ID.
-     * @param string $key   Setting key.
-     * @return void
+     * @param  int  $appId  Application ID.
+     * @param  string  $key  Setting key.
+     *
      * @throws InvalidArgumentException If parameters are invalid.
      * @throws RuntimeException If deletion fails.
      */
@@ -296,7 +303,7 @@ class AppSetting
                 'app_id' => $appId,
                 'key' => $trimmedKey,
             ]);
-            if (!$result) {
+            if (! $result) {
                 throw new RuntimeException(__('Setting not found or deletion failed'));
             }
             unset(self::$settingsCache[$appId]);
@@ -310,7 +317,7 @@ class AppSetting
                 'exception_trace' => $e->getTraceAsString(),
                 'sql_statement' => $sql,
                 'sql_parameters' => $params,
-                'identifier' => 'MySQLWrapper_Query_Failure'
+                'identifier' => 'MySQLWrapper_Query_Failure',
             ]);
             throw new RuntimeException(__('Database error during setting removal'), 0, $e);
         }

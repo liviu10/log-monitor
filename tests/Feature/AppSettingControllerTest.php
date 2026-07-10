@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
 use App\Controllers\AppSettingController;
 use App\Models\App;
 use App\Models\AppSetting;
+use Tests\TestCase;
 
 /**
  * Subclassed controller to intercept JSON responses.
@@ -29,16 +29,19 @@ class TestableAppSettingController extends AppSettingController
 class AppSettingControllerTest extends TestCase
 {
     private App $appModel;
+
     private AppSetting $settingModel;
+
     private TestableAppSettingController $controller;
+
     private int $appId;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->appModel = new App();
-        $this->settingModel = new AppSetting();
-        $this->controller = new TestableAppSettingController();
+        $this->appModel = new App;
+        $this->settingModel = new AppSetting;
+        $this->controller = new TestableAppSettingController;
 
         unset($GLOBALS['app_setting_controller_error']);
 
@@ -51,7 +54,7 @@ class AppSettingControllerTest extends TestCase
         $this->appId = $this->appModel->create('Controller Settings App', 'key-ctrl');
     }
 
-    public function testIndexReturnsSettingsJson(): void
+    public function test_index_returns_settings_json(): void
     {
         $this->settingModel->saveSetting($this->appId, 'email', 'test@test.com');
 
@@ -66,12 +69,12 @@ class AppSettingControllerTest extends TestCase
         }
     }
 
-    public function testStoreSavesNewSetting(): void
+    public function test_store_saves_new_setting(): void
     {
         $payload = [
             'app_id' => $this->appId,
             'key' => 'new_setting',
-            'value' => 'some_value'
+            'value' => 'some_value',
         ];
 
         try {
@@ -87,12 +90,12 @@ class AppSettingControllerTest extends TestCase
         }
     }
 
-    public function testStoreFailsOnInvalidKeyFormat(): void
+    public function test_store_fails_on_invalid_key_format(): void
     {
         $payload = [
             'app_id' => $this->appId,
             'key' => 'invalid key spaces',
-            'value' => 'some_value'
+            'value' => 'some_value',
         ];
 
         try {

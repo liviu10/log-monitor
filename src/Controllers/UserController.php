@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
-use App\Models\User;
-use App\Utilities\Validation;
-use App\Utilities\MySQLWrapper;
-use App\Utilities\LogViaStream;
 use App\Enums\LogLevel;
+use App\Models\User;
+use App\Utilities\LogViaStream;
+use App\Utilities\MySQLWrapper;
+use App\Utilities\Validation;
 
 /**
  * UserController Class
@@ -18,9 +18,11 @@ use App\Enums\LogLevel;
  * to prevent accidental self-deletion.
  *
  * @category Controller
- * @package  App\Controllers
+ *
  * @version  1.2
+ *
  * @since    PHP 8.4
+ *
  * @author   Voica Liviu
  * @license  Proprietary
  */
@@ -32,11 +34,11 @@ class UserController extends BaseController
     public function index(): void
     {
         $this->checkAuth();
-        
+
         try {
             $db = MySQLWrapper::getInstance();
             $users = $db->read('users');
-            
+
             $this->render('users/index', [
                 'users' => $users,
             ]);
@@ -48,7 +50,7 @@ class UserController extends BaseController
                 'exception_file' => $e->getFile(),
                 'exception_line' => $e->getLine(),
                 'exception_trace' => $e->getTraceAsString(),
-                'identifier' => 'UserController_Index_DatabaseFailure'
+                'identifier' => 'UserController_Index_DatabaseFailure',
             ]);
             throw new \RuntimeException(__('Unable to retrieve administrators list.'));
         }
@@ -61,27 +63,27 @@ class UserController extends BaseController
     public function store(array $data): never
     {
         $this->checkAuth();
-        
+
         $payload = $data;
         $validator = new Validation([
             'username' => __('Username'),
             'password' => __('Password'),
         ]);
-        
+
         $errors = $validator->validate([
             'username' => ['required', 'string', 'min:3'],
             'password' => ['required', 'string', 'min:6'],
         ], $payload);
 
-        if (!empty($errors)) {
+        if (! empty($errors)) {
             $_SESSION['errors'] = $errors;
             $this->redirect('users.php');
         }
 
         try {
-            $userModel = new User();
+            $userModel = new User;
             $userModel->create(trim($payload['username']), $payload['password']);
-            
+
             setFlash('success', __('Success'), __('User created successfully.'));
         } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Admin user creation process exception', [
@@ -92,11 +94,11 @@ class UserController extends BaseController
                 'exception_line' => $e->getLine(),
                 'exception_trace' => $e->getTraceAsString(),
                 'username' => $payload['username'] ?? null,
-                'identifier' => 'UserController_Store_Exception'
+                'identifier' => 'UserController_Store_Exception',
             ]);
             setFlash('danger', __('Error'), __('Failed to create user. Possible duplicate username.'));
         }
-        
+
         $this->redirect('users.php');
     }
 
@@ -107,11 +109,11 @@ class UserController extends BaseController
     public function delete(array $data): never
     {
         $this->checkAuth();
-        
+
         $id = $data['id'] ?? null;
         if ($id) {
-            $userId = (int)$id;
-            $currentAuthId = (int)($_SESSION['auth.user']['id'] ?? 0);
+            $userId = (int) $id;
+            $currentAuthId = (int) ($_SESSION['auth.user']['id'] ?? 0);
 
             if ($userId === $currentAuthId) {
                 setFlash('danger', __('Error'), __('You cannot delete your own account.'));
@@ -132,12 +134,12 @@ class UserController extends BaseController
                     'exception_trace' => $e->getTraceAsString(),
                     'sql_statement' => 'DELETE FROM users WHERE id = :id',
                     'sql_parameters' => ['id' => $userId],
-                    'identifier' => 'UserController_Delete_Failure'
+                    'identifier' => 'UserController_Delete_Failure',
                 ]);
                 setFlash('danger', __('Error'), __('Failed to delete user from database.'));
             }
         }
-        
+
         $this->redirect('users.php');
     }
 }

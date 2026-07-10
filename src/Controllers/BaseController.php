@@ -12,9 +12,11 @@ namespace App\Controllers;
  * redirects, and authentication checks, including applying security headers.
  *
  * @category Controller
- * @package  App\Controllers
+ *
  * @version  1.2
+ *
  * @since    PHP 8.4
+ *
  * @author   Voica Liviu
  * @license  Proprietary
  */
@@ -23,8 +25,8 @@ class BaseController
     /**
      * Sends a JSON response to the client and stops execution.
      *
-     * @param array $data   The data to be encoded in JSON format.
-     * @param int   $status The HTTP status code (default 200).
+     * @param  array  $data  The data to be encoded in JSON format.
+     * @param  int  $status  The HTTP status code (default 200).
      */
     protected function jsonResponse(array $data, int $status = 200): never
     {
@@ -37,23 +39,23 @@ class BaseController
     /**
      * Renders a view file and extracts the provided data.
      *
-     * @param string $view Name or path of the view file.
-     * @param array  $data Data that will be available in the view.
+     * @param  string  $view  Name or path of the view file.
+     * @param  array  $data  Data that will be available in the view.
      */
     protected function render(string $view, array $data = []): void
     {
         extract($data, EXTR_SKIP);
-        require_once __DIR__ . '/../../views/' . $view . '.php';
+        require_once __DIR__.'/../../views/'.$view.'.php';
     }
 
     /**
      * Redirects the user to a specified URL and terminates execution.
      *
-     * @param string $url Destination URL.
+     * @param  string  $url  Destination URL.
      */
     protected function redirect(string $url): never
     {
-        header('Location: ' . $url);
+        header('Location: '.$url);
         exit;
     }
 
@@ -68,8 +70,9 @@ class BaseController
         header('X-Content-Type-Options: nosniff');
         header('X-XSS-Protection: 1; mode=block');
         header('Referrer-Policy: strict-origin-when-cross-origin');
-        
+
         checkAuthUser();
+
         return getCurrentAuthUser();
     }
 }

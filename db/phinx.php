@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-require_once dirname(__DIR__) . '/vendor/autoload.php';
+require_once dirname(__DIR__).'/vendor/autoload.php';
 
 $dotenv = Dotenv\Dotenv::createImmutable(dirname(__DIR__));
 $dotenv->safeLoad();
@@ -10,7 +10,7 @@ $dotenv->safeLoad();
 return [
     'paths' => [
         'migrations' => '%%PHINX_CONFIG_DIR%%/migrations',
-        'seeds' => '%%PHINX_CONFIG_DIR%%/seeds'
+        'seeds' => '%%PHINX_CONFIG_DIR%%/seeds',
     ],
     'environments' => [
         'default_migration_table' => 'phinxlog',
@@ -32,7 +32,7 @@ return [
             'pass' => $_ENV['DB_PASS'] ?? 'password',
             'port' => $_ENV['DB_PORT'] ?? '3306',
             'charset' => 'utf8mb4',
-        ]
+        ],
     ],
-    'version_order' => 'creation'
+    'version_order' => 'creation',
 ];

@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
 use App\Controllers\AppController;
 use App\Models\App;
+use Tests\TestCase;
 
 /**
  * Subclassed controller to intercept redirect/render calls.
@@ -14,6 +14,7 @@ use App\Models\App;
 class TestableAppController extends AppController
 {
     public string $renderedView = '';
+
     public array $renderedData = [];
 
     protected function redirect(string $url): never
@@ -31,13 +32,14 @@ class TestableAppController extends AppController
 class AppControllerTest extends TestCase
 {
     private App $appModel;
+
     private TestableAppController $appController;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->appModel = new App();
-        $this->appController = new TestableAppController();
+        $this->appModel = new App;
+        $this->appController = new TestableAppController;
 
         $this->db()->getConnection()->exec('SET FOREIGN_KEY_CHECKS=0;');
         $this->db()->getConnection()->exec('TRUNCATE TABLE apps;');
@@ -47,7 +49,7 @@ class AppControllerTest extends TestCase
         $_SESSION['auth.user'] = ['id' => 1, 'username' => 'admin'];
     }
 
-    public function testIndexRendersRegisteredApps(): void
+    public function test_index_renders_registered_apps(): void
     {
         $this->appModel->create('First App', 'key-1');
         $this->appModel->create('Second App', 'key-2');
@@ -58,14 +60,14 @@ class AppControllerTest extends TestCase
         $this->assertCount(2, $this->appController->renderedData['apps']);
     }
 
-    public function testStoreCreatesNewAppWithUniqueApiKey(): void
+    public function test_store_creates_new_app_with_unique_api_key(): void
     {
         try {
             $this->appController->store(['name' => 'Third App']);
             $this->fail('Expected HttpRedirectException to be thrown');
         } catch (HttpRedirectException $e) {
             $this->assertEquals('apps.php', $e->url);
-            
+
             $apps = $this->appModel->getAll();
             $this->assertCount(1, $apps);
             $this->assertEquals('Third App', $apps[0]['name']);
@@ -73,7 +75,7 @@ class AppControllerTest extends TestCase
         }
     }
 
-    public function testUpdateModifiesAppName(): void
+    public function test_update_modifies_app_name(): void
     {
         $id = $this->appModel->create('Old Name', 'key-old');
 
@@ -82,13 +84,13 @@ class AppControllerTest extends TestCase
             $this->fail('Expected HttpRedirectException to be thrown');
         } catch (HttpRedirectException $e) {
             $this->assertEquals('apps.php', $e->url);
-            
+
             $app = $this->appModel->findByApiKey('key-old');
             $this->assertEquals('New Name', $app['name']);
         }
     }
 
-    public function testUpdateRegeneratesApiKey(): void
+    public function test_update_regenerates_api_key(): void
     {
         $id = $this->appModel->create('App Key Reg', 'key-original');
 
@@ -97,14 +99,14 @@ class AppControllerTest extends TestCase
             $this->fail('Expected HttpRedirectException to be thrown');
         } catch (HttpRedirectException $e) {
             $this->assertEquals('apps.php', $e->url);
-            
+
             $apps = $this->appModel->getAll();
             $this->assertNotEquals('key-original', $apps[0]['api_key']);
             $this->assertNotEmpty($apps[0]['api_key']);
         }
     }
 
-    public function testDeleteRemovesAppFromDatabase(): void
+    public function test_delete_removes_app_from_database(): void
     {
         $id = $this->appModel->create('To Delete', 'key-delete');
 
@@ -113,7 +115,7 @@ class AppControllerTest extends TestCase
             $this->fail('Expected HttpRedirectException to be thrown');
         } catch (HttpRedirectException $e) {
             $this->assertEquals('apps.php', $e->url);
-            
+
             $apps = $this->appModel->getAll();
             $this->assertEmpty($apps);
         }

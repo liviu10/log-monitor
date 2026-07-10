@@ -4,9 +4,10 @@
 
     <script nonce="<?= APP_NONCE ?>">
         document.addEventListener('DOMContentLoaded', function() {
-            <?php $flash = getFlash(); if ($flash): ?>
+            <?php $flash = getFlash();
+    if ($flash) { ?>
                 App.handleToast(<?= json_encode($flash) ?>);
-            <?php endif; ?>
+            <?php } ?>
         });
     </script>
 </body>

@@ -1,4 +1,4 @@
-<?php include __DIR__ . '/../layouts/header.php'; ?>
+<?php include __DIR__.'/../layouts/header.php'; ?>
 
 <div class="position-absolute top-0 end-0 p-3" style="z-index: 1050;">
     <!-- Language Switcher -->
@@ -65,4 +65,4 @@
 </div>
 
 
-<?php include __DIR__ . '/../layouts/footer.php'; ?>
+<?php include __DIR__.'/../layouts/footer.php'; ?>

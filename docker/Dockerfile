@@ -3,10 +3,10 @@ FROM docker.io/library/composer:2 AS builder
 WORKDIR /app
 
 # Copiem configuratiile de dependinte
-COPY composer.json composer.lock ./
+COPY composer.json composer.lock* ./
 
-# Rulam instalarea fara scripturi si generam autoload-ul optimizat direct aici
-RUN composer install --no-dev --no-interaction --no-scripts --optimize-autoloader
+# Rulam update pentru a asigura actualizarea si generarea automata a lock-ului din mers
+RUN composer update --no-interaction --no-scripts --optimize-autoloader
 
 # Etapa 2: Imaginea Finala de Productie
 FROM docker.io/dunglas/frankenphp:php8.4-alpine
@@ -31,8 +31,11 @@ WORKDIR /var/www/html
 # Copiem codul sursa al aplicatiei
 COPY . .
 
-# Copiem folderul vendor direct optimizat din builder (Fara Composer in imaginea finala)
+# Copiem folderul vendor direct din builder
 COPY --from=builder /app/vendor ./vendor
+
+# Copiem executabilul Composer din builder
+COPY --from=builder /usr/bin/composer /usr/bin/composer
 
 # Pregatirea si inregistrarea fisierului Crontab (Corectat)
 COPY docker/crontab /etc/crontabs/root

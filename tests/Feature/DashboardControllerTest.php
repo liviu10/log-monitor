@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
 use App\Controllers\DashboardController;
 use App\Models\App;
 use App\Models\Log;
+use Tests\TestCase;
 
 /**
  * Subclassed dashboard controller for capturing render calls.
@@ -15,6 +15,7 @@ use App\Models\Log;
 class TestableDashboardController extends DashboardController
 {
     public string $renderedView = '';
+
     public array $renderedData = [];
 
     protected function redirect(string $url): never
@@ -32,16 +33,19 @@ class TestableDashboardController extends DashboardController
 class DashboardControllerTest extends TestCase
 {
     private App $appModel;
+
     private Log $logModel;
+
     private TestableDashboardController $controller;
+
     private int $appId;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->appModel = new App();
-        $this->logModel = new Log();
-        $this->controller = new TestableDashboardController();
+        $this->appModel = new App;
+        $this->logModel = new Log;
+        $this->controller = new TestableDashboardController;
 
         $this->db()->getConnection()->exec('SET FOREIGN_KEY_CHECKS=0;');
         $this->db()->getConnection()->exec('TRUNCATE TABLE logs;');
@@ -52,7 +56,7 @@ class DashboardControllerTest extends TestCase
         $this->appId = $this->appModel->create('Dashboard App', 'dash-key');
     }
 
-    public function testIndexRendersDashboardWithCorrectData(): void
+    public function test_index_renders_dashboard_with_correct_data(): void
     {
         $this->logModel->create($this->appId, 'ERROR', 'Error on dashboard');
         $this->logModel->create($this->appId, 'INFO', 'Info on dashboard');
@@ -66,7 +70,7 @@ class DashboardControllerTest extends TestCase
         $this->assertEquals(1, $this->controller->renderedData['totalPages']);
     }
 
-    public function testIndexAppliesFiltersCorrectly(): void
+    public function test_index_applies_filters_correctly(): void
     {
         $this->logModel->create($this->appId, 'ERROR', 'Error on dashboard');
         $this->logModel->create($this->appId, 'INFO', 'Info on dashboard');

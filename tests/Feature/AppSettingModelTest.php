@@ -4,22 +4,24 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
 use App\Models\App;
 use App\Models\AppSetting;
 use InvalidArgumentException;
+use Tests\TestCase;
 
 class AppSettingModelTest extends TestCase
 {
     private App $appModel;
+
     private AppSetting $settingModel;
+
     private int $appId;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->appModel = new App();
-        $this->settingModel = new AppSetting();
+        $this->appModel = new App;
+        $this->settingModel = new AppSetting;
 
         $this->db()->getConnection()->exec('SET FOREIGN_KEY_CHECKS=0;');
         $this->db()->getConnection()->exec('TRUNCATE TABLE app_settings;');
@@ -29,7 +31,7 @@ class AppSettingModelTest extends TestCase
         $this->appId = $this->appModel->create('Test App Settings', 'settings-key-999');
     }
 
-    public function testCanSaveAndGetSetting(): void
+    public function test_can_save_and_get_setting(): void
     {
         $key = 'alert_email';
         $value = 'admin@example.com';
@@ -49,7 +51,7 @@ class AppSettingModelTest extends TestCase
         $this->assertEquals($newValue, $updatedSetting['value']);
     }
 
-    public function testGetSettingsForAppReturnsAllSettings(): void
+    public function test_get_settings_for_app_returns_all_settings(): void
     {
         $this->settingModel->saveSetting($this->appId, 'setting_one', 'val1');
         $this->settingModel->saveSetting($this->appId, 'setting_two', 'val2');
@@ -58,13 +60,13 @@ class AppSettingModelTest extends TestCase
         $this->assertCount(2, $allSettings);
     }
 
-    public function testSaveSettingThrowsExceptionOnInvalidParameters(): void
+    public function test_save_setting_throws_exception_on_invalid_parameters(): void
     {
         $this->expectException(InvalidArgumentException::class);
         $this->settingModel->saveSetting(0, '', 'val');
     }
 
-    public function testUpdateSetting(): void
+    public function test_update_setting(): void
     {
         $this->settingModel->saveSetting($this->appId, 'old_key', 'old_val');
         $this->settingModel->updateSetting($this->appId, 'old_key', ['key' => 'new_key', 'value' => 'new_val']);
@@ -74,7 +76,7 @@ class AppSettingModelTest extends TestCase
         $this->assertEquals('new_val', $setting['value']);
     }
 
-    public function testUpdateSettingThrowsExceptionOnDuplicateKey(): void
+    public function test_update_setting_throws_exception_on_duplicate_key(): void
     {
         $this->settingModel->saveSetting($this->appId, 'key1', 'val1');
         $this->settingModel->saveSetting($this->appId, 'key2', 'val2');
@@ -83,13 +85,13 @@ class AppSettingModelTest extends TestCase
         $this->settingModel->updateSetting($this->appId, 'key1', ['key' => 'key2']);
     }
 
-    public function testUpdateSettingThrowsExceptionOnInvalidParams(): void
+    public function test_update_setting_throws_exception_on_invalid_params(): void
     {
         $this->expectException(InvalidArgumentException::class);
         $this->settingModel->updateSetting(0, '', []);
     }
 
-    public function testDeleteSetting(): void
+    public function test_delete_setting(): void
     {
         $this->settingModel->saveSetting($this->appId, 'to_delete', 'val');
         $this->settingModel->deleteSetting($this->appId, 'to_delete');
@@ -98,7 +100,7 @@ class AppSettingModelTest extends TestCase
         $this->assertNull($setting);
     }
 
-    public function testDeleteSettingThrowsExceptionOnInvalidParams(): void
+    public function test_delete_setting_throws_exception_on_invalid_params(): void
     {
         $this->expectException(InvalidArgumentException::class);
         $this->settingModel->deleteSetting(0, '');

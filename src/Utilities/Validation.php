@@ -11,9 +11,11 @@ namespace App\Utilities;
  * Internally generated messages exclusively use English keys passed to __().
  *
  * @category Utilities
- * @package  App\Utilities
+ *
  * @version  1.4
+ *
  * @since    PHP 8.4
+ *
  * @author   Voica Liviu
  * @license  Proprietary
  */
@@ -27,7 +29,7 @@ class Validation
     /**
      * Class constructor. Promotes passed properties.
      *
-     * @param array $fieldNames Aliases for fields used in rendering messages.
+     * @param  array  $fieldNames  Aliases for fields used in rendering messages.
      */
     public function __construct(
         private array $fieldNames = []
@@ -36,8 +38,8 @@ class Validation
     /**
      * Runs the set of rules over the payload passed as an argument.
      *
-     * @param array $rules Validation rules (e.g. ['email' => ['required', 'email']]).
-     * @param array $payload Data received from HTTP request.
+     * @param  array  $rules  Validation rules (e.g. ['email' => ['required', 'email']]).
+     * @param  array  $payload  Data received from HTTP request.
      * @return array Final array with errors structured by fields.
      */
     public function validate(array $rules, array $payload): array
@@ -52,6 +54,7 @@ class Validation
                 if (in_array('required', $constraints, true)) {
                     $this->errors[$field][] = 'required';
                 }
+
                 continue;
             }
 
@@ -61,9 +64,10 @@ class Validation
                 }
 
                 if ($rule === 'email') {
-                    if (!empty($this->validateEmail((string)$value))) {
+                    if (! empty($this->validateEmail((string) $value))) {
                         $this->errors[$field][] = 'email';
                     }
+
                     continue;
                 }
 
@@ -77,10 +81,9 @@ class Validation
     /**
      * Applies a specific rule using exhaustive matching via match expression.
      *
-     * @param string $field Name of verified field.
-     * @param string $rule Rule to validate.
-     * @param mixed $value Value subjected to check.
-     * @return void
+     * @param  string  $field  Name of verified field.
+     * @param  string  $rule  Rule to validate.
+     * @param  mixed  $value  Value subjected to check.
      */
     private function applyRule(string $field, string $rule, mixed $value): void
     {
@@ -88,15 +91,15 @@ class Validation
             $rule === 'int' => is_numeric($value),
             $rule === 'string' => is_string($value),
             $rule === 'array' => is_array($value),
-            $rule === 'date' => strtotime((string)$value) !== false,
+            $rule === 'date' => strtotime((string) $value) !== false,
             str_starts_with($rule, 'min:') => $this->checkMin($rule, $value),
             str_starts_with($rule, 'max:') => $this->checkMax($rule, $value),
-            str_starts_with($rule, 'in:') => in_array((string)$value, explode(',', substr($rule, 3)), true),
-            str_starts_with($rule, 'regex:') => (preg_match(substr($rule, 6), (string)$value) === 1),
+            str_starts_with($rule, 'in:') => in_array((string) $value, explode(',', substr($rule, 3)), true),
+            str_starts_with($rule, 'regex:') => (preg_match(substr($rule, 6), (string) $value) === 1),
             default => true,
         };
 
-        if (!$isValid) {
+        if (! $isValid) {
             $this->errors[$field][] = $rule;
         }
     }
@@ -104,36 +107,38 @@ class Validation
     /**
      * Checks if a value respects the set minimum limit.
      *
-     * @param string $rule Rule containing the minimum value (e.g., min:3).
-     * @param mixed $value Inspected value.
+     * @param  string  $rule  Rule containing the minimum value (e.g., min:3).
+     * @param  mixed  $value  Inspected value.
      * @return bool True if the value is greater than or equal to the required minimum.
      */
     private function checkMin(string $rule, mixed $value): bool
     {
-        $min = (int)substr($rule, 4);
-        $checkValue = is_array($value) ? count($value) : (is_numeric($value) ? (float)$value : mb_strlen((string)$value));
+        $min = (int) substr($rule, 4);
+        $checkValue = is_array($value) ? count($value) : (is_numeric($value) ? (float) $value : mb_strlen((string) $value));
+
         return $checkValue >= $min;
     }
 
     /**
      * Checks if a value falls under the declared maximum limit.
      *
-     * @param string $rule Rule containing the maximum value (e.g., max:10).
-     * @param mixed $value Inspected value.
+     * @param  string  $rule  Rule containing the maximum value (e.g., max:10).
+     * @param  mixed  $value  Inspected value.
      * @return bool True if the value is less than or equal to the required maximum.
      */
     private function checkMax(string $rule, mixed $value): bool
     {
-        $max = (int)substr($rule, 4);
-        $checkValue = is_numeric($value) ? (float)$value : mb_strlen((string)$value);
+        $max = (int) substr($rule, 4);
+        $checkValue = is_numeric($value) ? (float) $value : mb_strlen((string) $value);
+
         return $checkValue <= $max;
     }
 
     /**
      * Returns the translated text corresponding to the errors found, using English keys.
      *
-     * @param string $field Technical field name.
-     * @param string $rule Violated rule.
+     * @param  string  $field  Technical field name.
+     * @param  string  $rule  Violated rule.
      * @return string Interpreted error message, returned without diacritics.
      */
     public function messages(string $field, string $rule): string

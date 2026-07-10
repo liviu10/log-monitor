@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/bootstrap.php';
+require_once __DIR__.'/bootstrap.php';
 
 $lang = $_GET['lang'] ?? 'ro';
 if (in_array($lang, ['ro', 'en'], true)) {
@@ -19,5 +19,5 @@ if ($refererHost !== null && $refererHost !== $allowedHost) {
     $referer = 'index.php';
 }
 
-header('Location: ' . $referer);
+header('Location: '.$referer);
 exit;

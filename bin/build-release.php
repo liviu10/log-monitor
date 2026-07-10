@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 if (php_sapi_name() !== 'cli') {
-    die('This script can only be run from the command line.');
+    exit('This script can only be run from the command line.');
 }
 
 /**
@@ -11,29 +11,31 @@ if (php_sapi_name() !== 'cli') {
  * Execution: php bin/build-release.php [7.4|8.0]
  *
  * @category Maintenance
- * @package  Bin
+ *
  * @version  1.0
+ *
  * @since    PHP 8.4
+ *
  * @author   Voica Liviu
  * @license  Proprietary
  */
 
 // Command line arguments validation and applying the Fail Fast philosophy
 $version = $argv[1] ?? null;
-if (!in_array($version, ['7.4', '8.0'], true)) {
+if (! in_array($version, ['7.4', '8.0'], true)) {
     echo "Usage: php bin/build-release.php [7.4|8.0]\n";
     exit(1);
 }
 
-$versionDirName = 'php' . str_replace('.', '', $version);
-$targetDir = realpath(__DIR__ . '/..') . '/dist/' . $versionDirName;
+$versionDirName = 'php'.str_replace('.', '', $version);
+$targetDir = realpath(__DIR__.'/..').'/dist/'.$versionDirName;
 
 echo "Building release for PHP {$version} in dist/{$versionDirName}...\n";
 
 // 1. Creating the target directory and cleaning up the previous build
 if (file_exists($targetDir)) {
     echo "Cleaning existing target directory...\n";
-    exec('rm -rf ' . escapeshellarg($targetDir));
+    exec('rm -rf '.escapeshellarg($targetDir));
 }
 mkdir($targetDir, 0755, true);
 
@@ -54,20 +56,20 @@ $itemsToCopy = [
     'api',
     'login.php',
     'users.php',
-    '.env.example'
+    '.env.example',
 ];
 
 foreach ($itemsToCopy as $item) {
-    $source = realpath(__DIR__ . '/..') . '/' . $item;
-    $destination = $targetDir . '/' . $item;
+    $source = realpath(__DIR__.'/..').'/'.$item;
+    $destination = $targetDir.'/'.$item;
 
-    if (!file_exists($source)) {
+    if (! file_exists($source)) {
         continue;
     }
 
     if (is_dir($source)) {
         echo "Copying directory: {$item}...\n";
-        exec('cp -r ' . escapeshellarg($source) . ' ' . escapeshellarg($destination));
+        exec('cp -r '.escapeshellarg($source).' '.escapeshellarg($destination));
     } else {
         echo "Copying file: {$item}...\n";
         copy($source, $destination);
@@ -75,7 +77,7 @@ foreach ($itemsToCopy as $item) {
 }
 
 // 3. Deleting the build-release script from the final directory for cleanliness
-$targetBuildScript = $targetDir . '/bin/build-release.php';
+$targetBuildScript = $targetDir.'/bin/build-release.php';
 if (file_exists($targetBuildScript)) {
     unlink($targetBuildScript);
 }
@@ -90,11 +92,11 @@ foreach (new RecursiveIteratorIterator($di) as $filename => $file) {
         // Detect if the file defines an Enum
         if (preg_match('/enum\s+([a-zA-Z0-9_]+)/', $content, $matches)) {
             $enumName = $matches[1];
-            echo "Dynamically converting enum {$enumName} in " . basename($filename) . "...\n";
+            echo "Dynamically converting enum {$enumName} in ".basename($filename)."...\n";
 
             // Determine backing type (string or int)
             $backingType = 'string'; // Implicit
-            if (preg_match('/enum\s+' . $enumName . '\s*:\s*(string|int)/', $content, $typeMatches)) {
+            if (preg_match('/enum\s+'.$enumName.'\s*:\s*(string|int)/', $content, $typeMatches)) {
                 $backingType = $typeMatches[1];
             }
 
@@ -103,7 +105,7 @@ foreach (new RecursiveIteratorIterator($di) as $filename => $file) {
             $content = preg_replace('/case\s+([a-zA-Z0-9_]+\s*=\s*.+?;)/', 'public const $1', $content);
 
             // 2. Transform "enum Name: string/int" definition to "class Name"
-            $content = preg_replace('/enum\s+' . $enumName . '\s*(:\s*(string|int))?/', 'class ' . $enumName, $content);
+            $content = preg_replace('/enum\s+'.$enumName.'\s*(:\s*(string|int))?/', 'class '.$enumName, $content);
 
             // 3. Inject mock native methods (cases, tryFrom, from) with comments in English and correct type-hints
             $mockMethods = <<<CODE
@@ -197,11 +199,11 @@ foreach (new RecursiveIteratorIterator($di) as $filename => $file) {
         return \$result;
     }
 CODE;
-            
+
             // Place the methods at the end of the class, before the last closing brace
             $pos = strrpos($content, '}');
             if ($pos !== false) {
-                $content = substr_replace($content, $mockMethods . "\n", $pos, 0);
+                $content = substr_replace($content, $mockMethods."\n", $pos, 0);
             }
 
             file_put_contents($filename, $content);
@@ -211,8 +213,8 @@ CODE;
 
 // 4. Executarea Rector pe directorul tinta
 echo "Running Rector on target directory...\n";
-$envVar = 'TARGET_PHP=' . str_replace('.', '', $version);
-$command = "{$envVar} vendor/bin/rector process --config bin/rector.php " . escapeshellarg($targetDir);
+$envVar = 'TARGET_PHP='.str_replace('.', '', $version);
+$command = "{$envVar} vendor/bin/rector process --config bin/rector.php ".escapeshellarg($targetDir);
 passthru($command, $exitCode);
 
 if ($exitCode === 0) {
@@ -226,25 +228,25 @@ if ($exitCode === 0) {
     foreach (new RecursiveIteratorIterator($di) as $filename => $file) {
         if ($file->isFile() && $file->getExtension() === 'php') {
             $content = file_get_contents($filename);
-            
+
             // Replace any ClassName::CONSTANT->value construction with ClassName::CONSTANT
             $updatedContent = preg_replace('/([A-Za-z0-9_\\\\]+)::([A-Z0-9_]+)->value/', '$1::$2', $content);
-            
+
             if ($content !== $updatedContent) {
-                echo "Fixed Enum-constant->value access in: " . basename($filename) . "\n";
+                echo 'Fixed Enum-constant->value access in: '.basename($filename)."\n";
                 file_put_contents($filename, $updatedContent);
             }
         }
     }
 
     // B. Update composer.json
-    $composerJsonPath = $targetDir . '/composer.json';
+    $composerJsonPath = $targetDir.'/composer.json';
     if (file_exists($composerJsonPath)) {
         echo "Updating composer.json dependencies for PHP {$version}...\n";
         $composerData = json_decode(file_get_contents($composerJsonPath), true);
         if (is_array($composerData)) {
             // Set the correct PHP version
-            $composerData['require']['php'] = '^' . $version;
+            $composerData['require']['php'] = '^'.$version;
             // Downgrade symfony/var-dumper to ^5.4 (compatible with PHP 7.4 and 8.0)
             if (isset($composerData['require']['symfony/var-dumper'])) {
                 $composerData['require']['symfony/var-dumper'] = '^5.4';

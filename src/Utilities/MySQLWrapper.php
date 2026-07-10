@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Utilities;
 
+use App\Enums\LogLevel;
 use PDO;
 use PDOStatement;
 use RuntimeException;
 use Throwable;
-use App\Enums\LogLevel;
 
 /**
  * MySQLWrapper Class
@@ -18,9 +18,11 @@ use App\Enums\LogLevel;
  * All text messages destined for exceptions use the __() function.
  *
  * @category Utilities
- * @package  App\Utilities
+ *
  * @version  1.7
+ *
  * @since    PHP 8.4
+ *
  * @author   Voica Liviu
  * @license  Proprietary
  */
@@ -34,21 +36,21 @@ class MySQLWrapper
 
     /** @var array Standard security and behavior configurations for PDO. */
     private array $options = [
-        PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-        PDO::ATTR_EMULATE_PREPARES   => false,
-        PDO::ATTR_PERSISTENT         => true,
+        PDO::ATTR_EMULATE_PREPARES => false,
+        PDO::ATTR_PERSISTENT => true,
     ];
 
     /**
      * Private constructor to restrict direct instantiation.
      *
-     * @param string $host Database host.
-     * @param string $db Database name.
-     * @param string $user Database user.
-     * @param string $pass Access password.
-     * @param string $port Communication port.
-     * @param string $charset Utilized character set.
+     * @param  string  $host  Database host.
+     * @param  string  $db  Database name.
+     * @param  string  $user  Database user.
+     * @param  string  $pass  Access password.
+     * @param  string  $port  Communication port.
+     * @param  string  $charset  Utilized character set.
      */
     public function __construct(
         private readonly string $host,
@@ -81,7 +83,6 @@ class MySQLWrapper
      * Initializes the native PDO connection and sends errors directly to cURL.
      *
      * @throws RuntimeException If connection initialization fails.
-     * @return void
      */
     public function connect(): void
     {
@@ -99,11 +100,11 @@ class MySQLWrapper
                 'exception_trace' => $e->getTraceAsString(),
                 'db_host' => $this->host,
                 'db_name' => $this->db,
-                'identifier' => 'MySQLWrapper_Connection_Failure'
+                'identifier' => 'MySQLWrapper_Connection_Failure',
             ];
 
             $this->logEmergency('Database connection initial failure', $context);
-            
+
             throw new RuntimeException(__('Database connection failed.'), 500, $e);
         }
     }
@@ -111,21 +112,21 @@ class MySQLWrapper
     /**
      * Returns the active connection or throws an exception if it doesn't exist.
      *
-     * @throws RuntimeException If the connection property is null.
      * @return PDO Valid PDO object.
+     *
+     * @throws RuntimeException If the connection property is null.
      */
     public function getConnection(): PDO
     {
         if ($this->connection === null) {
             throw new RuntimeException(__('No active database connection found.'));
         }
+
         return $this->connection;
     }
 
     /**
      * Closes the current database connection.
-     *
-     * @return void
      */
     public function disconnect(): void
     {
@@ -135,10 +136,11 @@ class MySQLWrapper
     /**
      * Executes a secure SQL query and dispatches full technical details via cURL on failure.
      *
-     * @param string $sql SQL statement to execute.
-     * @param array $params Parameters associated with placeholders.
-     * @throws RuntimeException When execution encounters syntax or network errors.
+     * @param  string  $sql  SQL statement to execute.
+     * @param  array  $params  Parameters associated with placeholders.
      * @return PDOStatement The statement object on successful execution.
+     *
+     * @throws RuntimeException When execution encounters syntax or network errors.
      */
     public function query(string $sql, array $params = []): PDOStatement
     {
@@ -147,6 +149,7 @@ class MySQLWrapper
         try {
             $stmt = $conn->prepare($sql);
             $stmt->execute($params);
+
             return $stmt;
         } catch (Throwable $e) {
             $context = [
@@ -158,7 +161,7 @@ class MySQLWrapper
                 'exception_trace' => $e->getTraceAsString(),
                 'sql_statement' => $sql,
                 'sql_parameters' => $params,
-                'identifier' => 'MySQLWrapper_Query_Failure'
+                'identifier' => 'MySQLWrapper_Query_Failure',
             ];
 
             $this->logEmergency('Query execution failure event', $context);
@@ -171,8 +174,8 @@ class MySQLWrapper
     /**
      * Inserts a new record into a specified table.
      *
-     * @param string $table Name of target table.
-     * @param array $data Dataset in column => value format.
+     * @param  string  $table  Name of target table.
+     * @param  array  $data  Dataset in column => value format.
      * @return string|int ID of the last inserted record or row count of affected rows.
      */
     public function create(string $table, array $data): string|int
@@ -181,7 +184,7 @@ class MySQLWrapper
             throw new RuntimeException(__('Cannot insert empty data into table :table.', ['table' => $table]));
         }
 
-        $escapedColumns = array_map(fn($col) => "`{$col}`", array_keys($data));
+        $escapedColumns = array_map(fn ($col) => "`{$col}`", array_keys($data));
         $columns = implode(', ', $escapedColumns);
         $placeholders = implode(', ', array_fill(0, count($data), '?'));
 
@@ -199,20 +202,20 @@ class MySQLWrapper
     /**
      * Queries the database and returns all matches found.
      *
-     * @param string $table Table name.
-     * @param array $conditions Filtering conditions of type column => value.
-     * @param array $columns List of selected columns.
-     * @param string $logic Logical operator used between filters (AND/OR).
+     * @param  string  $table  Table name.
+     * @param  array  $conditions  Filtering conditions of type column => value.
+     * @param  array  $columns  List of selected columns.
+     * @param  string  $logic  Logical operator used between filters (AND/OR).
      * @return array Multidimensional array with matching results.
      */
     public function read(string $table, array $conditions = [], array $columns = ['*'], string $logic = 'AND'): array
     {
-        $escapedSelectColumns = array_map(fn($col) => $col === '*' ? '*' : "`{$col}`", $columns);
-        $sql = "SELECT " . implode(', ', $escapedSelectColumns) . " FROM `{$table}`";
+        $escapedSelectColumns = array_map(fn ($col) => $col === '*' ? '*' : "`{$col}`", $columns);
+        $sql = 'SELECT '.implode(', ', $escapedSelectColumns)." FROM `{$table}`";
         $params = [];
 
-        if (!empty($conditions)) {
-            $sql .= " WHERE ";
+        if (! empty($conditions)) {
+            $sql .= ' WHERE ';
             $clauses = [];
             foreach ($conditions as $key => $value) {
                 $clauses[] = "`{$key}` = ?";
@@ -222,16 +225,17 @@ class MySQLWrapper
         }
 
         $stmt = $this->query($sql, $params);
+
         return $stmt->fetchAll();
     }
 
     /**
      * Modifies records in a table based on clear criteria.
      *
-     * @param string $table Affected table.
-     * @param array $data New information to be saved.
-     * @param array $conditions Conditions determining modified rows.
-     * @param string $logic Logical relation between filters.
+     * @param  string  $table  Affected table.
+     * @param  array  $data  New information to be saved.
+     * @param  array  $conditions  Conditions determining modified rows.
+     * @param  string  $logic  Logical relation between filters.
      * @return int Total number of rows modified by the operation.
      */
     public function update(string $table, array $data, array $conditions, string $logic = 'AND'): int
@@ -246,25 +250,26 @@ class MySQLWrapper
             $setClauses[] = "`{$key}` = ?";
             $params[] = $value;
         }
-        $sql = "UPDATE `{$table}` SET " . implode(', ', $setClauses);
+        $sql = "UPDATE `{$table}` SET ".implode(', ', $setClauses);
 
         $whereClauses = [];
         foreach ($conditions as $key => $value) {
             $whereClauses[] = "`{$key}` = ?";
             $params[] = $value;
         }
-        $sql .= " WHERE " . implode(" {$logic} ", $whereClauses);
+        $sql .= ' WHERE '.implode(" {$logic} ", $whereClauses);
 
         $stmt = $this->query($sql, $params);
+
         return $stmt->rowCount();
     }
 
     /**
      * Deletes records from the table, protecting against accidental global deletes.
      *
-     * @param string $table Target table.
-     * @param array $conditions Mandatory row deletion conditions.
-     * @param string $logic Linking operator for the WHERE clause.
+     * @param  string  $table  Target table.
+     * @param  array  $conditions  Mandatory row deletion conditions.
+     * @param  string  $logic  Linking operator for the WHERE clause.
      * @return int Number of permanently deleted rows.
      */
     public function delete(string $table, array $conditions, string $logic = 'AND'): int
@@ -283,37 +288,37 @@ class MySQLWrapper
         $sql .= implode(" {$logic} ", $clauses);
 
         $stmt = $this->query($sql, $params);
+
         return $stmt->rowCount();
     }
 
     /**
      * Writes an emergency log in case of database failure.
      *
-     * @param string $message Error message.
-     * @param array $context Additional context information.
-     * @return void
+     * @param  string  $message  Error message.
+     * @param  array  $context  Additional context information.
      */
     private function logEmergency(string $message, array $context): void
     {
         try {
-            $dir = dirname(__DIR__, 2) . '/storage/logs';
-            
-            if (!is_dir($dir)) {
+            $dir = dirname(__DIR__, 2).'/storage/logs';
+
+            if (! is_dir($dir)) {
                 if (file_exists($dir)) {
                     throw new RuntimeException("Path '{$dir}' exists but is not a directory.");
                 }
-                if (!mkdir($dir, 0777, true) && !is_dir($dir)) {
+                if (! mkdir($dir, 0777, true) && ! is_dir($dir)) {
                     throw new RuntimeException("Failed to create directory '{$dir}'.");
                 }
             }
 
-            if (!is_writable($dir)) {
+            if (! is_writable($dir)) {
                 throw new RuntimeException("Directory '{$dir}' is not writable.");
             }
 
-            $filePath = $dir . '/emergency-logs-' . date('Ymd') . '.log';
+            $filePath = $dir.'/emergency-logs-'.date('Ymd').'.log';
             $timestamp = date('Y-m-d H:i:s');
-            
+
             $logEntry = sprintf(
                 "[%s] [%s] %s\nContext: %s\n%s\n",
                 $timestamp,
@@ -328,7 +333,7 @@ class MySQLWrapper
             }
         } catch (Throwable $logException) {
             // Send the error to the native system log (error_log) as a last resort fallback
-            error_log("Emergency logging failed: " . $logException->getMessage());
+            error_log('Emergency logging failed: '.$logException->getMessage());
         }
     }
 }

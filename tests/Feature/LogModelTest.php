@@ -4,22 +4,24 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
 use App\Models\App;
 use App\Models\Log;
 use InvalidArgumentException;
+use Tests\TestCase;
 
 class LogModelTest extends TestCase
 {
     private App $appModel;
+
     private Log $logModel;
+
     private int $appId;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->appModel = new App();
-        $this->logModel = new Log();
+        $this->appModel = new App;
+        $this->logModel = new Log;
 
         // Ensure database state is reset for testing
         $this->db()->getConnection()->exec('SET FOREIGN_KEY_CHECKS=0;');
@@ -31,7 +33,7 @@ class LogModelTest extends TestCase
         $this->appId = $this->appModel->create('Test Logger Client', 'logger-key-client');
     }
 
-    public function testCanCreateAndRetrieveLog(): void
+    public function test_can_create_and_retrieve_log(): void
     {
         $level = 'ERROR';
         $message = 'Something went wrong inside the billing module.';
@@ -42,7 +44,7 @@ class LogModelTest extends TestCase
 
         $logs = $this->logModel->getPaginated(['app_id' => $this->appId]);
         $this->assertCount(1, $logs);
-        
+
         $log = $logs[0];
         $this->assertEquals($logId, $log['id']);
         $this->assertEquals($level, $log['level']);
@@ -50,13 +52,13 @@ class LogModelTest extends TestCase
         $this->assertEquals(json_encode($context), $log['context']);
     }
 
-    public function testCannotCreateLogWithInvalidParameters(): void
+    public function test_cannot_create_log_with_invalid_parameters(): void
     {
         $this->expectException(InvalidArgumentException::class);
         $this->logModel->create($this->appId, '', 'Message');
     }
 
-    public function testGetPaginatedFiltersByLogLevel(): void
+    public function test_get_paginated_filters_by_log_level(): void
     {
         // Insert INFO and WARNING logs
         $this->logModel->create($this->appId, 'INFO', 'Info message');

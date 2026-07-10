@@ -1,8 +1,8 @@
-<?php include __DIR__ . '/../layouts/header.php'; ?>
+<?php include __DIR__.'/../layouts/header.php'; ?>
 
 <div class="container-fluid p-0 overflow-hidden" x-data="App.queuePageData()">
     <div class="row g-0 vh-100">
-        <?php include __DIR__ . '/../layouts/sidebar.php'; ?>
+        <?php include __DIR__.'/../layouts/sidebar.php'; ?>
 
         <!-- Main Content -->
         <div class="col h-100 overflow-auto bg-dark bg-opacity-25">
@@ -73,17 +73,17 @@
                             <div class="d-flex align-items-center justify-content-between">
                                 <div>
                                     <span class="text-secondary small fw-bold text-uppercase d-block mb-1"><?= __('Worker Status') ?></span>
-                                    <?php if ($isWorkerRunning): ?>
+                                    <?php if ($isWorkerRunning) { ?>
                                         <div class="d-flex align-items-center gap-2">
                                             <span class="pulse-dot bg-success"></span>
                                             <h3 class="h3 text-success mb-0 fw-bold"><?= __('ACTIVE') ?></h3>
                                         </div>
-                                    <?php else: ?>
+                                    <?php } else { ?>
                                         <div class="d-flex align-items-center gap-2">
                                             <span class="pulse-dot bg-danger"></span>
                                             <h3 class="h3 text-danger mb-0 fw-bold"><?= __('INACTIVE') ?></h3>
                                         </div>
-                                    <?php endif; ?>
+                                    <?php } ?>
                                 </div>
                                 <div class="icon-shape <?= $isWorkerRunning ? 'bg-success text-success' : 'bg-danger text-danger' ?> bg-opacity-10 rounded-3 p-3">
                                     <i class="fas <?= $isWorkerRunning ? 'fa-check-circle' : 'fa-times-circle' ?> fa-lg"></i>
@@ -97,13 +97,13 @@
                 <!-- Global Actions -->
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h3 class="h5 mb-0 text-light fw-bold"><?= __('Active Queue') ?></h3>
-                    <?php if ($totalJobs > 0): ?>
+                    <?php if ($totalJobs > 0) { ?>
                         <form action="queue.php?action=purge" method="POST" onsubmit="return confirm('<?= __('Are you sure you want to completely purge the log queue?') ?>')" class="m-0">
                             <button type="submit" class="btn btn-outline-danger btn-sm fw-bold">
                                 <i class="far fa-trash-alt me-2"></i> <?= __('Purge Queue') ?>
                             </button>
                         </form>
-                    <?php endif; ?>
+                    <?php } ?>
                 </div>
 
                 <!-- Table of jobs -->
@@ -116,59 +116,59 @@
                                         <th class="ps-4 border-0" style="width: 130px;">
                                             <?php
                                                 $nextDirId = ($sortBy === 'id' && strtoupper($sortDir) === 'DESC') ? 'ASC' : 'DESC';
-                                                $urlId = '?' . http_build_query(['page' => 1, 'limit' => $limit, 'sort_by' => 'id', 'sort_dir' => $nextDirId]);
-                                            ?>
+$urlId = '?'.http_build_query(['page' => 1, 'limit' => $limit, 'sort_by' => 'id', 'sort_dir' => $nextDirId]);
+?>
                                             <a href="<?= $urlId ?>" class="text-decoration-none text-secondary hover-text-light d-flex align-items-center gap-1">
                                                 <?= __('Job ID') ?>
-                                                <?php if ($sortBy === 'id'): ?>
+                                                <?php if ($sortBy === 'id') { ?>
                                                     <i class="fas fa-sort-<?= $sortDir === 'ASC' ? 'up' : 'down' ?> text-info ms-1"></i>
-                                                <?php else: ?>
+                                                <?php } else { ?>
                                                     <i class="fas fa-sort text-secondary opacity-50 ms-1" style="font-size: 0.8rem;"></i>
-                                                <?php endif; ?>
+                                                <?php } ?>
                                             </a>
                                         </th>
                                         <th class="border-0" style="width: 180px;">
                                             <?php
-                                                $nextDirApp = ($sortBy === 'app_name' && strtoupper($sortDir) === 'DESC') ? 'ASC' : 'DESC';
-                                                $urlApp = '?' . http_build_query(['page' => 1, 'limit' => $limit, 'sort_by' => 'app_name', 'sort_dir' => $nextDirApp]);
-                                            ?>
+    $nextDirApp = ($sortBy === 'app_name' && strtoupper($sortDir) === 'DESC') ? 'ASC' : 'DESC';
+$urlApp = '?'.http_build_query(['page' => 1, 'limit' => $limit, 'sort_by' => 'app_name', 'sort_dir' => $nextDirApp]);
+?>
                                             <a href="<?= $urlApp ?>" class="text-decoration-none text-secondary hover-text-light d-flex align-items-center gap-1">
                                                 <?= __('App Name') ?>
-                                                <?php if ($sortBy === 'app_name'): ?>
+                                                <?php if ($sortBy === 'app_name') { ?>
                                                     <i class="fas fa-sort-<?= $sortDir === 'ASC' ? 'up' : 'down' ?> text-info ms-1"></i>
-                                                <?php else: ?>
+                                                <?php } else { ?>
                                                     <i class="fas fa-sort text-secondary opacity-50 ms-1" style="font-size: 0.8rem;"></i>
-                                                <?php endif; ?>
+                                                <?php } ?>
                                             </a>
                                         </th>
                                         <th class="border-0"><?= __('Payload Preview') ?></th>
                                         <th class="border-0" style="width: 180px;">
                                             <?php
-                                                $nextDirTime = ($sortBy === 'created_at' && strtoupper($sortDir) === 'DESC') ? 'ASC' : 'DESC';
-                                                $urlTime = '?' . http_build_query(['page' => 1, 'limit' => $limit, 'sort_by' => 'created_at', 'sort_dir' => $nextDirTime]);
-                                            ?>
+    $nextDirTime = ($sortBy === 'created_at' && strtoupper($sortDir) === 'DESC') ? 'ASC' : 'DESC';
+$urlTime = '?'.http_build_query(['page' => 1, 'limit' => $limit, 'sort_by' => 'created_at', 'sort_dir' => $nextDirTime]);
+?>
                                             <a href="<?= $urlTime ?>" class="text-decoration-none text-secondary hover-text-light d-flex align-items-center gap-1">
                                                 <?= __('Created At') ?>
-                                                <?php if ($sortBy === 'created_at'): ?>
+                                                <?php if ($sortBy === 'created_at') { ?>
                                                     <i class="fas fa-sort-<?= $sortDir === 'ASC' ? 'up' : 'down' ?> text-info ms-1"></i>
-                                                <?php else: ?>
+                                                <?php } else { ?>
                                                     <i class="fas fa-sort text-secondary opacity-50 ms-1" style="font-size: 0.8rem;"></i>
-                                                <?php endif; ?>
+                                                <?php } ?>
                                             </a>
                                         </th>
                                         <th class="border-0 text-end pe-4" style="width: 180px;"><?= __('Actions') ?></th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php foreach ($jobs as $job): ?>
-                                        <?php 
-                                            $payload = json_decode($job['payload_raw'], true) ?: [];
-                                            $previewMsg = $payload['message'] ?? ($payload[0]['message'] ?? 'N/A');
-                                            if (is_array($previewMsg)) {
-                                                $previewMsg = json_encode($previewMsg);
-                                            }
-                                            $previewMsg = mb_strimwidth((string)$previewMsg, 0, 80, '...');
-                                            $payloadSize = number_format(strlen($job['payload_raw']) / 1024, 2) . ' KB';
+                                    <?php foreach ($jobs as $job) { ?>
+                                        <?php
+$payload = json_decode($job['payload_raw'], true) ?: [];
+                                        $previewMsg = $payload['message'] ?? ($payload[0]['message'] ?? 'N/A');
+                                        if (is_array($previewMsg)) {
+                                            $previewMsg = json_encode($previewMsg);
+                                        }
+                                        $previewMsg = mb_strimwidth((string) $previewMsg, 0, 80, '...');
+                                        $payloadSize = number_format(strlen($job['payload_raw']) / 1024, 2).' KB';
                                         ?>
                                         <tr>
                                             <td class="ps-4 border-secondary border-opacity-10 text-secondary font-monospace">
@@ -198,15 +198,15 @@
                                                 </div>
                                             </td>
                                         </tr>
-                                    <?php endforeach; ?>
-                                    <?php if (empty($jobs)): ?>
+                                    <?php } ?>
+                                    <?php if (empty($jobs)) { ?>
                                         <tr>
                                             <td colspan="5" class="text-center py-5 text-secondary">
                                                 <i class="fas fa-inbox fa-2x mb-3 text-secondary opacity-25"></i>
                                                 <p class="mb-0 small"><?= __('No jobs currently in the queue.') ?></p>
                                             </td>
                                         </tr>
-                                    <?php endif; ?>
+                                    <?php } ?>
                                 </tbody>
                             </table>
                         </div>
@@ -215,44 +215,44 @@
 
                 <!-- Pagination & Page Size controls -->
                 <?php
-                    $currentPage = (int)($page ?? 1);
-                    $range = 2; // Range of pages to show around the current page
-                    $startPage = max(1, $currentPage - $range);
-                    $endPage = min($totalPages ?? 1, $currentPage + $range);
-                    $limitOptions = [10, 25, 50, 100];
-                    $paginationParams = [
-                        'sort_by' => $sortBy ?? 'id',
-                        'sort_dir' => $sortDir ?? 'DESC'
-                    ];
-                ?>
+                    $currentPage = (int) ($page ?? 1);
+$range = 2; // Range of pages to show around the current page
+$startPage = max(1, $currentPage - $range);
+$endPage = min($totalPages ?? 1, $currentPage + $range);
+$limitOptions = [10, 25, 50, 100];
+$paginationParams = [
+    'sort_by' => $sortBy ?? 'id',
+    'sort_dir' => $sortDir ?? 'DESC',
+];
+?>
                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mt-4">
                     <!-- Page Size Selector -->
                     <div class="d-flex align-items-center gap-2">
                         <label class="text-secondary small text-nowrap mb-0"><?= __('Rows per page:') ?></label>
                         <select class="form-select form-select-sm bg-dark border-secondary border-opacity-25 text-light" style="width: auto; cursor: pointer;" @change="window.location.href = $event.target.value">
-                            <?php foreach ($limitOptions as $l): ?>
+                            <?php foreach ($limitOptions as $l) { ?>
                                 <?php
-                                    $urlParams = array_merge($paginationParams, [
-                                        'page' => 1,
-                                        'limit' => $l
-                                    ]);
-                                    $url = '?' . http_build_query($urlParams);
+                    $urlParams = array_merge($paginationParams, [
+                        'page' => 1,
+                        'limit' => $l,
+                    ]);
+                                $url = '?'.http_build_query($urlParams);
                                 ?>
                                 <option value="<?= htmlspecialchars($url) ?>" <?= ($limit === $l) ? 'selected' : '' ?>>
                                     <?= $l ?>
                                 </option>
-                            <?php endforeach; ?>
+                            <?php } ?>
                         </select>
                     </div>
 
                     <!-- Pagination Links -->
-                    <?php if (($totalPages ?? 0) > 1): ?>
+                    <?php if (($totalPages ?? 0) > 1) { ?>
                         <nav aria-label="<?= __('Pagination') ?>">
                             <ul class="pagination mb-0 gap-1 align-items-center">
                                 <!-- First Page -->
                                 <li class="page-item <?= ($currentPage <= 1) ? 'disabled' : '' ?>">
                                     <a class="page-link rounded bg-dark border-secondary border-opacity-25 text-light" 
-                                       href="<?= ($currentPage <= 1) ? '#' : '?' . http_build_query(array_merge($paginationParams, ['page' => 1, 'limit' => $limit])) ?>" 
+                                       href="<?= ($currentPage <= 1) ? '#' : '?'.http_build_query(array_merge($paginationParams, ['page' => 1, 'limit' => $limit])) ?>" 
                                        title="<?= __('First') ?>">
                                         <i class="fas fa-angle-double-left small"></i>
                                     </a>
@@ -261,48 +261,48 @@
                                 <!-- Prev Link -->
                                 <li class="page-item <?= ($currentPage <= 1) ? 'disabled' : '' ?>">
                                     <a class="page-link rounded bg-dark border-secondary border-opacity-25 text-light" 
-                                       href="<?= ($currentPage <= 1) ? '#' : '?' . http_build_query(array_merge($paginationParams, ['page' => $currentPage - 1, 'limit' => $limit])) ?>" 
+                                       href="<?= ($currentPage <= 1) ? '#' : '?'.http_build_query(array_merge($paginationParams, ['page' => $currentPage - 1, 'limit' => $limit])) ?>" 
                                        title="<?= __('Previous') ?>">
                                         <i class="fas fa-chevron-left small"></i>
                                     </a>
                                 </li>
 
                                 <!-- First Page Number if range starts after page 1 -->
-                                <?php if ($startPage > 1): ?>
+                                <?php if ($startPage > 1) { ?>
                                     <li class="page-item">
                                         <a class="page-link rounded bg-dark border-secondary border-opacity-25 text-light" 
                                            href="?<?= http_build_query(array_merge($paginationParams, ['page' => 1, 'limit' => $limit])) ?>">1</a>
                                     </li>
-                                    <?php if ($startPage > 2): ?>
+                                    <?php if ($startPage > 2) { ?>
                                         <li class="page-item disabled"><span class="page-link rounded bg-dark border-secondary border-opacity-25 text-secondary">...</span></li>
-                                    <?php endif; ?>
-                                <?php endif; ?>
+                                    <?php } ?>
+                                <?php } ?>
 
                                 <!-- Intermediate Page Links -->
-                                <?php for ($i = $startPage; $i <= $endPage; $i++): ?>
+                                <?php for ($i = $startPage; $i <= $endPage; $i++) { ?>
                                     <li class="page-item <?= ($currentPage === $i) ? 'active' : '' ?>">
                                         <a class="page-link rounded bg-dark border-secondary border-opacity-25 text-light" 
                                            href="?<?= http_build_query(array_merge($paginationParams, ['page' => $i, 'limit' => $limit])) ?>">
                                             <?= $i ?>
                                         </a>
                                     </li>
-                                <?php endfor; ?>
+                                <?php } ?>
 
                                 <!-- Last Page Number if range ends before totalPages -->
-                                <?php if ($endPage < $totalPages): ?>
-                                    <?php if ($endPage < $totalPages - 1): ?>
+                                <?php if ($endPage < $totalPages) { ?>
+                                    <?php if ($endPage < $totalPages - 1) { ?>
                                         <li class="page-item disabled"><span class="page-link rounded bg-dark border-secondary border-opacity-25 text-secondary">...</span></li>
-                                    <?php endif; ?>
+                                    <?php } ?>
                                     <li class="page-item">
                                         <a class="page-link rounded bg-dark border-secondary border-opacity-25 text-light" 
                                            href="?<?= http_build_query(array_merge($paginationParams, ['page' => $totalPages, 'limit' => $limit])) ?>"><?= $totalPages ?></a>
                                     </li>
-                                <?php endif; ?>
+                                <?php } ?>
 
                                 <!-- Next Link -->
                                 <li class="page-item <?= ($currentPage >= $totalPages) ? 'disabled' : '' ?>">
                                     <a class="page-link rounded bg-dark border-secondary border-opacity-25 text-light" 
-                                       href="<?= ($currentPage >= $totalPages) ? '#' : '?' . http_build_query(array_merge($paginationParams, ['page' => $currentPage + 1, 'limit' => $limit])) ?>" 
+                                       href="<?= ($currentPage >= $totalPages) ? '#' : '?'.http_build_query(array_merge($paginationParams, ['page' => $currentPage + 1, 'limit' => $limit])) ?>" 
                                        title="<?= __('Next') ?>">
                                         <i class="fas fa-chevron-right small"></i>
                                     </a>
@@ -311,14 +311,14 @@
                                 <!-- Last Page -->
                                 <li class="page-item <?= ($currentPage >= $totalPages) ? 'disabled' : '' ?>">
                                     <a class="page-link rounded bg-dark border-secondary border-opacity-25 text-light" 
-                                       href="<?= ($currentPage >= $totalPages) ? '#' : '?' . http_build_query(array_merge($paginationParams, ['page' => $totalPages, 'limit' => $limit])) ?>" 
+                                       href="<?= ($currentPage >= $totalPages) ? '#' : '?'.http_build_query(array_merge($paginationParams, ['page' => $totalPages, 'limit' => $limit])) ?>" 
                                        title="<?= __('Last') ?>">
                                         <i class="fas fa-angle-double-right small"></i>
                                     </a>
                                 </li>
                             </ul>
                         </nav>
-                    <?php endif; ?>
+                    <?php } ?>
                 </div>
             </main>
         </div>
@@ -382,4 +382,4 @@
     </template>
 </div>
 
-<?php include __DIR__ . '/../layouts/footer.php'; ?>
+<?php include __DIR__.'/../layouts/footer.php'; ?>

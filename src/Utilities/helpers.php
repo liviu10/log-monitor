@@ -9,9 +9,11 @@ declare(strict_types=1);
  * All translation keys use English for consistency.
  *
  * @category Utilities
- * @package  App\Utilities
+ *
  * @version  2.5
+ *
  * @since    PHP 8.4
+ *
  * @author   Voica Liviu
  * @license  Proprietary
  */
@@ -25,7 +27,7 @@ use Symfony\Component\VarDumper\VarDumper;
  *
  * @return void
  */
-if (!function_exists('injectRuntimeSecurityHeaders')) {
+if (! function_exists('injectRuntimeSecurityHeaders')) {
     function injectRuntimeSecurityHeaders(): void
     {
         // Prevents Clickjacking attacks by blocking iframe embedding
@@ -41,7 +43,7 @@ if (!function_exists('injectRuntimeSecurityHeaders')) {
         header("Content-Security-Policy: default-src 'self'; script-src 'self'; object-src 'none'; style-src 'self' 'unsafe-inline'; base-uri 'self'; form-action 'self';", true);
 
         // Activate HSTS if request is secure
-        $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || 
+        $isHttps = (! empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||
                    (($_SERVER['SERVER_PORT'] ?? '') === '443') ||
                    (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
 
@@ -58,10 +60,10 @@ define('ROLE_ADMIN', 'admin');
  * Dumps the received variables and terminates script execution (Dump and Die).
  * Uses Symfony's VarDumper component for a clean view.
  *
- * @param mixed ...$args One or more variables to be inspected.
+ * @param  mixed  ...$args  One or more variables to be inspected.
  * @return never Definitive termination of program execution.
  */
-if (!function_exists('dd')) {
+if (! function_exists('dd')) {
     function dd(mixed ...$args): never
     {
         foreach ($args as $x) {
@@ -78,26 +80,26 @@ if (!function_exists('dd')) {
  *
  * @return string Complete base URL of the application.
  */
-if (!function_exists('constructUrl')) {
+if (! function_exists('constructUrl')) {
     function constructUrl(): string
     {
         $rawHost = $_SERVER['HTTP_HOST'] ?? 'localhost';
-        
+
         // Strict validation of the host to prevent injection
         $host = filter_var($rawHost, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME);
         if ($host === false) {
             $host = 'localhost';
         }
-        
+
         $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? ''));
         $basePath = rtrim($scriptDir, '/\\');
-        
-        $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || 
+
+        $isHttps = (! empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||
                    (($_SERVER['SERVER_PORT'] ?? '') === 443) ||
                    (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
-                   
-        $protocol = $isHttps ? "https" : "http";
-        
+
+        $protocol = $isHttps ? 'https' : 'http';
+
         return "{$protocol}://{$host}{$basePath}";
     }
 }
@@ -108,19 +110,19 @@ if (!function_exists('constructUrl')) {
  *
  * @return bool Returns true if the user has a valid session.
  */
-if (!function_exists('checkAuthUser')) {
+if (! function_exists('checkAuthUser')) {
     function checkAuthUser(): bool
     {
         // Handle logout action
         if (isset($_GET['action']) && $_GET['action'] === 'logout') {
             unset($_SESSION['auth.user']);
             session_destroy();
-            
+
             if (session_status() === PHP_SESSION_NONE) {
                 session_start();
             }
             session_regenerate_id(true);
-            
+
             header('Location: login.php');
             exit;
         }
@@ -137,8 +139,8 @@ if (!function_exists('checkAuthUser')) {
 
         // Set flash message with exclusively English keys
         setFlash(
-            'warning', 
-            __('Authentication Warning'), 
+            'warning',
+            __('Authentication Warning'),
             __('You must log in to access this page.')
         );
 
@@ -152,10 +154,11 @@ if (!function_exists('checkAuthUser')) {
  *
  * @return array|null Array of user data or null if not authenticated.
  */
-if (!function_exists('getCurrentAuthUser')) {
+if (! function_exists('getCurrentAuthUser')) {
     function getCurrentAuthUser(): ?array
     {
         $user = $_SESSION['auth.user'] ?? null;
+
         return is_array($user) ? $user : null;
     }
 }
@@ -163,13 +166,14 @@ if (!function_exists('getCurrentAuthUser')) {
 /**
  * Formates a date from SQL format to standard European format.
  *
- * @param string $dateString Date string (e.g., Y-m-d).
+ * @param  string  $dateString  Date string (e.g., Y-m-d).
  * @return string Formatted date as day.month.year.
  */
-if (!function_exists('formatDate')) {
+if (! function_exists('formatDate')) {
     function formatDate(string $dateString): string
     {
         $timestamp = strtotime($dateString);
+
         return date('d.m.Y', $timestamp ?: time());
     }
 }
@@ -177,13 +181,13 @@ if (!function_exists('formatDate')) {
 /**
  * Checks if the current user has a specific permission (Mockup).
  *
- * @param string $permission Checked permission identifier.
+ * @param  string  $permission  Checked permission identifier.
  * @return bool True if permission is granted.
  */
-if (!function_exists('can')) {
+if (! function_exists('can')) {
     function can(string $permission): bool
     {
-        return true; 
+        return true;
     }
 }
 
@@ -192,43 +196,45 @@ if (!function_exists('can')) {
  *
  * @return string Generated token in hexadecimal format.
  */
-if (!function_exists('generateCsrfToken')) {
+if (! function_exists('generateCsrfToken')) {
     function generateCsrfToken(): string
     {
         if (empty($_SESSION['csrf_token'])) {
             $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
         }
-        return (string)$_SESSION['csrf_token'];
+
+        return (string) $_SESSION['csrf_token'];
     }
 }
 
 /**
  * Verifies validity of a CSRF token using a comparison immune to timing attacks.
  *
- * @param string|null $token Received token for verification.
+ * @param  string|null  $token  Received token for verification.
  * @return bool True if token matches the one in session.
  */
-if (!function_exists('verifyCsrfToken')) {
+if (! function_exists('verifyCsrfToken')) {
     function verifyCsrfToken(?string $token): bool
     {
-        if (!$token || empty($_SESSION['csrf_token'])) {
+        if (! $token || empty($_SESSION['csrf_token'])) {
             return false;
         }
-        return hash_equals((string)$_SESSION['csrf_token'], $token);
+
+        return hash_equals((string) $_SESSION['csrf_token'], $token);
     }
 }
 
 /**
  * Registers a temporary flash message in the application session.
  *
- * @param string $type Message type (e.g. success, error, warning).
- * @param string $title Notification title.
- * @param string $message Descriptive notification text.
- * @param int $toastDelay Display time in milliseconds.
- * @param string $redirectUrl Optional URL for redirection.
+ * @param  string  $type  Message type (e.g. success, error, warning).
+ * @param  string  $title  Notification title.
+ * @param  string  $message  Descriptive notification text.
+ * @param  int  $toastDelay  Display time in milliseconds.
+ * @param  string  $redirectUrl  Optional URL for redirection.
  * @return void
  */
-if (!function_exists('setFlash')) {
+if (! function_exists('setFlash')) {
     function setFlash(string $type, string $title, string $message, int $toastDelay = 10000, string $redirectUrl = ''): void
     {
         $_SESSION['app_flash'] = [
@@ -246,7 +252,7 @@ if (!function_exists('setFlash')) {
  *
  * @return array|null Flash message data or null if not present.
  */
-if (!function_exists('getFlash')) {
+if (! function_exists('getFlash')) {
     function getFlash(): ?array
     {
         if (isset($_SESSION['app_flash'])) {
@@ -265,16 +271,17 @@ if (!function_exists('getFlash')) {
  *
  * @return string Language code (default 'en').
  */
-if (!function_exists('getLang')) {
+if (! function_exists('getLang')) {
     function getLang(): string
     {
         if (session_status() !== PHP_SESSION_ACTIVE) {
             return 'en';
         }
-        if (!isset($_SESSION['app_lang'])) {
+        if (! isset($_SESSION['app_lang'])) {
             $_SESSION['app_lang'] = 'en';
         }
-        return (string)$_SESSION['app_lang'];
+
+        return (string) $_SESSION['app_lang'];
     }
 }
 
@@ -282,18 +289,18 @@ if (!function_exists('getLang')) {
  * Translates a text key and safely replaces dynamic parameters to prevent XSS.
  * Uses native PHP 8.4 json_validate for enhanced safety.
  *
- * @param string $key Translation frame key.
- * @param array $replacements Associative array of replacement parameters.
+ * @param  string  $key  Translation frame key.
+ * @param  array  $replacements  Associative array of replacement parameters.
  * @return string Final translated and sanitized text.
  */
-if (!function_exists('__')) {
+if (! function_exists('__')) {
     function __(string $key, array $replacements = []): string
     {
         static $translations = null;
 
         if ($translations === null) {
             $lang = getLang();
-            $path = __DIR__ . "/../../lang/{$lang}.json";
+            $path = __DIR__."/../../lang/{$lang}.json";
 
             if (file_exists($path)) {
                 $content = file_get_contents($path);
@@ -310,8 +317,8 @@ if (!function_exists('__')) {
         $text = $translations[$key] ?? $key;
 
         foreach ($replacements as $placeholder => $value) {
-            $safeValue = htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
-            $text = str_replace(':' . $placeholder, $safeValue, $text);
+            $safeValue = htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+            $text = str_replace(':'.$placeholder, $safeValue, $text);
         }
 
         return $text;

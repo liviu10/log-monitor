@@ -10,9 +10,11 @@ namespace App\Enums;
  * A Native Backed Enum (string) is used for strict typing and automatic validation.
  *
  * @category Enum
- * @package  App\Enums
+ *
  * @version  1.3
+ *
  * @since    PHP 8.4
+ *
  * @author   Voica Liviu
  * @license  Proprietary
  */
@@ -44,6 +46,7 @@ enum LogLevel: string
 
     /**
      * Returns all raw (string) values of the logging levels.
+     *
      * * @return array<int, string>
      */
     public static function all(): array
@@ -54,8 +57,8 @@ enum LogLevel: string
     /**
      * Verifies if a given string is a valid logging level.
      * Implements Fail Fast philosophy via defensive input processing.
+     *
      * * @param string $level The level to check.
-     * @return bool
      */
     public static function isValid(string $level): bool
     {

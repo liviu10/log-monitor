@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
-use App\Models\App;
-use App\Utilities\Validation;
-use App\Utilities\LogViaStream;
 use App\Enums\LogLevel;
+use App\Models\App;
+use App\Utilities\LogViaStream;
+use App\Utilities\Validation;
 
 /**
  * AppController Class
@@ -17,9 +17,11 @@ use App\Enums\LogLevel;
  * the generation of unique API keys and strict validation of input data.
  *
  * @category Controller
- * @package  App\Controllers
+ *
  * @version  1.2
+ *
  * @since    PHP 8.4
+ *
  * @author   Voica Liviu
  * @license  Proprietary
  */
@@ -31,10 +33,10 @@ class AppController extends BaseController
     public function index(): void
     {
         $this->checkAuth();
-        
-        $appModel = new App();
+
+        $appModel = new App;
         $apps = $appModel->getAll();
-        
+
         $this->render('apps/index', [
             'apps' => $apps,
         ]);
@@ -47,25 +49,25 @@ class AppController extends BaseController
     public function store(array $postData): never
     {
         $this->checkAuth();
-        
+
         $payload = $postData;
         $validator = new Validation(['name' => __('Application name')]);
-        
+
         $errors = $validator->validate([
             'name' => ['required', 'string', 'min:3'],
         ], $payload);
 
-        if (!empty($errors)) {
+        if (! empty($errors)) {
             $_SESSION['errors'] = $errors;
             $this->redirect('apps.php');
         }
 
         try {
-            $appModel = new App();
+            $appModel = new App;
             $apiKey = bin2hex(random_bytes(32));
-            
+
             $appModel->create(trim($payload['name']), $apiKey);
-            
+
             setFlash('success', __('Success'), __('Application created successfully.'));
         } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Failed to create application record', [
@@ -76,11 +78,11 @@ class AppController extends BaseController
                 'exception_line' => $e->getLine(),
                 'exception_trace' => $e->getTraceAsString(),
                 'payload' => $payload,
-                'identifier' => 'AppController_Store_Failure'
+                'identifier' => 'AppController_Store_Failure',
             ]);
             setFlash('danger', __('Error'), __('Failed to create application.'));
         }
-        
+
         $this->redirect('apps.php');
     }
 
@@ -90,15 +92,15 @@ class AppController extends BaseController
     public function update(array $postData, array $getData = []): never
     {
         $this->checkAuth();
-        
+
         $id = $postData['id'] ?? null;
-        if (!$id) {
+        if (! $id) {
             setFlash('danger', __('Error'), __('Missing application ID.'));
             $this->redirect('apps.php');
         }
 
-        $appModel = new App();
-        $appId = (int)$id;
+        $appModel = new App;
+        $appId = (int) $id;
 
         try {
             if (isset($getData['sub_action']) && $getData['sub_action'] === 'regenerate-key') {
@@ -110,20 +112,20 @@ class AppController extends BaseController
 
             $payload = $postData;
             $validator = new Validation(['name' => __('Application name')]);
-            
+
             $errors = $validator->validate([
                 'name' => ['required', 'string', 'min:3'],
             ], $payload);
 
-            if (!empty($errors)) {
+            if (! empty($errors)) {
                 $_SESSION['errors'] = $errors;
                 $this->redirect('apps.php');
             }
 
             $appModel->update($appId, [
-                'name' => trim($payload['name'])
+                'name' => trim($payload['name']),
             ]);
-            
+
             setFlash('success', __('Success'), __('Application updated successfully.'));
         } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Failed to update application data', [
@@ -134,7 +136,7 @@ class AppController extends BaseController
                 'exception_line' => $e->getLine(),
                 'exception_trace' => $e->getTraceAsString(),
                 'app_id' => $appId,
-                'identifier' => 'AppController_Update_Failure'
+                'identifier' => 'AppController_Update_Failure',
             ]);
             setFlash('danger', __('Error'), __('Failed to update application.'));
         }
@@ -148,12 +150,12 @@ class AppController extends BaseController
     public function delete(array $postData): never
     {
         $this->checkAuth();
-        
+
         $id = $postData['id'] ?? null;
         if ($id) {
             try {
-                $appModel = new App();
-                $appModel->delete((int)$id);
+                $appModel = new App;
+                $appModel->delete((int) $id);
                 setFlash('success', __('Success'), __('Application deleted successfully.'));
             } catch (\Throwable $e) {
                 LogViaStream::send(LogLevel::ERROR->value, 'Failed to delete application', [
@@ -164,12 +166,12 @@ class AppController extends BaseController
                     'exception_line' => $e->getLine(),
                     'exception_trace' => $e->getTraceAsString(),
                     'app_id' => $id,
-                    'identifier' => 'AppController_Delete_Failure'
+                    'identifier' => 'AppController_Delete_Failure',
                 ]);
                 setFlash('danger', __('Error'), __('Failed to delete application.'));
             }
         }
-        
+
         $this->redirect('apps.php');
     }
 }

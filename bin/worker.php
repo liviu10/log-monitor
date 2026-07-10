@@ -6,16 +6,18 @@ declare(strict_types=1);
 set_time_limit(0);
 
 // Load base application configuration
-require_once dirname(__DIR__) . '/bootstrap.php';
+require_once dirname(__DIR__).'/bootstrap.php';
 
-use App\Utilities\MySQLWrapper;
-use App\Models\Log;
 use App\Controllers\NotificationController;
+use App\Enums\LogLevel;
+use App\Models\Log;
+use App\Utilities\LogViaStream;
+use App\Utilities\MySQLWrapper;
 
 /**
  * Recursively sanitizes the context array to mask confidential/sensitive data.
  *
- * @param array $data The context data array.
+ * @param  array  $data  The context data array.
  * @return array The sanitized array.
  */
 function sanitizeSensitivePayload(array $data): array
@@ -26,7 +28,7 @@ function sanitizeSensitivePayload(array $data): array
         if (is_array($value)) {
             $data[$key] = sanitizeSensitivePayload($value);
         } elseif (is_string($value)) {
-            $lowerKey = strtolower((string)$key);
+            $lowerKey = strtolower((string) $key);
             if (in_array($lowerKey, $sensitiveKeys, true)) {
                 $data[$key] = '******';
             } else {
@@ -37,7 +39,7 @@ function sanitizeSensitivePayload(array $data): array
                         if (is_array($decoded)) {
                             $data[$key] = json_encode(sanitizeSensitivePayload($decoded), JSON_UNESCAPED_SLASHES);
                         }
-                    } catch (\Throwable) {
+                    } catch (Throwable) {
                         // Ignore errors if decoding fails for any reason
                     }
                 }
@@ -51,31 +53,31 @@ function sanitizeSensitivePayload(array $data): array
 /**
  * Masks sensitive data in the log message.
  *
- * @param string $message The original message.
+ * @param  string  $message  The original message.
  * @return string The sanitized message.
  */
 function sanitizeLogMessage(string $message): string
 {
-    return (string)preg_replace('/(password|pass|pwd|token|api_key)\s*=\s*[^\s&]+/ims', '$1=******', $message);
+    return (string) preg_replace('/(password|pass|pwd|token|api_key)\s*=\s*[^\s&]+/ims', '$1=******', $message);
 }
 
 // Main infinite loop of the CLI worker
 $appsCache = [];
 $lastHeartbeat = 0;
-$notificationController = new NotificationController();
+$notificationController = new NotificationController;
 
 while (true) {
     $currentTime = time();
     if (($currentTime - $lastHeartbeat) >= 10) {
         try {
-            $heartbeatFile = dirname(__DIR__) . '/storage/worker.heartbeat';
-            file_put_contents($heartbeatFile, (string)$currentTime, LOCK_EX);
+            $heartbeatFile = dirname(__DIR__).'/storage/worker.heartbeat';
+            file_put_contents($heartbeatFile, (string) $currentTime, LOCK_EX);
             $lastHeartbeat = $currentTime;
-        } catch (\Throwable) {
+        } catch (Throwable) {
             // Defensive execution: prevent the worker from blocking if temporary I/O issues occur
         }
     }
-    
+
     try {
         $db = MySQLWrapper::getInstance();
         $pdo = $db->getConnection();
@@ -93,9 +95,9 @@ while (true) {
             $insertValues = [];
 
             foreach ($jobs as $job) {
-                $jobId = (int)$job['id'];
-                $appId = (int)$job['app_id'];
-                $payloadRaw = (string)$job['payload_raw'];
+                $jobId = (int) $job['id'];
+                $appId = (int) $job['app_id'];
+                $payloadRaw = (string) $job['payload_raw'];
 
                 $idsToDelete[] = $jobId;
 
@@ -104,8 +106,8 @@ while (true) {
                     $payload = json_decode($payloadRaw, true);
 
                     if (is_array($payload)) {
-                        $level = strtoupper(trim((string)($payload['level'] ?? 'INFO')));
-                        $message = trim((string)($payload['message'] ?? ''));
+                        $level = strtoupper(trim((string) ($payload['level'] ?? 'INFO')));
+                        $message = trim((string) ($payload['message'] ?? ''));
 
                         // Sanitize sensitive data from the message and context
                         $message = sanitizeLogMessage($message);
@@ -114,7 +116,7 @@ while (true) {
                             : [];
 
                         $jsonContext = null;
-                        if (!empty($context)) {
+                        if (! empty($context)) {
                             $jsonContext = json_encode($context, JSON_THROW_ON_ERROR);
                         }
 
@@ -127,7 +129,7 @@ while (true) {
 
                         // Send automatic alerts if configured
                         $currentTime = time();
-                        if (!isset($appsCache[$appId]) || ($currentTime - $appsCache[$appId]['cached_at']) > 10) {
+                        if (! isset($appsCache[$appId]) || ($currentTime - $appsCache[$appId]['cached_at']) > 10) {
                             $stmtApp = $db->query('SELECT * FROM apps WHERE id = ? LIMIT 1', [$appId]);
                             $appData = $stmtApp->fetch() ?: null;
                             $settings = [];
@@ -140,7 +142,7 @@ while (true) {
                             $appsCache[$appId] = [
                                 'data' => $appData,
                                 'settings' => $settings,
-                                'cached_at' => $currentTime
+                                'cached_at' => $currentTime,
                             ];
                         }
 
@@ -149,7 +151,7 @@ while (true) {
                             $notificationController->sendAlert($app, [
                                 'level' => $level,
                                 'message' => $message,
-                                'context' => $context
+                                'context' => $context,
                             ], $appsCache[$appId]['settings']);
                         }
                     }
@@ -157,14 +159,14 @@ while (true) {
             }
 
             // Inserare bulk in logs
-            if (!empty($insertRows)) {
-                $sqlInsert = 'INSERT INTO logs (app_id, level, message, context) VALUES ' . implode(', ', $insertRows);
+            if (! empty($insertRows)) {
+                $sqlInsert = 'INSERT INTO logs (app_id, level, message, context) VALUES '.implode(', ', $insertRows);
                 $stmtInsert = $pdo->prepare($sqlInsert);
                 $stmtInsert->execute($insertValues);
             }
 
             // Batch delete from log_queue
-            if (!empty($idsToDelete)) {
+            if (! empty($idsToDelete)) {
                 $placeholders = implode(', ', array_fill(0, count($idsToDelete), '?'));
                 $sqlDelete = "DELETE FROM log_queue WHERE id IN ({$placeholders})";
                 $stmtDelete = $pdo->prepare($sqlDelete);
@@ -179,16 +181,16 @@ while (true) {
             usleep(500000); // 0.5 seconds to avoid excessive CPU usage (idle)
         }
 
-    } catch (\Throwable $e) {
+    } catch (Throwable $e) {
         if (class_exists('App\\Utilities\\LogViaStream')) {
-            \App\Utilities\LogViaStream::send(\App\Enums\LogLevel::ERROR->value, 'CLI Worker execution failure', [
+            LogViaStream::send(LogLevel::ERROR->value, 'CLI Worker execution failure', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
                 'exception_message' => $e->getMessage(),
                 'exception_file' => $e->getFile(),
                 'exception_line' => $e->getLine(),
                 'exception_trace' => $e->getTraceAsString(),
-                'identifier' => 'CLI_Worker_Failure'
+                'identifier' => 'CLI_Worker_Failure',
             ]);
         }
 
@@ -197,18 +199,18 @@ while (true) {
             if (isset($pdo) && $pdo->inTransaction()) {
                 $pdo->rollBack();
             }
-        } catch (\Throwable) {
+        } catch (Throwable) {
             // Ignore errors at the rollback level
         }
 
         // Write critical error to a local emergency file in /storage/logs/
         try {
-            $logDir = dirname(__DIR__) . '/storage/logs';
-            if (!is_dir($logDir)) {
+            $logDir = dirname(__DIR__).'/storage/logs';
+            if (! is_dir($logDir)) {
                 @mkdir($logDir, 0777, true);
             }
 
-            $logFile = $logDir . '/worker_emergency.log';
+            $logFile = $logDir.'/worker_emergency.log';
             $timestamp = date('Y-m-d H:i:s');
             $errorMessage = sprintf(
                 "[%s] Critical error encountered in CLI Worker: %s\nTrace:\n%s\n%s\n",
@@ -219,9 +221,9 @@ while (true) {
             );
 
             @file_put_contents($logFile, $errorMessage, FILE_APPEND | LOCK_EX);
-        } catch (\Throwable) {
+        } catch (Throwable) {
             // Final fallback to PHP error_log if the filesystem is blocked
-            error_log("Worker emergency logging failure: " . $e->getMessage());
+            error_log('Worker emergency logging failure: '.$e->getMessage());
         }
 
         // Introduce a defensive delay of 5 seconds before retrying to prevent rapid loops

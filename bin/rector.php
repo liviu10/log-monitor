@@ -8,9 +8,11 @@ use Rector\Config\RectorConfig;
  * Rector Configuration: Code transpiling, downgrade, and cleaning.
  *
  * @category Configuration
- * @package  Rector
+ *
  * @version  1.0
+ *
  * @since    PHP 8.4
+ *
  * @author   Voica Liviu
  * @license  Proprietary
  */
@@ -19,12 +21,12 @@ use Rector\Config\RectorConfig;
 $targetPhp = getenv('TARGET_PHP') ?: '74';
 
 $skips = [
-    dirname(__DIR__) . '/vendor',
-    dirname(__DIR__) . '/.phpunit.cache',
+    dirname(__DIR__).'/vendor',
+    dirname(__DIR__).'/.phpunit.cache',
 ];
 
-if (!getenv('TARGET_PHP')) {
-    $skips[] = dirname(__DIR__) . '/dist';
+if (! getenv('TARGET_PHP')) {
+    $skips[] = dirname(__DIR__).'/dist';
 }
 
 return RectorConfig::configure()

@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
-use App\Models\User;
-use App\Utilities\Validation;
-use App\Utilities\LogViaStream;
 use App\Enums\LogLevel;
+use App\Models\User;
+use App\Utilities\LogViaStream;
+use App\Utilities\Validation;
 
 /**
  * AuthController Class
@@ -17,9 +17,11 @@ use App\Enums\LogLevel;
  * and secure active session management.
  *
  * @category Controller
- * @package  App\Controllers
+ *
  * @version  1.3
+ *
  * @since    PHP 8.4
+ *
  * @author   Voica Liviu
  * @license  Proprietary
  */
@@ -44,7 +46,7 @@ class AuthController extends BaseController
     public function login(array $data): never
     {
         $payload = $data;
-        
+
         $validator = new Validation([
             'username' => __('Username'),
             'password' => __('Password'),
@@ -55,32 +57,32 @@ class AuthController extends BaseController
             'password' => ['required', 'string'],
         ], $payload);
 
-        if (!empty($errors)) {
+        if (! empty($errors)) {
             $_SESSION['errors'] = $errors;
             $this->redirect('login.php');
         }
 
         try {
-            $userModel = new User();
+            $userModel = new User;
             $user = $userModel->findByUsername(trim($payload['username']));
 
             if ($user && password_verify($payload['password'], $user['password_hash'])) {
                 // Prevent Session Fixation attacks by regenerating the session ID
                 session_regenerate_id(true);
-                
+
                 $_SESSION['auth.user'] = [
                     'id' => $user['id'],
                     'username' => $user['username'],
                 ];
                 $this->redirect('index.php');
             }
-            
+
             // Audit log for authentication failure (potential brute force attack)
             LogViaStream::send(LogLevel::WARNING->value, 'Failed authentication attempt', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
                 'username' => $payload['username'],
-                'identifier' => 'AuthController_Login_FailedAttempt'
+                'identifier' => 'AuthController_Login_FailedAttempt',
             ]);
         } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Critical authentication exception process', [
@@ -90,7 +92,7 @@ class AuthController extends BaseController
                 'exception_file' => $e->getFile(),
                 'exception_line' => $e->getLine(),
                 'exception_trace' => $e->getTraceAsString(),
-                'identifier' => 'AuthController_Login_SystemException'
+                'identifier' => 'AuthController_Login_SystemException',
             ]);
         }
 
@@ -115,8 +117,8 @@ class AuthController extends BaseController
                 time() - 42000,
                 $params['path'],
                 $params['domain'],
-                (bool)$params['secure'],
-                (bool)$params['httponly']
+                (bool) $params['secure'],
+                (bool) $params['httponly']
             );
         }
 

@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
-use App\Models\Log;
-use App\Models\App;
 use App\Enums\LogLevel;
+use App\Models\App;
+use App\Models\Log;
 use App\Utilities\LogViaStream;
 
 /**
@@ -17,9 +17,11 @@ use App\Utilities\LogViaStream;
  * data for viewing the system logs in an organized manner.
  *
  * @category Controller
- * @package  App\Controllers
+ *
  * @version  1.2
+ *
  * @since    PHP 8.4
+ *
  * @author   Voica Liviu
  * @license  Proprietary
  */
@@ -33,8 +35,8 @@ class DashboardController extends BaseController
         $this->checkAuth();
 
         try {
-            $logModel = new Log();
-            $appModel = new App();
+            $logModel = new Log;
+            $appModel = new App;
 
             $filters = [
                 'app_id' => $queryParams['app_id'] ?? null,
@@ -42,26 +44,26 @@ class DashboardController extends BaseController
                 'search' => $queryParams['search'] ?? null,
             ];
 
-            $page = (int)($queryParams['page'] ?? 1);
+            $page = (int) ($queryParams['page'] ?? 1);
             if ($page < 1) {
                 $page = 1;
             }
-            
+
             $allowedLimits = [10, 25, 50, 100];
-            $limit = (int)($queryParams['limit'] ?? 10);
-            if (!in_array($limit, $allowedLimits, true)) {
+            $limit = (int) ($queryParams['limit'] ?? 10);
+            if (! in_array($limit, $allowedLimits, true)) {
                 $limit = 10;
             }
-            
+
             $offset = ($page - 1) * $limit;
 
-            $sortBy = (string)($queryParams['sort_by'] ?? 'id');
-            $sortDir = (string)($queryParams['sort_dir'] ?? 'DESC');
+            $sortBy = (string) ($queryParams['sort_by'] ?? 'id');
+            $sortDir = (string) ($queryParams['sort_dir'] ?? 'DESC');
 
             $logs = $logModel->getPaginated($filters, $limit, $offset, $sortBy, $sortDir);
             $totalLogs = $logModel->count($filters);
-            $totalPages = (int)ceil($totalLogs / $limit);
-            
+            $totalPages = (int) ceil($totalLogs / $limit);
+
             $apps = $appModel->getAll();
             $levels = LogLevel::all();
             $stats = $logModel->getStats();
@@ -87,9 +89,9 @@ class DashboardController extends BaseController
                 'exception_line' => $e->getLine(),
                 'exception_trace' => $e->getTraceAsString(),
                 'query_params' => $queryParams,
-                'identifier' => 'DashboardController_Index_Failure'
+                'identifier' => 'DashboardController_Index_Failure',
             ]);
-            
+
             // Defensive Fail Fast: do not allow loading a partial page with incomplete data
             throw new \RuntimeException(__('Critical error loading dashboard data. Please try again later.'));
         }

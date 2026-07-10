@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
 use App\Models\User;
 use InvalidArgumentException;
+use Tests\TestCase;
 
 class UserModelTest extends TestCase
 {
@@ -15,7 +15,7 @@ class UserModelTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->userModel = new User();
+        $this->userModel = new User;
 
         // Ensure database state is reset for testing
         $this->db()->getConnection()->exec('SET FOREIGN_KEY_CHECKS=0;');
@@ -23,7 +23,7 @@ class UserModelTest extends TestCase
         $this->db()->getConnection()->exec('SET FOREIGN_KEY_CHECKS=1;');
     }
 
-    public function testCanCreateAndFindUserByUsername(): void
+    public function test_can_create_and_find_user_by_username(): void
     {
         $username = 'test_admin';
         $password = 'secure_pass_123';
@@ -39,13 +39,13 @@ class UserModelTest extends TestCase
         $this->assertTrue(password_verify($password, $user['password_hash']));
     }
 
-    public function testCannotCreateUserWithEmptyUsernameOrPassword(): void
+    public function test_cannot_create_user_with_empty_username_or_password(): void
     {
         $this->expectException(InvalidArgumentException::class);
         $this->userModel->create('', 'password');
     }
 
-    public function testCannotFindNonExistentUser(): void
+    public function test_cannot_find_non_existent_user(): void
     {
         $user = $this->userModel->findByUsername('non_existent_username');
         $this->assertNull($user);

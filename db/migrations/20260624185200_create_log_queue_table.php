@@ -13,11 +13,11 @@ class CreateLogQueueTable extends AbstractMigration
     {
         $table = $this->table('log_queue', ['id' => false, 'primary_key' => ['id']]);
         $table->addColumn('id', 'biginteger', ['identity' => true, 'signed' => false])
-              ->addColumn('app_id', 'biginteger', ['signed' => false])
-              ->addColumn('payload_raw', 'json')
-              ->addColumn('created_at', 'timestamp', ['default' => 'CURRENT_TIMESTAMP'])
-              ->addForeignKey('app_id', 'apps', 'id', ['delete'=> 'CASCADE', 'update'=> 'NO_ACTION'])
-              ->addIndex(['created_at'])
-              ->create();
+            ->addColumn('app_id', 'biginteger', ['signed' => false])
+            ->addColumn('payload_raw', 'json')
+            ->addColumn('created_at', 'timestamp', ['default' => 'CURRENT_TIMESTAMP'])
+            ->addForeignKey('app_id', 'apps', 'id', ['delete' => 'CASCADE', 'update' => 'NO_ACTION'])
+            ->addIndex(['created_at'])
+            ->create();
     }
 }

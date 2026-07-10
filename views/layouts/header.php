@@ -22,9 +22,9 @@
     <script nonce="<?= APP_NONCE ?>">
         <?php
             $lang = getLang();
-            $langFile = __DIR__ . "/../../lang/{$lang}.json";
-            $translations = file_exists($langFile) ? json_decode(file_get_contents($langFile), true) : [];
-        ?>
+$langFile = __DIR__."/../../lang/{$lang}.json";
+$translations = file_exists($langFile) ? json_decode(file_get_contents($langFile), true) : [];
+?>
         
         window.Translations = <?= json_encode($translations) ?>;
         window.__ = function(key, replacements = {}) {

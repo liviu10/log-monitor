@@ -6,7 +6,7 @@ declare(strict_types=1);
 set_time_limit(5);
 
 // Load base application configuration
-require_once dirname(__DIR__) . '/bootstrap.php';
+require_once dirname(__DIR__).'/bootstrap.php';
 
 use App\Utilities\MySQLWrapper;
 
@@ -22,6 +22,7 @@ $handler = function () {
         header('Access-Control-Allow-Headers: X-API-KEY, Content-Type, Authorization');
         header('Access-Control-Max-Age: 86400'); // Cache preflight for 24 hours
         http_response_code(204); // No Content
+
         return;
     }
 
@@ -30,6 +31,7 @@ $handler = function () {
         header('Content-Type: application/json');
         http_response_code(405);
         echo json_encode(['error' => __('Method Not Allowed. Use POST.')]);
+
         return;
     }
 
@@ -39,7 +41,7 @@ $handler = function () {
     // Extract the API Key EXCLUSIVELY from headers
     $apiKey = $_SERVER['HTTP_X_API_KEY'] ?? $_SERVER['X_API_KEY'] ?? null;
 
-    if (!$apiKey) {
+    if (! $apiKey) {
         // Case-insensitive fallback via getallheaders if the function is available
         if (function_exists('getallheaders')) {
             $headers = getallheaders();
@@ -55,28 +57,30 @@ $handler = function () {
     }
 
     // Fail-Fast: If the API key is missing, reject the request directly
-    if (!$apiKey || trim((string)$apiKey) === '') {
+    if (! $apiKey || trim((string) $apiKey) === '') {
         header('Content-Type: application/json');
         http_response_code(400);
         echo json_encode(['error' => __('X-API-KEY header is missing or empty.')]);
+
         return;
     }
 
     // Internal validation: find application ID directly from the database
     try {
         $db = MySQLWrapper::getInstance();
-        $stmt = $db->query('SELECT id FROM apps WHERE api_key = ? LIMIT 1', [trim((string)$apiKey)]);
+        $stmt = $db->query('SELECT id FROM apps WHERE api_key = ? LIMIT 1', [trim((string) $apiKey)]);
         $app = $stmt->fetch();
 
-        if (!$app) {
+        if (! $app) {
             header('Content-Type: application/json');
             http_response_code(403);
             echo json_encode(['error' => __('Invalid or inactive client API Key.')]);
+
             return;
         }
 
-        $appId = (int)$app['id'];
-    } catch (\Throwable $e) {
+        $appId = (int) $app['id'];
+    } catch (Throwable $e) {
         if (class_exists('App\\Utilities\\LogViaStream')) {
             LogViaStream::send(LogLevel::ERROR->value, 'Log API query failure event', [
                 'location' => __METHOD__,
@@ -87,15 +91,16 @@ $handler = function () {
                 'exception_trace' => $e->getTraceAsString(),
                 'sql_statement' => 'Log API query failure event',
                 'sql_parameters' => [
-                    'api_key' => $apiKey
+                    'api_key' => $apiKey,
                 ],
-                'identifier' => 'Log_API_Query_Failure'
+                'identifier' => 'Log_API_Query_Failure',
             ]);
         }
 
         header('Content-Type: application/json');
         http_response_code(500);
         echo json_encode(['error' => __('Database connection or query failed.')]);
+
         return;
     }
 
@@ -106,6 +111,7 @@ $handler = function () {
         header('Content-Type: application/json');
         http_response_code(400);
         echo json_encode(['error' => __('Empty request body.')]);
+
         return;
     }
 
@@ -113,9 +119,9 @@ $handler = function () {
     try {
         $db->create('log_queue', [
             'app_id' => $appId,
-            'payload_raw' => $rawPayload
+            'payload_raw' => $rawPayload,
         ]);
-    } catch (\Throwable $e) {
+    } catch (Throwable $e) {
         if (class_exists('App\\Utilities\\LogViaStream')) {
             LogViaStream::send(LogLevel::ERROR->value, 'Failed to queue the log payload', [
                 'location' => __METHOD__,
@@ -127,15 +133,16 @@ $handler = function () {
                 'sql_statement' => 'INSERT INTO log_queue',
                 'sql_parameters' => [
                     'app_id' => $appId,
-                    'payload_raw' => $rawPayload
+                    'payload_raw' => $rawPayload,
                 ],
-                'identifier' => 'Log_Queue_Failure'
+                'identifier' => 'Log_Queue_Failure',
             ]);
         }
 
         header('Content-Type: application/json');
         http_response_code(500);
         echo json_encode(['error' => __('Failed to queue the log payload.')]);
+
         return;
     }
 
@@ -149,14 +156,14 @@ if ($isFrankenPhpWorker) {
     try {
         // FrankenPHP worker loop
         $maxRequests = 500; // To prevent memory leaks
-        for ($nbRequests = 0; $nbRequests < $maxRequests; ++$nbRequests) {
+        for ($nbRequests = 0; $nbRequests < $maxRequests; $nbRequests++) {
             $keepRunning = frankenphp_handle_request($handler);
-            if (!$keepRunning) {
+            if (! $keepRunning) {
                 break;
             }
         }
-    } catch (\Throwable $e) {
-        if ($e instanceof \RuntimeException && str_contains($e->getMessage(), 'not in worker mode')) {
+    } catch (Throwable $e) {
+        if ($e instanceof RuntimeException && str_contains($e->getMessage(), 'not in worker mode')) {
             // If not in worker mode (e.g. standard request), execute the handler directly
             $handler();
         } else {
@@ -168,7 +175,7 @@ if ($isFrankenPhpWorker) {
                     'exception_file' => $e->getFile(),
                     'exception_line' => $e->getLine(),
                     'exception_trace' => $e->getTraceAsString(),
-                    'identifier' => 'FrankenPHP_Worker_Failure'
+                    'identifier' => 'FrankenPHP_Worker_Failure',
                 ]);
             }
             throw $e;
