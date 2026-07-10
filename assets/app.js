@@ -1,6 +1,6 @@
 const App = {
     /**
-     * Gestionare notificari de tip Toast
+     * Toast notification management
      */
     handleToast(toastContent) {
         const { type, title, message, toastDelay, redirectUrl } = toastContent;
@@ -41,7 +41,7 @@ const App = {
 
         toastEl.appendChild(toastHeader);
 
-        // Bara de progres (Timer)
+        // Progress bar (Timer)
         if (toastDelay > 0) {
             const progress = document.createElement("div");
             progress.className = `toast-progress-bar bg-${type}`;
@@ -80,7 +80,30 @@ const App = {
     },
 
     /**
-     * Constructor date Alpine.js pentru pagina Dashboard.
+     * Global utility method for clipboard copying and visual feedback
+     */
+    copyPayload(alpineContext, dataObject, stateKey) {
+        if (!dataObject) return;
+
+        // If the object has payload_raw (queue page) copy payload_raw, otherwise copy the entire object (dashboard page)
+        const textToCopy = dataObject.payload_raw ? dataObject.payload_raw : JSON.stringify(dataObject, null, 4);
+
+        navigator.clipboard.writeText(textToCopy)
+            .then(() => {
+                // Modify the state in the Alpine context passed as a parameter
+                alpineContext[stateKey] = true;
+
+                setTimeout(() => {
+                    alpineContext[stateKey] = false;
+                }, 2000);
+            })
+            .catch(err => {
+                console.error('Copy failed', err);
+            });
+    },
+
+    /**
+     * Alpine.js data constructor for the Dashboard page.
      */
     dashboardPageData() {
         return {
@@ -90,10 +113,12 @@ const App = {
             autoRefresh: localStorage.getItem('auto_refresh') === 'true',
             countdown: 300,
             timer: null,
+            payloadCopied: false,
 
             openLog(log) {
                 this.selectedLog = log;
                 this.showModal = true;
+                this.payloadCopied = false;
             },
 
             toggleAutoRefresh() {
@@ -121,6 +146,10 @@ const App = {
                 }, 1000);
             },
 
+            copyLog() {
+                App.copyPayload(this, this.selectedLog, 'payloadCopied');
+            },
+
             init() {
                 if (this.autoRefresh) {
                     this.startCountdown();
@@ -130,7 +159,7 @@ const App = {
     },
 
     /**
-     * Constructor date Alpine.js pentru pagina de gestionare aplicatii (Manage Applications).
+     * Alpine.js data constructor for the Manage Applications page.
      */
     appsPageData() {
         return {
@@ -423,17 +452,19 @@ const App = {
     },
 
     /**
-     * Constructor date Alpine.js pentru pagina de gestionare coada (Queue Manager).
+     * Alpine.js data constructor for the Queue Manager page.
      */
     queuePageData() {
         return {
             sidebarOpen: true,
             selectedJob: null,
             showModal: false,
+            payloadCopied: false,
 
             viewJob(job) {
                 this.selectedJob = job;
                 this.showModal = true;
+                this.payloadCopied = false;
             },
 
             formatJson(rawJson) {
@@ -445,26 +476,8 @@ const App = {
                 }
             },
 
-            copyPayload() {
-                if (!this.selectedJob || !this.selectedJob.payload_raw) return;
-                navigator.clipboard.writeText(this.selectedJob.payload_raw)
-                    .then(() => {
-                        App.handleToast({
-                            type: 'success',
-                            title: window.__('Success'),
-                            message: window.__('Copied to clipboard!'),
-                            toastDelay: 2000
-                        });
-                    })
-                    .catch(err => {
-                        console.error('Copy failed', err);
-                        App.handleToast({
-                            type: 'danger',
-                            title: window.__('Error'),
-                            message: window.__('Copy to clipboard failed.'),
-                            toastDelay: 2000
-                        });
-                    });
+            copyJobPayload() {
+                App.copyPayload(this, this.selectedJob, 'payloadCopied');
             }
         };
     }

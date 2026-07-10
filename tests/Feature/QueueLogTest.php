@@ -4,13 +4,12 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
 use App\Models\App;
 use App\Models\Log;
-use App\Utilities\MySQLWrapper;
+use Tests\TestCase;
 
-// Importam functiile din worker daca este posibil, altfel le redefinim local pentru testare unitara
-if (!function_exists('sanitizeSensitivePayloadTest')) {
+// Import functions from the worker if possible, otherwise redefine them locally for unit testing
+if (! function_exists('sanitizeSensitivePayloadTest')) {
     function sanitizeSensitivePayloadTest(array $data): array
     {
         $sensitiveKeys = ['password', 'pass', 'pwd', 'token', 'secret', 'auth', 'card', 'ccv', 'cvv', 'api_key', 'key'];
@@ -18,7 +17,7 @@ if (!function_exists('sanitizeSensitivePayloadTest')) {
             if (is_array($value)) {
                 $data[$key] = sanitizeSensitivePayloadTest($value);
             } elseif (is_string($value)) {
-                $lowerKey = strtolower((string)$key);
+                $lowerKey = strtolower((string) $key);
                 if (in_array($lowerKey, $sensitiveKeys, true)) {
                     $data[$key] = '******';
                 } else {
@@ -34,27 +33,29 @@ if (!function_exists('sanitizeSensitivePayloadTest')) {
                 }
             }
         }
+
         return $data;
     }
 }
 
-if (!function_exists('sanitizeLogMessageTest')) {
+if (! function_exists('sanitizeLogMessageTest')) {
     function sanitizeLogMessageTest(string $message): string
     {
-        return (string)preg_replace('/(password|pass|pwd|token|api_key)\s*=\s*[^\s&]+/ims', '$1=******', $message);
+        return (string) preg_replace('/(password|pass|pwd|token|api_key)\s*=\s*[^\s&]+/ims', '$1=******', $message);
     }
 }
 
 class QueueLogTest extends TestCase
 {
     private App $appModel;
+
     private Log $logModel;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->appModel = new App();
-        $this->logModel = new Log();
+        $this->appModel = new App;
+        $this->logModel = new Log;
 
         $this->db()->getConnection()->exec('SET FOREIGN_KEY_CHECKS=0;');
         $this->db()->getConnection()->exec('TRUNCATE TABLE logs;');
@@ -63,19 +64,19 @@ class QueueLogTest extends TestCase
         $this->db()->getConnection()->exec('SET FOREIGN_KEY_CHECKS=1;');
     }
 
-    public function testSanitizerMasksSensitiveInformationInContext(): void
+    public function test_sanitizer_masks_sensitive_information_in_context(): void
     {
         $context = [
             'username' => 'admin',
             'password' => 'supersecret123',
             'nested' => [
                 'token' => 'abc-123-xyz',
-                'normal_field' => 'hello'
+                'normal_field' => 'hello',
             ],
             'json_string' => json_encode([
                 'api_key' => 'secretkeyval',
-                'data' => 'regular'
-            ])
+                'data' => 'regular',
+            ]),
         ];
 
         $sanitized = sanitizeSensitivePayloadTest($context);
@@ -90,9 +91,9 @@ class QueueLogTest extends TestCase
         $this->assertEquals('regular', $decodedJsonString['data']);
     }
 
-    public function testSanitizerMasksSensitiveInformationInMessage(): void
+    public function test_sanitizer_masks_sensitive_information_in_message(): void
     {
-        $message = "User login failed for user=admin password=secret123 and token=abcde";
+        $message = 'User login failed for user=admin password=secret123 and token=abcde';
         $sanitized = sanitizeLogMessageTest($message);
 
         $this->assertStringContainsString('password=******', $sanitized);
@@ -100,7 +101,7 @@ class QueueLogTest extends TestCase
         $this->assertStringContainsString('user=admin', $sanitized);
     }
 
-    public function testQueueIntegrationLifecycle(): void
+    public function test_queue_integration_lifecycle(): void
     {
         $apiKey = 'test-app-key-123';
         $appId = $this->appModel->create('Test App', $apiKey);
@@ -110,49 +111,49 @@ class QueueLogTest extends TestCase
             'message' => 'DB Connection lost for host=localhost password=dbpass',
             'context' => [
                 'token' => 'securetoken',
-                'user_id' => 42
-            ]
+                'user_id' => 42,
+            ],
         ];
 
-        // 1. Inseram direct in coada log_queue (simulam log.php)
+        // 1. Insert directly into the log_queue queue (simulate log.php)
         $db = $this->db();
         $db->create('log_queue', [
             'app_id' => $appId,
-            'payload_raw' => json_encode($payload)
+            'payload_raw' => json_encode($payload),
         ]);
 
         $queued = $db->read('log_queue');
         $this->assertCount(1, $queued);
         $this->assertEquals($appId, $queued[0]['app_id']);
 
-        // 2. Procesam elementul din coada (simulam bin/worker.php)
+        // 2. Process the queue item (simulate bin/worker.php)
         $job = $queued[0];
-        $jobId = (int)$job['id'];
-        $appId = (int)$job['app_id'];
-        $payloadRaw = (string)$job['payload_raw'];
+        $jobId = (int) $job['id'];
+        $appId = (int) $job['app_id'];
+        $payloadRaw = (string) $job['payload_raw'];
 
         $this->assertTrue(json_validate($payloadRaw));
         $decoded = json_decode($payloadRaw, true);
 
-        $level = strtoupper(trim((string)($decoded['level'] ?? 'INFO')));
-        $message = sanitizeLogMessageTest(trim((string)($decoded['message'] ?? '')));
+        $level = strtoupper(trim((string) ($decoded['level'] ?? 'INFO')));
+        $message = sanitizeLogMessageTest(trim((string) ($decoded['message'] ?? '')));
         $context = sanitizeSensitivePayloadTest($decoded['context'] ?? []);
 
-        // Salvam in logs
+        // Save to logs
         $logId = $this->logModel->create($appId, $level, $message, $context);
         $this->assertGreaterThan(0, $logId);
 
-        // Stergem din coada
+        // Remove from the queue
         $db->delete('log_queue', ['id' => $jobId]);
 
-        // 3. Verificam ca a fost eliminat din coada si mutat in logs
+        // 3. Verify it was removed from the queue and moved to logs
         $this->assertCount(0, $db->read('log_queue'));
-        
+
         $logs = $this->logModel->getPaginated(['app_id' => $appId]);
         $this->assertCount(1, $logs);
         $this->assertEquals('ERROR', $logs[0]['level']);
         $this->assertStringContainsString('password=******', $logs[0]['message']);
-        
+
         $savedContext = json_decode($logs[0]['context'], true);
         $this->assertEquals('******', $savedContext['token']);
         $this->assertEquals(42, $savedContext['user_id']);

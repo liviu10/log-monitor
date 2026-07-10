@@ -4,68 +4,73 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
-use App\Models\App;
-use App\Utilities\Validation;
-use App\Utilities\LogViaStream;
 use App\Enums\LogLevel;
+use App\Models\App;
+use App\Utilities\LogViaStream;
+use App\Utilities\Validation;
 
 /**
- * Clasa AppController
+ * AppController Class
  *
- * Gestioneaza interfata de administrare pentru aplicatiile inregistrate.
- * Permite listarea, crearea, actualizarea si stergerea aplicatiilor, asigurand
- * generarea de chei API unice si validarea stricta a datelor introduse.
+ * Manages the administration interface for registered applications.
+ * Allows listing, creating, updating, and deleting applications, ensuring
+ * the generation of unique API keys and strict validation of input data.
  *
  * @category Controller
- * @package  App\Controllers
+ *
  * @version  1.2
+ *
  * @since    PHP 8.4
+ *
  * @author   Voica Liviu
  * @license  Proprietary
  */
 class AppController extends BaseController
 {
     /**
-     * Afiseaza lista tuturor aplicatiilor inregistrate.
+     * Displays a list of all registered applications.
      */
     public function index(): void
     {
         $this->checkAuth();
-        
-        $appModel = new App();
+
+        $appModel = new App;
         $apps = $appModel->getAll();
-        
+
         $this->render('apps/index', [
             'apps' => $apps,
         ]);
     }
 
     /**
-     * Proceseaza adaugarea unei noi aplicatii in sistem.
-     * Genereaza automat o cheie API securizata de 64 de caractere.
+     * Processes adding a new application to the system.
+     * Automatically generates a secure 64-character API key.
+     *
+     * @param  array<string, mixed>  $postData
      */
     public function store(array $postData): never
     {
         $this->checkAuth();
-        
+
         $payload = $postData;
         $validator = new Validation(['name' => __('Application name')]);
-        
+
         $errors = $validator->validate([
             'name' => ['required', 'string', 'min:3'],
         ], $payload);
 
-        if (!empty($errors)) {
+        if (! empty($errors)) {
             $_SESSION['errors'] = $errors;
             $this->redirect('apps.php');
         }
 
         try {
-            $appModel = new App();
+            $appModel = new App;
             $apiKey = bin2hex(random_bytes(32));
-            
-            $appModel->create(trim($payload['name']), $apiKey);
-            
+
+            $nameVal = $payload['name'] ?? '';
+            $appModel->create(trim(is_string($nameVal) ? $nameVal : ''), $apiKey);
+
             setFlash('success', __('Success'), __('Application created successfully.'));
         } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Failed to create application record', [
@@ -76,29 +81,32 @@ class AppController extends BaseController
                 'exception_line' => $e->getLine(),
                 'exception_trace' => $e->getTraceAsString(),
                 'payload' => $payload,
-                'identifier' => 'AppController_Store_Failure'
+                'identifier' => 'AppController_Store_Failure',
             ]);
             setFlash('danger', __('Error'), __('Failed to create application.'));
         }
-        
+
         $this->redirect('apps.php');
     }
 
     /**
-     * Proceseaza actualizarea numelui unei aplicatii sau regenerarea cheii API.
+     * Processes updating an application name or regenerating the API key.
+     *
+     * @param  array<string, mixed>  $postData
+     * @param  array<string, mixed>  $getData
      */
     public function update(array $postData, array $getData = []): never
     {
         $this->checkAuth();
-        
-        $id = $postData['id'] ?? null;
-        if (!$id) {
-            setFlash('danger', __('Error'), __('Missing application ID.'));
+
+        $idVal = $postData['id'] ?? null;
+        if (! $idVal || (! is_int($idVal) && ! is_string($idVal))) {
+            setFlash('danger', __('Error'), __('Missing or invalid application ID.'));
             $this->redirect('apps.php');
         }
 
-        $appModel = new App();
-        $appId = (int)$id;
+        $appModel = new App;
+        $appId = (int) $idVal;
 
         try {
             if (isset($getData['sub_action']) && $getData['sub_action'] === 'regenerate-key') {
@@ -110,20 +118,21 @@ class AppController extends BaseController
 
             $payload = $postData;
             $validator = new Validation(['name' => __('Application name')]);
-            
+
             $errors = $validator->validate([
                 'name' => ['required', 'string', 'min:3'],
             ], $payload);
 
-            if (!empty($errors)) {
+            if (! empty($errors)) {
                 $_SESSION['errors'] = $errors;
                 $this->redirect('apps.php');
             }
 
+            $nameVal = $payload['name'] ?? '';
             $appModel->update($appId, [
-                'name' => trim($payload['name'])
+                'name' => trim(is_string($nameVal) ? $nameVal : ''),
             ]);
-            
+
             setFlash('success', __('Success'), __('Application updated successfully.'));
         } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Failed to update application data', [
@@ -134,7 +143,7 @@ class AppController extends BaseController
                 'exception_line' => $e->getLine(),
                 'exception_trace' => $e->getTraceAsString(),
                 'app_id' => $appId,
-                'identifier' => 'AppController_Update_Failure'
+                'identifier' => 'AppController_Update_Failure',
             ]);
             setFlash('danger', __('Error'), __('Failed to update application.'));
         }
@@ -143,17 +152,19 @@ class AppController extends BaseController
     }
 
     /**
-     * Sterge o aplicatie din sistem pe baza ID-ului furnizat prin POST.
+     * Deletes an application from the system based on the ID provided via POST.
+     *
+     * @param  array<string, mixed>  $postData
      */
     public function delete(array $postData): never
     {
         $this->checkAuth();
-        
-        $id = $postData['id'] ?? null;
-        if ($id) {
+
+        $idVal = $postData['id'] ?? null;
+        if ($idVal && (is_int($idVal) || is_string($idVal))) {
             try {
-                $appModel = new App();
-                $appModel->delete((int)$id);
+                $appModel = new App;
+                $appModel->delete((int) $idVal);
                 setFlash('success', __('Success'), __('Application deleted successfully.'));
             } catch (\Throwable $e) {
                 LogViaStream::send(LogLevel::ERROR->value, 'Failed to delete application', [
@@ -163,13 +174,13 @@ class AppController extends BaseController
                     'exception_file' => $e->getFile(),
                     'exception_line' => $e->getLine(),
                     'exception_trace' => $e->getTraceAsString(),
-                    'app_id' => $id,
-                    'identifier' => 'AppController_Delete_Failure'
+                    'app_id' => $idVal,
+                    'identifier' => 'AppController_Delete_Failure',
                 ]);
                 setFlash('danger', __('Error'), __('Failed to delete application.'));
             }
         }
-        
+
         $this->redirect('apps.php');
     }
 }

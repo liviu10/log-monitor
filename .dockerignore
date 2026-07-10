@@ -1,10 +1,33 @@
+# Version control
 .git
 .gitignore
+
+# Environment & secrets
 .env
-phinx.php
+.env.example
+
+# Documentation
 README.md
-todo.txt
-.data/
-node_modules/
+LICENSE
+
+# Testing & development tooling
+.phpunit.cache/
+tests/
+phpunit.xml
+phpstan.neon
+phpstan-report.json
+
+# Docker setup files
+docker/
+.dockerignore
+
+# OS metadata
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Local runtime data & dependencies
 vendor/
-storage/backups/
+storage/logs/*
+storage/backups/*

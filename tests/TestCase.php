@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Tests;
 
-use PHPUnit\Framework\TestCase as BaseTestCase;
+use App\Utilities\MySQLWrapper;
 use Phinx\Console\PhinxApplication;
+use PHPUnit\Framework\TestCase as BaseTestCase;
 use Symfony\Component\Console\Input\StringInput;
 use Symfony\Component\Console\Output\NullOutput;
-use App\Utilities\MySQLWrapper;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -17,9 +17,9 @@ abstract class TestCase extends BaseTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Run database migrations once per test execution to ensure a clean schema
-        if (!self::$migrated) {
+        if (! self::$migrated) {
             $this->runMigrations();
             self::$migrated = true;
         }
@@ -30,12 +30,12 @@ abstract class TestCase extends BaseTestCase
      */
     protected function runMigrations(): void
     {
-        $app = new PhinxApplication();
+        $app = new PhinxApplication;
         $app->setAutoExit(false);
-        
+
         // Run rollback if tables already exist to start fresh
-        $app->run(new StringInput('rollback -e production -t 0'), new NullOutput());
-        $app->run(new StringInput('migrate -e production'), new NullOutput());
+        $app->run(new StringInput('rollback -c db/phinx.php -e production -t 0'), new NullOutput);
+        $app->run(new StringInput('migrate -c db/phinx.php -e production'), new NullOutput);
     }
 
     /**
@@ -43,9 +43,9 @@ abstract class TestCase extends BaseTestCase
      */
     protected function runSeeds(): void
     {
-        $app = new PhinxApplication();
+        $app = new PhinxApplication;
         $app->setAutoExit(false);
-        $app->run(new StringInput('seed:run -e production'), new NullOutput());
+        $app->run(new StringInput('seed:run -c db/phinx.php -e production'), new NullOutput);
     }
 
     /**

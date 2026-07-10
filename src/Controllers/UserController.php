@@ -4,39 +4,41 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
-use App\Models\User;
-use App\Utilities\Validation;
-use App\Utilities\MySQLWrapper;
-use App\Utilities\LogViaStream;
 use App\Enums\LogLevel;
+use App\Models\User;
+use App\Utilities\LogViaStream;
+use App\Utilities\MySQLWrapper;
+use App\Utilities\Validation;
 
 /**
- * Clasa UserController
+ * UserController Class
  *
- * Gestioneaza conturile de utilizatori administratori care au acces la panoul de loguri.
- * Ofera operatiuni de vizualizare, creare si eliminare de conturi, implementand logici defensive
- * pentru prevenirea auto-stergerii accidentale.
+ * Manages administrator user accounts that have access to the log panel.
+ * Offers view, creation, and removal operations for accounts, implementing defensive logic
+ * to prevent accidental self-deletion.
  *
  * @category Controller
- * @package  App\Controllers
+ *
  * @version  1.2
+ *
  * @since    PHP 8.4
+ *
  * @author   Voica Liviu
  * @license  Proprietary
  */
 class UserController extends BaseController
 {
     /**
-     * Afiseaza lista tuturor utilizatorilor administratori inregistrati.
+     * Displays a list of all registered administrator users.
      */
     public function index(): void
     {
         $this->checkAuth();
-        
+
         try {
             $db = MySQLWrapper::getInstance();
             $users = $db->read('users');
-            
+
             $this->render('users/index', [
                 'users' => $users,
             ]);
@@ -48,41 +50,49 @@ class UserController extends BaseController
                 'exception_file' => $e->getFile(),
                 'exception_line' => $e->getLine(),
                 'exception_trace' => $e->getTraceAsString(),
-                'identifier' => 'UserController_Index_DatabaseFailure'
+                'identifier' => 'UserController_Index_DatabaseFailure',
             ]);
             throw new \RuntimeException(__('Unable to retrieve administrators list.'));
         }
     }
 
     /**
-     * Proceseaza crearea unui nou cont de utilizator administrator.
-     * Valideaza complexitatea minima a parolei si unicitatea numelui.
+     * Processes the creation of a new administrator user account.
+     * Validates the minimum complexity of the password and uniqueness of the username.
+     *
+     * @param  array<array-key, mixed>  $data
      */
     public function store(array $data): never
     {
         $this->checkAuth();
-        
+
         $payload = $data;
         $validator = new Validation([
             'username' => __('Username'),
             'password' => __('Password'),
         ]);
-        
+
         $errors = $validator->validate([
             'username' => ['required', 'string', 'min:3'],
             'password' => ['required', 'string', 'min:6'],
         ], $payload);
 
-        if (!empty($errors)) {
+        if (! empty($errors)) {
             $_SESSION['errors'] = $errors;
             $this->redirect('users.php');
         }
 
         try {
-            $userModel = new User();
-            $userModel->create(trim($payload['username']), $payload['password']);
-            
-            setFlash('success', __('Success'), __('User created successfully.'));
+            $userModel = new User;
+            $usernameVal = $payload['username'] ?? '';
+            $passwordVal = $payload['password'] ?? '';
+
+            if (is_string($usernameVal) && is_string($passwordVal)) {
+                $userModel->create(trim($usernameVal), $passwordVal);
+                setFlash('success', __('Success'), __('User created successfully.'));
+            } else {
+                setFlash('danger', __('Error'), __('Invalid username or password format.'));
+            }
         } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Admin user creation process exception', [
                 'location' => __METHOD__,
@@ -92,26 +102,33 @@ class UserController extends BaseController
                 'exception_line' => $e->getLine(),
                 'exception_trace' => $e->getTraceAsString(),
                 'username' => $payload['username'] ?? null,
-                'identifier' => 'UserController_Store_Exception'
+                'identifier' => 'UserController_Store_Exception',
             ]);
             setFlash('danger', __('Error'), __('Failed to create user. Possible duplicate username.'));
         }
-        
+
         $this->redirect('users.php');
     }
 
     /**
-     * Sterge un utilizator din sistem pe baza ID-ului trimis prin POST.
-     * Include o verificare stricta pentru a bloca auto-stergerea utilizatorului curent.
+     * Deletes a user from the system based on the ID sent via POST.
+     * Includes a strict check to block the self-deletion of the current user.
+     *
+     * @param  array<array-key, mixed>  $data
      */
     public function delete(array $data): never
     {
         $this->checkAuth();
-        
+
         $id = $data['id'] ?? null;
         if ($id) {
-            $userId = (int)$id;
-            $currentAuthId = (int)($_SESSION['auth.user']['id'] ?? 0);
+            $userId = (is_int($id) || is_string($id)) ? (int) $id : 0;
+            $authUser = $_SESSION['auth.user'] ?? null;
+            $currentAuthId = 0;
+            if (is_array($authUser)) {
+                $rawAuthId = $authUser['id'] ?? null;
+                $currentAuthId = (is_int($rawAuthId) || is_string($rawAuthId)) ? (int) $rawAuthId : 0;
+            }
 
             if ($userId === $currentAuthId) {
                 setFlash('danger', __('Error'), __('You cannot delete your own account.'));
@@ -132,12 +149,12 @@ class UserController extends BaseController
                     'exception_trace' => $e->getTraceAsString(),
                     'sql_statement' => 'DELETE FROM users WHERE id = :id',
                     'sql_parameters' => ['id' => $userId],
-                    'identifier' => 'UserController_Delete_Failure'
+                    'identifier' => 'UserController_Delete_Failure',
                 ]);
                 setFlash('danger', __('Error'), __('Failed to delete user from database.'));
             }
         }
-        
+
         $this->redirect('users.php');
     }
 }

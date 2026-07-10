@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
 use App\Controllers\UserController;
 use App\Models\User;
+use Tests\TestCase;
 
 /**
  * Subclassed user controller to intercept redirect/render calls.
@@ -14,6 +14,7 @@ use App\Models\User;
 class TestableUserController extends UserController
 {
     public string $renderedView = '';
+
     public array $renderedData = [];
 
     protected function redirect(string $url): never
@@ -31,13 +32,14 @@ class TestableUserController extends UserController
 class UserControllerTest extends TestCase
 {
     private User $userModel;
+
     private TestableUserController $userController;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->userModel = new User();
-        $this->userController = new TestableUserController();
+        $this->userModel = new User;
+        $this->userController = new TestableUserController;
 
         $this->db()->getConnection()->exec('SET FOREIGN_KEY_CHECKS=0;');
         $this->db()->getConnection()->exec('TRUNCATE TABLE users;');
@@ -47,7 +49,7 @@ class UserControllerTest extends TestCase
         $_SESSION['auth.user'] = ['id' => 999, 'username' => 'admin'];
     }
 
-    public function testIndexRendersAdministrators(): void
+    public function test_index_renders_administrators(): void
     {
         $this->userModel->create('admin2', 'password_123');
 
@@ -59,24 +61,24 @@ class UserControllerTest extends TestCase
         $this->assertEquals('admin2', $this->userController->renderedData['users'][0]['username']);
     }
 
-    public function testStoreCreatesNewAdmin(): void
+    public function test_store_creates_new_admin(): void
     {
         try {
             $this->userController->store([
                 'username' => 'new_admin',
-                'password' => 'supersecretpassword'
+                'password' => 'supersecretpassword',
             ]);
             $this->fail('Expected HttpRedirectException to be thrown');
         } catch (HttpRedirectException $e) {
             $this->assertEquals('users.php', $e->url);
-            
+
             $user = $this->userModel->findByUsername('new_admin');
             $this->assertNotNull($user);
             $this->assertEquals('new_admin', $user['username']);
         }
     }
 
-    public function testDeleteSelfIsBlocked(): void
+    public function test_delete_self_is_blocked(): void
     {
         try {
             $this->userController->delete(['id' => 999]); // Same ID as current auth user
@@ -88,7 +90,7 @@ class UserControllerTest extends TestCase
         }
     }
 
-    public function testDeleteOtherUserSucceeds(): void
+    public function test_delete_other_user_succeeds(): void
     {
         $id = $this->userModel->create('other_user', 'password123');
 
@@ -97,18 +99,18 @@ class UserControllerTest extends TestCase
             $this->fail('Expected HttpRedirectException to be thrown');
         } catch (HttpRedirectException $e) {
             $this->assertEquals('users.php', $e->url);
-            
+
             $user = $this->userModel->findByUsername('other_user');
             $this->assertNull($user);
         }
     }
 
-    public function testStoreFailsValidationWithEmptyUsername(): void
+    public function test_store_fails_validation_with_empty_username(): void
     {
         try {
             $this->userController->store([
                 'username' => '',
-                'password' => 'supersecretpassword'
+                'password' => 'supersecretpassword',
             ]);
             $this->fail('Expected HttpRedirectException to be thrown');
         } catch (HttpRedirectException $e) {
@@ -118,12 +120,12 @@ class UserControllerTest extends TestCase
         }
     }
 
-    public function testStoreFailsValidationWithShortPassword(): void
+    public function test_store_fails_validation_with_short_password(): void
     {
         try {
             $this->userController->store([
                 'username' => 'valid_user',
-                'password' => '123'
+                'password' => '123',
             ]);
             $this->fail('Expected HttpRedirectException to be thrown');
         } catch (HttpRedirectException $e) {
@@ -133,7 +135,7 @@ class UserControllerTest extends TestCase
         }
     }
 
-    public function testDeleteWithNoIdDoesNothing(): void
+    public function test_delete_with_no_id_does_nothing(): void
     {
         try {
             $this->userController->delete([]);

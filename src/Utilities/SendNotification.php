@@ -4,32 +4,33 @@ declare(strict_types=1);
 
 namespace App\Utilities;
 
+use App\Enums\LogLevel;
 use PHPMailer\PHPMailer\PHPMailer;
 use RuntimeException;
-use App\Enums\LogLevel;
-use App\Utilities\LogViaStream;
 
 /**
- * Clasa SendNotification
+ * SendNotification Class
  *
- * Gestioneaza expedierea email-urilor via PHPMailer cu suport pentru proxy corporate.
- * Toate exceptiile colecteaza detaliile complete si le trimit catre cURL.
- * Toate mesajele text destinate exceptiilor folosesc functia __().
+ * Manages sending emails via PHPMailer with corporate proxy support.
+ * All exceptions collect full details and dispatch them via cURL.
+ * All text messages intended for exceptions use the __() function.
  *
- * @category Pachete
- * @package  App\Utilities
+ * @category Packages
+ *
  * @version  1.6
+ *
  * @since    PHP 8.4
+ *
  * @author   Voica Liviu
- * @license  Proprietar
+ * @license  Proprietary
  */
 class SendNotification
 {
-    /** @var bool $canSendNotification Permisiune de rulare in functie de mediu. */
+    /** @var bool Execution permission based on environment. */
     private bool $canSendNotification = true;
 
     /**
-     * Constructor clasa. Dezactiveaza interactiunea cu serverul de mail in medii locale (DEV).
+     * Class constructor. Disables email server interaction in local environments (DEV).
      */
     public function __construct()
     {
@@ -40,22 +41,23 @@ class SendNotification
     }
 
     /**
-     * Proceseaza datele si trimite email-ul conform configuratiei.
+     * Processes data and sends the email according to the configuration.
      *
      * @param array{
-     * to: string,
-     * message: string,
+     * to?: string,
+     * message?: string,
      * priority?: int,
      * attachmentPath?: string|array<int, string>|null,
      * from?: string|null,
      * subject?: string|null
-     * } $emailData Setul complet de informatii pentru livrare.
-     * @throws RuntimeException Cand datele obligatorii lipsesc sau expedierea esueaza.
-     * @return string Continutul MIME complet (.eml) al mesajului transmis.
+     * } $emailData Complete set of delivery information.
+     * @return string Complete MIME content (.eml) of the transmitted message.
+     *
+     * @throws RuntimeException When required data is missing or transmission fails.
      */
     public function handle(array $emailData): string
     {
-        if (!$this->canSendNotification) {
+        if (! $this->canSendNotification) {
             throw new RuntimeException(__('Notification system is disabled in this runtime environment.'));
         }
 
@@ -65,6 +67,20 @@ class SendNotification
         $attachmentPath = $emailData['attachmentPath'] ?? null;
         $from = $emailData['from'] ?? null;
         $subject = $emailData['subject'] ?? null;
+        if ($attachmentPath !== null) {
+            $attachments = is_array($attachmentPath) ? $attachmentPath : [$attachmentPath];
+
+            foreach ($attachments as $filePath) {
+                $normalizedPath = realpath($filePath);
+
+                if ($normalizedPath === false || ! is_readable($normalizedPath) || is_dir($normalizedPath)) {
+                    LogViaStream::send(LogLevel::ERROR->value, 'The provided attachment file is inaccessible or invalid.', [
+                        'file' => $filePath,
+                    ]);
+                    throw new RuntimeException(__('The provided attachment file is inaccessible or invalid.'));
+                }
+            }
+        }
 
         $mail = new PHPMailer(true);
 
@@ -83,8 +99,10 @@ class SendNotification
                 ],
             ];
 
-            if (!empty($_ENV['PROXY_HOST']) && !empty($_ENV['PROXY_PORT'])) {
-                $proxyUrl = "tcp://{$_ENV['PROXY_HOST']}:{$_ENV['PROXY_PORT']}";
+            if (! empty($_ENV['PROXY_HOST']) && ! empty($_ENV['PROXY_PORT'])) {
+                $proxyHost = $_ENV['PROXY_HOST'];
+                $proxyPort = $_ENV['PROXY_PORT'];
+                $proxyUrl = sprintf('tcp://%s:%s', is_string($proxyHost) ? $proxyHost : '', is_string($proxyPort) || is_int($proxyPort) ? (string) $proxyPort : '');
                 $smtpOptions['ssl'] = [
                     'proxy' => $proxyUrl,
                     'verify_peer' => false,
@@ -106,13 +124,13 @@ class SendNotification
                 }
             }
 
-            if (!empty($_ENV['SMTP_CC']) && is_string($_ENV['SMTP_CC'])) {
+            if (! empty($_ENV['SMTP_CC']) && is_string($_ENV['SMTP_CC'])) {
                 $ccAddresses = array_map('trim', explode(',', $_ENV['SMTP_CC']));
                 foreach ($ccAddresses as $cc) {
                     $mail->addCC($cc);
                 }
             }
-            if (!empty($_ENV['SMTP_BCC']) && is_string($_ENV['SMTP_BCC'])) {
+            if (! empty($_ENV['SMTP_BCC']) && is_string($_ENV['SMTP_BCC'])) {
                 $bccAddresses = array_map('trim', explode(',', $_ENV['SMTP_BCC']));
                 foreach ($bccAddresses as $bcc) {
                     $mail->addBCC($bcc);
@@ -124,7 +142,7 @@ class SendNotification
                 (is_string($_ENV['APP_NAME'] ?? null) ? $_ENV['APP_NAME'] : 'Log Monitor'),
                 (is_string($_ENV['SMTP_SUBJECT'] ?? null) ? $_ENV['SMTP_SUBJECT'] : 'Automatic Notification')
             );
-            
+
             $mail->isHTML(true);
             $mail->Body = nl2br(htmlspecialchars($message, ENT_QUOTES, 'UTF-8'));
 
@@ -135,22 +153,16 @@ class SendNotification
 
                 foreach ($attachments as $filePath) {
                     $normalizedPath = realpath($filePath);
-
-                    if ($normalizedPath === false || !is_readable($normalizedPath) || is_dir($normalizedPath)) {
-                        LogViaStream::send(LogLevel::ERROR->value, 'The provided attachment file is inaccessible or invalid.', [
-                            'file' => $filePath,
-                        ]);
-                        throw new RuntimeException(__('The provided attachment file is inaccessible or invalid.'));
+                    if (is_string($normalizedPath)) {
+                        $mail->addAttachment($normalizedPath);
                     }
-
-                    $mail->addAttachment($normalizedPath);
                 }
             }
 
             $mail->send();
             $mail->preSend();
-            
-            return (string)$mail->getSentMIMEMessage();
+
+            return (string) $mail->getSentMIMEMessage();
         } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Critical failure within PHPMailer distribution handler', [
                 'location' => __METHOD__,
@@ -160,7 +172,7 @@ class SendNotification
                 'exception_line' => $e->getLine(),
                 'exception_trace' => $e->getTraceAsString(),
                 'email_recipient' => $to,
-                'identifier' => 'SendNotification_Handler_Failure'
+                'identifier' => 'SendNotification_Handler_Failure',
             ]);
 
             throw new RuntimeException(__('A critical error occurred while sending the notification.'), 500, $e);

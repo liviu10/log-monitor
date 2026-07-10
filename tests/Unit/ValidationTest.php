@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Unit;
 
-use Tests\TestCase;
 use App\Utilities\Validation;
+use Tests\TestCase;
 
 class ValidationTest extends TestCase
 {
@@ -14,10 +14,10 @@ class ValidationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->validation = new Validation();
+        $this->validation = new Validation;
     }
 
-    public function testRequiredRuleFailsWhenFieldIsMissing(): void
+    public function test_required_rule_fails_when_field_is_missing(): void
     {
         $rules = [
             'name' => ['required'],
@@ -30,7 +30,7 @@ class ValidationTest extends TestCase
         $this->assertContains('required', $errors['name']);
     }
 
-    public function testRequiredRulePassesWhenFieldIsPresent(): void
+    public function test_required_rule_passes_when_field_is_present(): void
     {
         $rules = [
             'name' => ['required'],
@@ -42,7 +42,7 @@ class ValidationTest extends TestCase
         $this->assertArrayNotHasKey('name', $errors);
     }
 
-    public function testEmailRuleValidatesIncorrectEmail(): void
+    public function test_email_rule_validates_incorrect_email(): void
     {
         $rules = [
             'email' => ['required', 'email'],
@@ -55,7 +55,7 @@ class ValidationTest extends TestCase
         $this->assertContains('email', $errors['email']);
     }
 
-    public function testEmailRuleValidatesCorrectEmail(): void
+    public function test_email_rule_validates_correct_email(): void
     {
         $rules = [
             'email' => ['required', 'email'],
@@ -67,7 +67,7 @@ class ValidationTest extends TestCase
         $this->assertArrayNotHasKey('email', $errors);
     }
 
-    public function testTypeChecks(): void
+    public function test_type_checks(): void
     {
         $rules = [
             'age' => ['int'],
@@ -90,7 +90,7 @@ class ValidationTest extends TestCase
         $this->assertArrayHasKey('username', $errors);
     }
 
-    public function testMinAndMaxRules(): void
+    public function test_min_and_max_rules(): void
     {
         $rules = [
             'password' => ['min:6', 'max:12'],
@@ -111,7 +111,7 @@ class ValidationTest extends TestCase
         $this->assertArrayNotHasKey('password', $errors);
     }
 
-    public function testInRule(): void
+    public function test_in_rule(): void
     {
         $rules = [
             'role' => ['in:admin,user'],
@@ -127,7 +127,7 @@ class ValidationTest extends TestCase
         $this->assertContains('in:admin,user', $errors['role']);
     }
 
-    public function testRegexRule(): void
+    public function test_regex_rule(): void
     {
         $rules = [
             'code' => ['regex:/^[A-Z]{3}$/'],
@@ -143,7 +143,7 @@ class ValidationTest extends TestCase
         $this->assertContains('regex:/^[A-Z]{3}$/', $errors['code']);
     }
 
-    public function testDateAndArrayRules(): void
+    public function test_date_and_array_rules(): void
     {
         $rules = [
             'created_at' => ['date'],
@@ -166,11 +166,11 @@ class ValidationTest extends TestCase
         $this->assertArrayHasKey('tags', $errors);
     }
 
-    public function testMessagesMethodReturnsTranslatedKeys(): void
+    public function test_messages_method_returns_translated_keys(): void
     {
         $validator = new Validation(['username' => 'User Name']);
         $msg = $validator->messages('username', 'required');
-        
+
         $this->assertStringContainsString('User Name', $msg);
     }
 }

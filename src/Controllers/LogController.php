@@ -4,37 +4,39 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Enums\LogLevel;
 use App\Models\App;
 use App\Models\Log;
-use App\Enums\LogLevel;
-use App\Utilities\Validation;
 use App\Utilities\LogViaStream;
+use App\Utilities\Validation;
 
 /**
- * Clasa LogController
+ * LogController Class
  *
- * Responsabila pentru gestionarea cererilor de tip API dedicate inregistrarii de loguri.
- * Asigura securitatea prin verificarea User-Agent (pentru prevenirea expunerii cheilor in browser),
- * validarea stricta a headerului Content-Type si verificarea cheilor API unice per aplicatie.
+ * Responsible for handling API requests dedicated to log recording.
+ * Ensures security by checking User-Agent (to prevent key exposure in the browser),
+ * strict validation of the Content-Type header, and verifying unique API keys per application.
  *
  * @category Controller
- * @package  App\Controllers
+ *
  * @version  1.3
+ *
  * @since    PHP 8.4
+ *
  * @author   Voica Liviu
  * @license  Proprietary
  */
 class LogController extends BaseController
 {
     /**
-     * Proceseaza si stocheaza o noua intrare de log primita prin POST (cerere API JSON).
+     * Processes and stores a new log entry received via POST (JSON API request).
      */
     public function store(): never
     {
-        // 1. Verificare User-Agent pentru protectie server-to-server
+        // 1. Check User-Agent for server-to-server protection
         $userAgent = $this->getRequestHeader('User-Agent') ?? '';
         $browserSignatures = ['Mozilla', 'Chrome', 'Safari', 'Edge', 'Opera', 'Firefox'];
-        
+
         foreach ($browserSignatures as $signature) {
             if (stripos($userAgent, $signature) !== false) {
                 $this->jsonResponse([
@@ -44,36 +46,36 @@ class LogController extends BaseController
             }
         }
 
-        // 2. Verificare Content-Type
+        // 2. Check Content-Type
         $contentType = $this->getRequestHeader('Content-Type') ?? '';
-        if (!str_contains($contentType, 'application/json')) {
+        if (! str_contains($contentType, 'application/json')) {
             $this->jsonResponse(['error' => 'Content-Type must be application/json'], 415);
         }
 
-        // 3. Verificare prezenta si validitate API Key
+        // 3. Check presence and validity of the API Key
         $apiKey = $this->getRequestHeader('X-API-KEY');
-        if (!$apiKey) {
+        if (! $apiKey) {
             $this->jsonResponse(['error' => 'X-API-KEY header is missing'], 401);
         }
 
-        $appModel = new App();
+        $appModel = new App;
         try {
             $app = $appModel->findByApiKey($apiKey);
         } catch (\Throwable $e) {
             $this->jsonResponse(['error' => 'Invalid or inactive API Key'], 403);
         }
-        if (!$app) {
+        if (! $app) {
             $this->jsonResponse(['error' => 'Invalid or inactive API Key'], 403);
         }
 
-        // 4. Utilizare functionalitate nativa PHP 8.4 json_validate pentru performanta si protectie
+        // 4. Use native PHP 8.4 json_validate for performance and protection
         $rawPayload = file_get_contents('php://input');
-        if (!json_validate($rawPayload)) {
+        if ($rawPayload === false || ! json_validate($rawPayload)) {
             $this->jsonResponse(['error' => 'Invalid JSON payload structure'], 400);
         }
 
         $payload = json_decode($rawPayload, true);
-        if (!is_array($payload)) {
+        if (! is_array($payload)) {
             $this->jsonResponse(['error' => 'Invalid JSON structure format'], 400);
         }
 
@@ -84,42 +86,54 @@ class LogController extends BaseController
         ]);
 
         $errors = $validator->validate([
-            'level' => ['required', 'string', 'in:' . implode(',', LogLevel::all())],
+            'level' => ['required', 'string', 'in:'.implode(',', LogLevel::all())],
             'message' => ['required', 'string'],
             'context' => ['array'],
         ], $payload);
 
-        if (!empty($errors)) {
+        if (! empty($errors)) {
             $errorMessages = [];
             foreach ($errors as $field => $rules) {
                 foreach ($rules as $rule) {
-                    $errorMessages[] = $validator->messages($field, $rule);
+                    $errorMessages[] = $validator->messages((string) $field, $rule);
                 }
             }
             $this->jsonResponse(['errors' => $errorMessages], 422);
         }
 
-        // 5. Inregistrare log in baza de date si alertare automata
+        // 5. Record log in database and send automatic alerts
         try {
-            $logModel = new Log();
+            $logModel = new Log;
+            $rawAppId = $app['id'] ?? null;
+            $rawLevel = $payload['level'] ?? null;
+            $rawMessage = $payload['message'] ?? null;
+            $rawContext = $payload['context'] ?? null;
+
+            if ((! is_int($rawAppId) && ! is_string($rawAppId)) ||
+                ! is_string($rawLevel) ||
+                ! is_string($rawMessage) ||
+                ($rawContext !== null && ! is_array($rawContext))) {
+                $this->jsonResponse(['error' => __('Invalid data types for log entry')], 400);
+            }
+
             $result = $logModel->create(
-                $app['id'],
-                $payload['level'],
-                $payload['message'],
-                $payload['context'] ?? null,
+                (int) $rawAppId,
+                $rawLevel,
+                $rawMessage,
+                $rawContext,
             );
 
             if ($result) {
-                $notificationController = new NotificationController();
+                $notificationController = new NotificationController;
                 $notificationController->sendAlert($app, [
-                    'level' => $payload['level'],
-                    'message' => $payload['message'],
-                    'context' => $payload['context'] ?? null,
+                    'level' => $rawLevel,
+                    'message' => $rawMessage,
+                    'context' => $rawContext,
                 ]);
 
                 $this->jsonResponse(['status' => true, 'message' => __('Log recorded')]);
             }
-            
+
             $this->jsonResponse(['error' => __('Failed to store log')], 500);
         } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'API log storage critical failure', [
@@ -130,24 +144,28 @@ class LogController extends BaseController
                 'exception_line' => $e->getLine(),
                 'exception_trace' => $e->getTraceAsString(),
                 'app_id' => $app['id'] ?? null,
-                'identifier' => 'LogController_Store_CriticalFailure'
+                'identifier' => 'LogController_Store_CriticalFailure',
             ]);
             $this->jsonResponse(['error' => __('Internal Server Error')], 500);
         }
     }
 
     /**
-     * Purgeaza si arhiveaza logurile mai vechi de un numar specificat de zile.
+     * Purges and archives logs older than a specified number of days.
      *
-     * @param int    $days       Numarul de zile salvat ca prag de retentie.
-     * @param string $backupPath Calea absoluta catre fisierul de backup salvat.
-     * @return array
+     * @param  int  $days  The number of days saved as retention cutoff.
+     * @param  string  $backupPath  The absolute path to the saved backup file.
+     * @return array<string, mixed>
      */
     public function purge(int $days, string $backupPath): array
     {
         try {
-            $cutoffDate = date('Y-m-d H:i:s', strtotime("-{$days} days"));
-            $logModel = new Log();
+            $timestamp = strtotime("-{$days} days");
+            if ($timestamp === false) {
+                throw new \RuntimeException(__('Failed to calculate the retention cutoff date boundary.'));
+            }
+            $cutoffDate = date('Y-m-d H:i:s', $timestamp);
+            $logModel = new Log;
 
             $totalToArchive = $logModel->countBeforeDate($cutoffDate);
 
@@ -156,22 +174,22 @@ class LogController extends BaseController
                     'status' => true,
                     'message' => __('No old logs to archive.'),
                     'archived_count' => 0,
-                    'deleted_count' => 0
+                    'deleted_count' => 0,
                 ];
             }
 
             $dir = dirname($backupPath);
-            if (!is_dir($dir) && !mkdir($dir, 0755, true) && !is_dir($dir)) {
+            if (! is_dir($dir) && ! mkdir($dir, 0755, true) && ! is_dir($dir)) {
                 throw new \RuntimeException(sprintf('Directory "%s" was not created', $dir));
             }
 
             $fileHandle = fopen($backupPath, 'w');
-            if (!$fileHandle) {
-                throw new \RuntimeException(__('Failed to create backup file at path: %s', $backupPath));
+            if (! $fileHandle) {
+                throw new \RuntimeException(sprintf(__('Failed to create backup file at path: %s'), $backupPath));
             }
 
-            fwrite($fileHandle, "LOG MONITOR BACKUP - GENERATED AT " . date('Y-m-d H:i:s') . "\n");
-            fwrite($fileHandle, str_repeat("=", 80) . "\n\n");
+            fwrite($fileHandle, 'LOG MONITOR BACKUP - GENERATED AT '.date('Y-m-d H:i:s')."\n");
+            fwrite($fileHandle, str_repeat('=', 80)."\n\n");
 
             $offset = 0;
             $chunkSize = 1000;
@@ -180,13 +198,19 @@ class LogController extends BaseController
                 $rows = $logModel->getBeforeDate($cutoffDate, $chunkSize, $offset);
 
                 foreach ($rows as $row) {
+                    $createdAt = $row['created_at'] ?? '';
+                    $appName = $row['app_name'] ?? '';
+                    $level = $row['level'] ?? '';
+                    $message = $row['message'] ?? '';
+                    $context = $row['context'] ?? '{}';
+
                     $line = sprintf(
                         "[%s] [%s] [%s]: %s | Context: %s\n",
-                        $row['created_at'],
-                        $row['app_name'],
-                        $row['level'],
-                        $row['message'],
-                        $row['context'] ?? '{}'
+                        is_string($createdAt) ? $createdAt : '',
+                        is_string($appName) ? $appName : '',
+                        is_string($level) ? $level : '',
+                        is_string($message) ? $message : '',
+                        is_string($context) ? $context : '{}'
                     );
                     fwrite($fileHandle, $line);
                 }
@@ -206,7 +230,7 @@ class LogController extends BaseController
                 'status' => true,
                 'message' => __('Archive and cleanup process completed successfully.'),
                 'archived_count' => $offset,
-                'deleted_count' => $deletedCount
+                'deleted_count' => $deletedCount,
             ];
         } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Log purge task failure event', [
@@ -218,40 +242,46 @@ class LogController extends BaseController
                 'exception_trace' => $e->getTraceAsString(),
                 'retention_days' => $days,
                 'backup_destination' => $backupPath,
-                'identifier' => 'LogController_Purge_Failure'
+                'identifier' => 'LogController_Purge_Failure',
             ]);
             throw $e;
         }
     }
 
     /**
-     * Returneaza valoarea unui header din request, case-insensitive.
+     * Returns the value of a request header, case-insensitively.
      */
     private function getRequestHeader(string $name): ?string
     {
         $normalizedName = strtolower($name);
-        
+
         if (function_exists('getallheaders')) {
             $headers = getallheaders();
-            if (is_array($headers)) {
-                foreach ($headers as $key => $value) {
-                    if (strtolower((string)$key) === $normalizedName) {
-                        return (string)$value;
+            foreach ($headers as $key => $value) {
+                if (strtolower((string) $key) === $normalizedName) {
+                    if (is_string($value) || is_numeric($value) || is_bool($value)) {
+                        return (string) $value;
                     }
                 }
             }
         }
-        
-        $serverKey = 'HTTP_' . strtoupper(str_replace('-', '_', $name));
+
+        $serverKey = 'HTTP_'.strtoupper(str_replace('-', '_', $name));
         if (isset($_SERVER[$serverKey])) {
-            return (string)$_SERVER[$serverKey];
+            $srvVal = $_SERVER[$serverKey];
+            if (is_string($srvVal) || is_numeric($srvVal) || is_bool($srvVal)) {
+                return (string) $srvVal;
+            }
         }
-        
+
         $directServerKey = strtoupper(str_replace('-', '_', $name));
         if (isset($_SERVER[$directServerKey])) {
-            return (string)$_SERVER[$directServerKey];
+            $dirSrvVal = $_SERVER[$directServerKey];
+            if (is_string($dirSrvVal) || is_numeric($dirSrvVal) || is_bool($dirSrvVal)) {
+                return (string) $dirSrvVal;
+            }
         }
-        
+
         return null;
     }
 }

@@ -1,8 +1,8 @@
-<?php include __DIR__ . '/../layouts/header.php'; ?>
+<?php include __DIR__.'/../layouts/header.php'; ?>
 
 <div class="container-fluid p-0 overflow-hidden" x-data="App.appsPageData()">
     <div class="row g-0 vh-100">
-        <?php include __DIR__ . '/../layouts/sidebar.php'; ?>
+        <?php include __DIR__.'/../layouts/sidebar.php'; ?>
 
         <!-- Main Content -->
         <div class="col h-100 overflow-auto bg-dark bg-opacity-25">
@@ -83,8 +83,8 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <?php foreach ($apps as $app): ?>
-                                                <tr x-data="{ editingName: '<?= htmlspecialchars(addslashes((string)$app['name'])) ?>' }">
+                                            <?php foreach ($apps as $app) { ?>
+                                                <tr x-data="{ editingName: '<?= htmlspecialchars(addslashes((string) $app['name'])) ?>' }">
                                                     <td class="ps-4 border-secondary border-opacity-10">
                                                         <!-- Edit Mode -->
                                                         <div x-show="editingAppId === <?= $app['id'] ?>" x-cloak>
@@ -92,7 +92,7 @@
                                                                  <input type="hidden" name="id" value="<?= $app['id'] ?>">
                                                                  <input type="text" name="name" x-model="editingName" class="form-control form-control-sm bg-dark border-secondary border-opacity-50 text-light" required minlength="3">
                                                                  <button type="submit" class="btn btn-success btn-sm" title="<?= __('Save') ?>"><i class="fas fa-check"></i></button>
-                                                                 <button type="button" class="btn btn-secondary btn-sm" @click="editingAppId = null; editingName = '<?= htmlspecialchars(addslashes((string)$app['name'])) ?>'" title="<?= __('Cancel') ?>"><i class="fas fa-times"></i></button>
+                                                                 <button type="button" class="btn btn-secondary btn-sm" @click="editingAppId = null; editingName = '<?= htmlspecialchars(addslashes((string) $app['name'])) ?>'" title="<?= __('Cancel') ?>"><i class="fas fa-times"></i></button>
                                                             </form>
                                                         </div>
                                                         <!-- Read Mode -->
@@ -102,7 +102,7 @@
                                                     </td>
                                                     <td class="border-secondary border-opacity-10">
                                                         <div class="input-group input-group-sm" style="max-width: 330px;">
-                                                            <input type="text" class="form-control bg-dark border-secondary border-opacity-25 text-info font-monospace" value="<?= htmlspecialchars((string)$app['api_key']) ?>" readonly id="key-<?= $app['id'] ?>">
+                                                            <input type="text" class="form-control bg-dark border-secondary border-opacity-25 text-info font-monospace" value="<?= htmlspecialchars((string) $app['api_key']) ?>" readonly id="key-<?= $app['id'] ?>">
                                                             <button class="btn btn-outline-secondary border-opacity-25" type="button" @click="navigator.clipboard.writeText('<?= $app['api_key'] ?>')" title="<?= __('Copy Key') ?>">
                                                                 <i class="far fa-copy"></i>
                                                             </button>
@@ -117,10 +117,10 @@
                                                     <td class="text-end pe-4 border-secondary border-opacity-10">
                                                         <div class="d-inline-flex gap-3 align-items-center">
                                                             <div x-show="editingAppId !== <?= $app['id'] ?>" class="d-flex gap-3">
-                                                                <button type="button" class="btn btn-link text-warning p-0" title="<?= __('Edit name') ?>" @click="editingAppId = <?= $app['id'] ?>; editingName = '<?= htmlspecialchars(addslashes((string)$app['name'])) ?>'">
+                                                                <button type="button" class="btn btn-link text-warning p-0" title="<?= __('Edit name') ?>" @click="editingAppId = <?= $app['id'] ?>; editingName = '<?= htmlspecialchars(addslashes((string) $app['name'])) ?>'">
                                                                     <i class="fas fa-edit"></i>
                                                                 </button>
-                                                                <button type="button" class="btn btn-link text-info p-0" title="<?= __('Application settings') ?>" @click="openSettings(<?= $app['id'] ?>, '<?= htmlspecialchars(addslashes((string)$app['name'])) ?>')">
+                                                                <button type="button" class="btn btn-link text-info p-0" title="<?= __('Application settings') ?>" @click="openSettings(<?= $app['id'] ?>, '<?= htmlspecialchars(addslashes((string) $app['name'])) ?>')">
                                                                     <i class="fas fa-cog"></i>
                                                                 </button>
                                                                 <form action="apps.php?action=delete" method="POST" onsubmit="return confirm('<?= __('Are you sure you want to delete this application? The associated logs will remain but you will no longer be able to send new ones with this key.') ?>')" class="m-0">
@@ -136,12 +136,12 @@
                                                         </div>
                                                     </td>
                                                 </tr>
-                                            <?php endforeach; ?>
-                                            <?php if (empty($apps)): ?>
+                                            <?php } ?>
+                                            <?php if (empty($apps)) { ?>
                                                 <tr>
                                                     <td colspan="3" class="text-center py-4 text-secondary"><?= __('No applications registered yet.') ?></td>
                                                 </tr>
-                                            <?php endif; ?>
+                                            <?php } ?>
                                         </tbody>
                                     </table>
                             </div>
@@ -324,4 +324,4 @@
     </template>
 </div>
 
-<?php include __DIR__ . '/../layouts/footer.php'; ?>
+<?php include __DIR__.'/../layouts/footer.php'; ?>

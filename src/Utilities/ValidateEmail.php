@@ -7,23 +7,25 @@ namespace App\Utilities;
 /**
  * Trait ValidateEmail
  *
- * Pune la dispozitie mecanisme refolosibile de validare sintactica si DNS pentru email-uri.
+ * Provides reusable mechanisms for syntax and DNS validation of emails.
  *
- * @category Utilitare
- * @package  App\Utilities
+ * @category Utilities
+ *
  * @version  1.2
+ *
  * @since    PHP 8.4
+ *
  * @author   Voica Liviu
- * @license  Proprietar
+ * @license  Proprietary
  */
 trait ValidateEmail
 {
     /**
-     * Valideaza o lista de adrese de e-mail despartite prin separatorul virgula.
-     * Realizeaza validari de format si interogari DNS (MX/A) pentru domenii.
+     * Validates a list of comma-separated email addresses.
+     * Performs format checks and DNS lookup (MX/A) queries for domains.
      *
-     * @param string $emailsToVerify String-ul compus cu adresele de verificat.
-     * @return array Vector cu toate adresele care au picat testele de validare.
+     * @param  string  $emailsToVerify  The compound string of emails to verify.
+     * @return array<int, string> Array with all addresses that failed the validation tests.
      */
     public function validateEmail(string $emailsToVerify): array
     {
@@ -35,13 +37,14 @@ trait ValidateEmail
                 continue;
             }
 
-            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
                 $invalidEmails[] = $email;
+
                 continue;
             }
 
-            $domain = substr(strrchr($email, "@") ?: '', 1);
-            if ($domain === '' || (!checkdnsrr($domain, "MX") && !checkdnsrr($domain, "A"))) {
+            $domain = substr(strrchr($email, '@') ?: '', 1);
+            if ($domain === '' || (! checkdnsrr($domain, 'MX') && ! checkdnsrr($domain, 'A'))) {
                 $invalidEmails[] = $email;
             }
         }

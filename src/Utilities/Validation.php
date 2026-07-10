@@ -5,40 +5,42 @@ declare(strict_types=1);
 namespace App\Utilities;
 
 /**
- * Clasa Validation
+ * Validation Class
  *
- * Motor extensibil pentru validarea datelor intrate.
- * Mesajele generate intern folosesc in mod exclusiv chei in engleza pasate catre __().
+ * Extensible engine for validating incoming data.
+ * Internally generated messages exclusively use English keys passed to __().
  *
- * @category Utilitare
- * @package  App\Utilities
+ * @category Utilities
+ *
  * @version  1.4
+ *
  * @since    PHP 8.4
+ *
  * @author   Voica Liviu
- * @license  Proprietar
+ * @license  Proprietary
  */
 class Validation
 {
     use ValidateEmail;
 
-    /** @var array Erorile stranse in timpul procesului curent de validare. */
+    /** @var array<string, array<int, string>> Errors collected during the current validation process. */
     private array $errors = [];
 
     /**
-     * Constructor clasa. Promoveaza proprietatile transmise.
+     * Class constructor. Promotes passed properties.
      *
-     * @param array $fieldNames Aliasuri pentru campuri folosite in randarea mesajelor.
+     * @param  array<string, string>  $fieldNames  Aliases for fields used in rendering messages.
      */
     public function __construct(
         private array $fieldNames = []
     ) {}
 
     /**
-     * Ruleaza setul de reguli peste payload-ul primit ca argument.
+     * Runs the set of rules over the payload passed as an argument.
      *
-     * @param array $rules Regulile de validare (ex: ['email' => ['required', 'email']]).
-     * @param array $payload Datele primite din cererea HTTP.
-     * @return array Vectorul final cu erori structurate pe campuri.
+     * @param  array<string, array<int, string>>  $rules  Validation rules (e.g. ['email' => ['required', 'email']]).
+     * @param  array<array-key, mixed>  $payload  Data received from HTTP request.
+     * @return array<string, array<int, string>> Final array with errors structured by fields.
      */
     public function validate(array $rules, array $payload): array
     {
@@ -52,6 +54,7 @@ class Validation
                 if (in_array('required', $constraints, true)) {
                     $this->errors[$field][] = 'required';
                 }
+
                 continue;
             }
 
@@ -61,9 +64,11 @@ class Validation
                 }
 
                 if ($rule === 'email') {
-                    if (!empty($this->validateEmail((string)$value))) {
+                    $rawVal = is_string($value) || is_numeric($value) || is_bool($value) ? (string) $value : '';
+                    if (! empty($this->validateEmail($rawVal))) {
                         $this->errors[$field][] = 'email';
                     }
+
                     continue;
                 }
 
@@ -75,12 +80,11 @@ class Validation
     }
 
     /**
-     * Aplica o regula specifica utilizand potrivirea exhaustiva prin expresia match.
+     * Applies a specific rule using exhaustive matching via match expression.
      *
-     * @param string $field Numele campului verificat.
-     * @param string $rule Regula de validat.
-     * @param mixed $value Valoarea supusa verificarii.
-     * @return void
+     * @param  string  $field  Name of verified field.
+     * @param  string  $rule  Rule to validate.
+     * @param  mixed  $value  Value subjected to check.
      */
     private function applyRule(string $field, string $rule, mixed $value): void
     {
@@ -88,57 +92,76 @@ class Validation
             $rule === 'int' => is_numeric($value),
             $rule === 'string' => is_string($value),
             $rule === 'array' => is_array($value),
-            $rule === 'date' => strtotime((string)$value) !== false,
+            $rule === 'date' => is_string($value) && strtotime($value) !== false,
             str_starts_with($rule, 'min:') => $this->checkMin($rule, $value),
             str_starts_with($rule, 'max:') => $this->checkMax($rule, $value),
-            str_starts_with($rule, 'in:') => in_array((string)$value, explode(',', substr($rule, 3)), true),
-            str_starts_with($rule, 'regex:') => (preg_match(substr($rule, 6), (string)$value) === 1),
+            str_starts_with($rule, 'in:') => in_array(is_scalar($value) ? (string) $value : '', explode(',', substr($rule, 3)), true),
+            str_starts_with($rule, 'regex:') => is_string($value) && (preg_match(substr($rule, 6), $value) === 1),
             default => true,
         };
 
-        if (!$isValid) {
+        if (! $isValid) {
             $this->errors[$field][] = $rule;
         }
     }
 
     /**
-     * Verifica daca o valoare respecta limita minima setata.
+     * Checks if a value respects the set minimum limit.
      *
-     * @param string $rule Regula continand valoarea de minim (ex: min:3).
-     * @param mixed $value Valoarea inspectata.
-     * @return bool True daca valoarea este mai mare sau egala cu minimul impus.
+     * @param  string  $rule  Rule containing the minimum value (e.g., min:3).
+     * @param  mixed  $value  Inspected value.
+     * @return bool True if the value is greater than or equal to the required minimum.
      */
     private function checkMin(string $rule, mixed $value): bool
     {
-        $min = (int)substr($rule, 4);
-        $checkValue = is_array($value) ? count($value) : (is_numeric($value) ? (float)$value : mb_strlen((string)$value));
+        $min = (int) substr($rule, 4);
+        if (is_array($value)) {
+            $checkValue = count($value);
+        } elseif (is_string($value)) {
+            $checkValue = mb_strlen($value);
+        } elseif (is_numeric($value)) {
+            $checkValue = (float) $value;
+        } else {
+            $checkValue = 0;
+        }
+
         return $checkValue >= $min;
     }
 
     /**
-     * Verifica daca o valoare se incadreaza sub limita maxima declarata.
+     * Checks if a value falls under the declared maximum limit.
      *
-     * @param string $rule Regula continand valoarea de maxim (ex: max:10).
-     * @param mixed $value Valoarea inspectata.
-     * @return bool True daca valoarea este mai mica sau egala cu maximul impus.
+     * @param  string  $rule  Rule containing the maximum value (e.g., max:10).
+     * @param  mixed  $value  Inspected value.
+     * @return bool True if the value is less than or equal to the required maximum.
      */
     private function checkMax(string $rule, mixed $value): bool
     {
-        $max = (int)substr($rule, 4);
-        $checkValue = is_numeric($value) ? (float)$value : mb_strlen((string)$value);
+        $max = (int) substr($rule, 4);
+        if (is_array($value)) {
+            $checkValue = count($value);
+        } elseif (is_string($value)) {
+            $checkValue = mb_strlen($value);
+        } elseif (is_numeric($value)) {
+            $checkValue = (float) $value;
+        } else {
+            $checkValue = 0;
+        }
+
         return $checkValue <= $max;
     }
 
     /**
-     * Intoarce textul tradus corespunzator erorilor gasite folosind chei in engleza.
+     * Returns the translated text corresponding to the errors found, using English keys.
      *
-     * @param string $field Denumirea tehnica a campului.
-     * @param string $rule Regula incalcata.
-     * @return string Mesajul de eroare interpretat si returnat fara diacritice.
+     * @param  string  $field  Technical field name.
+     * @param  string  $rule  Violated rule.
+     * @return string Interpreted error message, returned without diacritics.
      */
     public function messages(string $field, string $rule): string
     {
-        $label = __($this->fieldNames[$field] ?? ucfirst($field));
+        $rawLabel = $this->fieldNames[$field] ?? ucfirst($field);
+        $label = __($rawLabel);
 
         return match (true) {
             $rule === 'required' => __('The :field field is required.', ['field' => $label]),

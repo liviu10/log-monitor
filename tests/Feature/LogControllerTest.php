@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
 use App\Controllers\LogController;
 use App\Models\App;
 use App\Models\Log;
+use Tests\TestCase;
 
 /**
  * Custom exception to intercept exit calls in jsonResponse.
@@ -15,11 +15,12 @@ use App\Models\Log;
 class HttpResponseException extends \Exception
 {
     public array $data;
+
     public int $statusCode;
 
     public function __construct(array $data, int $statusCode)
     {
-        parent::__construct("HTTP Response sent", $statusCode);
+        parent::__construct('HTTP Response sent', $statusCode);
         $this->data = $data;
         $this->statusCode = $statusCode;
     }
@@ -49,7 +50,9 @@ class TestableLogController extends LogController
 class MockPhpStream
 {
     public $context;
+
     public static string $content = '';
+
     public int $position = 0;
 
     public static function setContent(string $content): void
@@ -60,6 +63,7 @@ class MockPhpStream
     public function stream_open(string $path, string $mode, int $options, ?string &$opened_path): bool
     {
         $this->position = 0;
+
         return true;
     }
 
@@ -67,6 +71,7 @@ class MockPhpStream
     {
         $result = substr(self::$content, $this->position, $count);
         $this->position += strlen($result);
+
         return $result;
     }
 
@@ -84,15 +89,17 @@ class MockPhpStream
 class LogControllerTest extends TestCase
 {
     private App $appModel;
+
     private Log $logModel;
+
     private TestableLogController $controller;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->appModel = new App();
-        $this->logModel = new Log();
-        $this->controller = new TestableLogController();
+        $this->appModel = new App;
+        $this->logModel = new Log;
+        $this->controller = new TestableLogController;
 
         unset($GLOBALS['log_controller_success']);
 
@@ -123,10 +130,10 @@ class LogControllerTest extends TestCase
         parent::tearDown();
     }
 
-    public function testRejectsBrowserUserAgents(): void
+    public function test_rejects_browser_user_agents(): void
     {
         $_SERVER['HTTP_USER_AGENT'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)';
-        
+
         try {
             $this->controller->store();
             $this->fail('Expected HttpResponseException to be thrown');
@@ -136,7 +143,7 @@ class LogControllerTest extends TestCase
         }
     }
 
-    public function testRejectsInvalidContentTypes(): void
+    public function test_rejects_invalid_content_types(): void
     {
         $_SERVER['CONTENT_TYPE'] = 'text/plain';
 
@@ -149,7 +156,7 @@ class LogControllerTest extends TestCase
         }
     }
 
-    public function testRejectsMissingApiKey(): void
+    public function test_rejects_missing_api_key(): void
     {
         try {
             $this->controller->store();
@@ -160,17 +167,20 @@ class LogControllerTest extends TestCase
         }
     }
 
-    public function testRejectsInvalidApiKey(): void
+    public function test_rejects_invalid_api_key(): void
     {
         $_SERVER['HTTP_X_API_KEY'] = 'non-existent-api-key';
 
-        $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('Application not found for the provided API key');
-
-        $this->controller->store();
+        try {
+            $this->controller->store();
+            $this->fail('Expected HttpResponseException to be thrown');
+        } catch (HttpResponseException $e) {
+            $this->assertEquals(403, $e->statusCode);
+            $this->assertEquals('Invalid or inactive API Key', $e->data['error']);
+        }
     }
 
-    public function testAcceptsValidPayloadAndInsertsIntoDatabase(): void
+    public function test_accepts_valid_payload_and_inserts_into_database(): void
     {
         $apiKey = 'valid-test-api-key';
         $appId = $this->appModel->create('API Logger App', $apiKey);
@@ -180,7 +190,7 @@ class LogControllerTest extends TestCase
         $payload = [
             'level' => 'WARNING',
             'message' => 'Disk usage reached 85%',
-            'context' => ['server' => 'app-srv-01']
+            'context' => ['server' => 'app-srv-01'],
         ];
         MockPhpStream::setContent(json_encode($payload));
 

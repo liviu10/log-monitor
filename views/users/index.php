@@ -1,8 +1,8 @@
-<?php include __DIR__ . '/../layouts/header.php'; ?>
+<?php include __DIR__.'/../layouts/header.php'; ?>
 
 <div class="container-fluid p-0 overflow-hidden" x-data="{ sidebarOpen: true }">
     <div class="row g-0 vh-100">
-        <?php include __DIR__ . '/../layouts/sidebar.php'; ?>
+        <?php include __DIR__.'/../layouts/sidebar.php'; ?>
 
         <!-- Main Content -->
         <div class="col h-100 overflow-auto bg-dark bg-opacity-25">
@@ -92,14 +92,14 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <?php foreach ($users ?? [] as $user): ?>
+                                            <?php foreach ($users ?? [] as $user) { ?>
                                                 <tr class="border-secondary border-opacity-10">
                                                     <td class="ps-4">
                                                         <div class="d-flex align-items-center gap-3">
                                                             <div class="avatar bg-info bg-opacity-10 text-info rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
                                                                 <i class="fas fa-user small"></i>
                                                             </div>
-                                                            <span class="fw-bold text-light"><?= htmlspecialchars((string)($user['username'] ?? '')) ?></span>
+                                                            <span class="fw-bold text-light"><?= htmlspecialchars((string) ($user['username'] ?? '')) ?></span>
                                                         </div>
                                                     </td>
                                                     <td>
@@ -107,19 +107,19 @@
                                                     </td>
                                                     <td class="text-secondary small font-monospace"><?= $user['created_at'] ?? '-' ?></td>
                                                     <td class="pe-4 text-end">
-                                                        <?php if ((int)($user['id'] ?? 0) !== (int)($_SESSION['auth.user']['id'] ?? 0)): ?>
+                                                        <?php if ((int) ($user['id'] ?? 0) !== (int) ($_SESSION['auth.user']['id'] ?? 0)) { ?>
                                                             <form action="users.php?action=delete" method="POST" onsubmit="return confirm('<?= __('Are you sure you want to delete this user?') ?>')">
                                                                 <input type="hidden" name="id" value="<?= $user['id'] ?>">
                                                                 <button type="submit" class="btn btn-outline-danger btn-sm border-0">
                                                                     <i class="fas fa-trash-alt"></i>
                                                                 </button>
                                                             </form>
-                                                        <?php else: ?>
+                                                        <?php } else { ?>
                                                             <span class="badge bg-secondary opacity-25"><?= __('Self') ?></span>
-                                                        <?php endif; ?>
+                                                        <?php } ?>
                                                     </td>
                                                 </tr>
-                                            <?php endforeach; ?>
+                                            <?php } ?>
                                         </tbody>
                                     </table>
                                 </div>
@@ -133,4 +133,4 @@
 </div>
 
 
-<?php include __DIR__ . '/../layouts/footer.php'; ?>
+<?php include __DIR__.'/../layouts/footer.php'; ?>

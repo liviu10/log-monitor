@@ -4,34 +4,36 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use PDO;
-use PDOException;
-use RuntimeException;
-use InvalidArgumentException;
-use App\Utilities\MySQLWrapper;
-use App\Utilities\LogViaStream;
 use App\Enums\LogLevel;
+use App\Utilities\LogViaStream;
+use App\Utilities\MySQLWrapper;
+use InvalidArgumentException;
+use PDO;
+use RuntimeException;
 
 /**
  * Log Class
  *
- * Gestioneaza operatiile bazei de date pentru entitatea Log.
- * Securizat impotriva SQL injection la paginare prin eliminarea interpolarii si validare stricta.
- * Utilizeaza indexare FULLTEXT pentru cautari eficiente.
+ * Manages database operations for the Log entity.
+ * Secured against SQL injection during pagination by removing interpolation and strict validation.
+ * Uses FULLTEXT indexing for efficient searches.
  *
  * @category Model
- * @package  App\Models
+ *
  * @version  1.3
+ *
  * @since    PHP 8.4
+ *
  * @author   Voica Liviu
- * @license  Proprietar
+ * @license  Proprietary
  */
 class Log
 {
     /**
-     * Constructorul clasei Log.
-     * Promovarea proprietatilor pentru injectarea bazei de date.
-     * * @param MySQLWrapper $db Instanta wrapper-ului bazei de date.
+     * Constructor for the Log class.
+     * Property promotion for database dependency injection.
+     *
+     * * @param MySQLWrapper $db Database wrapper instance.
      */
     public function __construct(
         protected MySQLWrapper $db = new MySQLWrapper(
@@ -45,15 +47,16 @@ class Log
     }
 
     /**
-     * Creaza o noua inregistrare de log in baza de date.
+     * Creates a new log entry in the database.
      *
-     * @param int    $appId   ID-ul aplicatiei sursa.
-     * @param string $level   Nivelul de severitate.
-     * @param string $message Mesajul descriptiv.
-     * @param mixed  $context Date suplimentare de context (vor fi JSON).
-     * @return int ID-ul logului creat.
-     * @throws InvalidArgumentException Daca datele obligatorii lipsesc.
-     * @throws RuntimeException Daca operatiunea esueaza.
+     * @param  int  $appId  Source application ID.
+     * @param  string  $level  Severity level.
+     * @param  string  $message  Descriptive message.
+     * @param  mixed  $context  Additional context data (will be JSON).
+     * @return int Created log ID.
+     *
+     * @throws InvalidArgumentException If required data is missing.
+     * @throws RuntimeException If operation fails.
      */
     public function create(int $appId, string $level, string $message, mixed $context = null): int
     {
@@ -76,11 +79,12 @@ class Log
 
         try {
             $result = $this->db->create('logs', $params);
-            if ($result === false) {
+            if ($result === 0 || $result === '') {
                 throw new RuntimeException(__('Failed to write log to database'));
             }
-            return (int)$result;
-        } catch (PDOException $e) {
+
+            return (int) $result;
+        } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
@@ -90,22 +94,22 @@ class Log
                 'exception_trace' => $e->getTraceAsString(),
                 'sql_statement' => $sql,
                 'sql_parameters' => $params,
-                'identifier' => 'MySQLWrapper_Query_Failure'
+                'identifier' => 'MySQLWrapper_Query_Failure',
             ]);
             throw new RuntimeException(__('Database error saving log entry'), 0, $e);
         }
     }
 
     /**
-     * Returneaza o lista paginata de loguri bazata pe filtre aplicate.
-     * Securizat complet impotriva atacurilor de injectare SQL prin parametri legati nativ pentru LIMIT/OFFSET.
+     * Returns a paginated list of logs based on applied filters.
+     * Fully secured against SQL injection attacks via natively bound parameters for LIMIT/OFFSET.
      *
-     * @param array  $filters Filtre aplicate.
-     * @param int    $limit   Numar maxim de inregistrari.
-     * @param int    $offset  Punctul de pornire al paginarii.
-     * @param string $sortBy  Coloana dupa care se face sortarea.
-     * @param string $sortDir Directia de sortare (ASC sau DESC).
-     * @return array Logurile gasite.
+     * @param  array<string, mixed>  $filters  Applied filters.
+     * @param  int  $limit  Maximum number of records.
+     * @param  int  $offset  Pagination starting offset.
+     * @param  string  $sortBy  Column to sort by.
+     * @param  string  $sortDir  Sort direction (ASC or DESC).
+     * @return array<int, array<string, mixed>> Found logs.
      */
     public function getPaginated(array $filters = [], int $limit = 50, int $offset = 0, string $sortBy = 'id', string $sortDir = 'DESC'): array
     {
@@ -116,28 +120,31 @@ class Log
             $offset = 0;
         }
 
-        $sql = "SELECT l.*, a.name as app_name 
+        $sql = 'SELECT l.*, a.name as app_name 
                 FROM logs l 
                 JOIN apps a ON l.app_id = a.id 
-                WHERE 1=1";
+                WHERE 1=1';
         $params = [];
 
-        if (!empty($filters['app_id'])) {
-            $sql .= " AND l.app_id = ?";
-            $params[] = (int)$filters['app_id'];
+        if (! empty($filters['app_id'])) {
+            $sql .= ' AND l.app_id = ?';
+            $rawAppId = $filters['app_id'];
+            $params[] = (is_int($rawAppId) || is_string($rawAppId)) ? (int) $rawAppId : 0;
         }
 
-        if (!empty($filters['level'])) {
-            $sql .= " AND l.level = ?";
-            $params[] = strtoupper(trim((string)$filters['level']));
+        if (! empty($filters['level'])) {
+            $sql .= ' AND l.level = ?';
+            $rawLevel = $filters['level'];
+            $params[] = strtoupper(trim(is_string($rawLevel) ? $rawLevel : ''));
         }
 
-        if (!empty($filters['search'])) {
-            $sql .= " AND MATCH(l.message, l.context) AGAINST(? IN BOOLEAN MODE)";
-            $params[] = trim((string)$filters['search']) . "*";
+        if (! empty($filters['search'])) {
+            $sql .= ' AND MATCH(l.message, l.context) AGAINST(? IN BOOLEAN MODE)';
+            $rawSearch = $filters['search'];
+            $params[] = trim(is_string($rawSearch) ? $rawSearch : '').'*';
         }
 
-        // Validare stricta a coloanelor de sortare pentru a preveni SQL Injection
+        // Strict validation of sort columns to prevent SQL Injection
         $allowedSorts = ['id', 'created_at', 'level', 'app_name'];
         $allowedDirections = ['ASC', 'DESC'];
 
@@ -150,18 +157,21 @@ class Log
             $orderClause = "ORDER BY l.{$sortField} {$sortOrder}";
         }
 
-        // Adaugam l.id ca sortare secundara pentru a avea o cronologie determinista la loguri sosite in aceeasi secunda
+        // Add l.id as secondary sort to ensure deterministic chronology for logs arriving in the same second
         if ($sortField !== 'id') {
             $orderClause .= ", l.id {$sortOrder}";
         }
 
-        // Securizare stricta: LIMIT si OFFSET sunt interpolate direct ca intregi pentru a evita legarea lor ca string de catre PDO
-        $sql .= " {$orderClause} LIMIT " . (int)$limit . " OFFSET " . (int)$offset;
+        // Strict security: LIMIT and OFFSET are directly interpolated as integers to avoid binding them as string by PDO
+        $sql .= " {$orderClause} LIMIT ".(int) $limit.' OFFSET '.(int) $offset;
 
         try {
             $stmt = $this->db->query($sql, $params);
-            return $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
-        } catch (PDOException $e) {
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            /** @var array<int, array<string, mixed>> $rows */
+            return $rows;
+        } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
@@ -171,42 +181,47 @@ class Log
                 'exception_trace' => $e->getTraceAsString(),
                 'sql_statement' => $sql,
                 'sql_parameters' => $params,
-                'identifier' => 'MySQLWrapper_Query_Failure'
+                'identifier' => 'MySQLWrapper_Query_Failure',
             ]);
+
             return [];
         }
     }
 
     /**
-     * Numara logurile totale care corespund filtrelor selectate.
+     * Counts the total logs matching the selected filters.
      *
-     * @param array $filters Filtre aplicate.
-     * @return int Numarul total de loguri gasite.
+     * @param  array<string, mixed>  $filters  Applied filters.
+     * @return int Total number of matching logs found.
      */
     public function count(array $filters = []): int
     {
-        $sql = "SELECT COUNT(*) FROM logs l WHERE 1=1";
+        $sql = 'SELECT COUNT(*) FROM logs l WHERE 1=1';
         $params = [];
 
-        if (!empty($filters['app_id'])) {
-            $sql .= " AND l.app_id = ?";
-            $params[] = (int)$filters['app_id'];
+        if (! empty($filters['app_id'])) {
+            $sql .= ' AND l.app_id = ?';
+            $rawAppId = $filters['app_id'];
+            $params[] = (is_int($rawAppId) || is_string($rawAppId)) ? (int) $rawAppId : 0;
         }
 
-        if (!empty($filters['level'])) {
-            $sql .= " AND l.level = ?";
-            $params[] = strtoupper(trim((string)$filters['level']));
+        if (! empty($filters['level'])) {
+            $sql .= ' AND l.level = ?';
+            $rawLevel = $filters['level'];
+            $params[] = strtoupper(trim(is_string($rawLevel) ? $rawLevel : ''));
         }
 
-        if (!empty($filters['search'])) {
-            $sql .= " AND MATCH(l.message, l.context) AGAINST(? IN BOOLEAN MODE)";
-            $params[] = trim((string)$filters['search']) . "*";
+        if (! empty($filters['search'])) {
+            $sql .= ' AND MATCH(l.message, l.context) AGAINST(? IN BOOLEAN MODE)';
+            $rawSearch = $filters['search'];
+            $params[] = trim(is_string($rawSearch) ? $rawSearch : '').'*';
         }
 
         try {
             $stmt = $this->db->query($sql, $params);
-            return $stmt ? (int)$stmt->fetchColumn() : 0;
-        } catch (PDOException $e) {
+
+            return (int) $stmt->fetchColumn();
+        } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
@@ -216,27 +231,29 @@ class Log
                 'exception_trace' => $e->getTraceAsString(),
                 'sql_statement' => $sql,
                 'sql_parameters' => $params,
-                'identifier' => 'MySQLWrapper_Query_Failure'
+                'identifier' => 'MySQLWrapper_Query_Failure',
             ]);
+
             return 0;
         }
     }
 
     /**
-     * Numara inregistrarile create inainte de o anumita data.
+     * Counts records created before a specific date.
      *
-     * @param string $date Data limita de demarcare.
-     * @return int Numarul total de loguri vechi.
+     * @param  string  $date  Cutoff date.
+     * @return int Total number of old logs.
      */
     public function countBeforeDate(string $date): int
     {
-        $sql = "SELECT COUNT(*) FROM logs WHERE created_at < ?";
+        $sql = 'SELECT COUNT(*) FROM logs WHERE created_at < ?';
         $params = [$date];
 
         try {
             $stmt = $this->db->query($sql, $params);
-            return $stmt ? (int)$stmt->fetchColumn() : 0;
-        } catch (PDOException $e) {
+
+            return (int) $stmt->fetchColumn();
+        } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
@@ -246,19 +263,20 @@ class Log
                 'exception_trace' => $e->getTraceAsString(),
                 'sql_statement' => $sql,
                 'sql_parameters' => $params,
-                'identifier' => 'MySQLWrapper_Query_Failure'
+                'identifier' => 'MySQLWrapper_Query_Failure',
             ]);
+
             return 0;
         }
     }
 
     /**
-     * Recupereaza logurile create inainte de o anumita data, in mod paginat.
+     * Retrieves logs created before a specific date in a paginated manner.
      *
-     * @param string $date   Data limita de demarcare.
-     * @param int    $limit  Numar logs per chunk.
-     * @param int    $offset Punct de pornire paginare.
-     * @return array Lista rezultatelor.
+     * @param  string  $date  Cutoff date.
+     * @param  int  $limit  Number of logs per chunk.
+     * @param  int  $offset  Pagination starting point.
+     * @return array<int, array<string, mixed>> List of results.
      */
     public function getBeforeDate(string $date, int $limit, int $offset): array
     {
@@ -269,18 +287,21 @@ class Log
             $offset = 0;
         }
 
-        $sql = "SELECT l.*, a.name as app_name 
+        $sql = 'SELECT l.*, a.name as app_name 
                 FROM logs l 
                 JOIN apps a ON l.app_id = a.id 
                 WHERE l.created_at < ? 
                 ORDER BY l.created_at ASC 
-                LIMIT " . (int)$limit . " OFFSET " . (int)$offset;
+                LIMIT '.(int) $limit.' OFFSET '.(int) $offset;
         $params = [$date];
 
         try {
             $stmt = $this->db->query($sql, $params);
-            return $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
-        } catch (PDOException $e) {
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            /** @var array<int, array<string, mixed>> $rows */
+            return $rows;
+        } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
@@ -290,28 +311,31 @@ class Log
                 'exception_trace' => $e->getTraceAsString(),
                 'sql_statement' => $sql,
                 'sql_parameters' => $params,
-                'identifier' => 'MySQLWrapper_Query_Failure'
+                'identifier' => 'MySQLWrapper_Query_Failure',
             ]);
+
             return [];
         }
     }
 
     /**
-     * Sterge logurile create mai vechi decat o anumita data.
+     * Deletes logs created before a specific date.
      *
-     * @param string $date Data limita de demarcare.
-     * @return int Numarul de inregistrari sterse.
-     * @throws RuntimeException Daca stergerea esueaza catastrofic.
+     * @param  string  $date  Cutoff date.
+     * @return int Number of deleted records.
+     *
+     * @throws RuntimeException If deletion fails catastrophically.
      */
     public function deleteBeforeDate(string $date): int
     {
-        $sql = "DELETE FROM logs WHERE created_at < ?";
+        $sql = 'DELETE FROM logs WHERE created_at < ?';
         $params = [$date];
 
         try {
             $stmt = $this->db->query($sql, $params);
-            return $stmt ? (int)$stmt->rowCount() : 0;
-        } catch (PDOException $e) {
+
+            return (int) $stmt->rowCount();
+        } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
@@ -321,24 +345,25 @@ class Log
                 'exception_trace' => $e->getTraceAsString(),
                 'sql_statement' => $sql,
                 'sql_parameters' => $params,
-                'identifier' => 'MySQLWrapper_Query_Failure'
+                'identifier' => 'MySQLWrapper_Query_Failure',
             ]);
             throw new RuntimeException(__('Failed to clear old logs from storage'), 0, $e);
         }
     }
 
     /**
-     * Optimizeaza tabelul de loguri pentru eliberarea spatiului de stocare fragmentat.
+     * Optimizes the logs table to reclaim fragmented storage space.
      *
-     * @return bool True in caz de succes, altfel False.
+     * @return bool True on success, otherwise False.
      */
     public function optimize(): bool
     {
-        $sql = "OPTIMIZE TABLE logs";
+        $sql = 'OPTIMIZE TABLE logs';
         try {
-            $stmt = $this->db->query($sql);
-            return $stmt !== false;
-        } catch (PDOException $e) {
+            $this->db->query($sql);
+
+            return true;
+        } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
@@ -348,14 +373,15 @@ class Log
                 'exception_trace' => $e->getTraceAsString(),
                 'sql_statement' => $sql,
                 'sql_parameters' => [],
-                'identifier' => 'MySQLWrapper_Query_Failure'
+                'identifier' => 'MySQLWrapper_Query_Failure',
             ]);
+
             return false;
         }
     }
 
     /**
-     * Extrage statistici agregate pentru dashboard-ul de administrare.
+     * Extracts aggregated statistics for the administration dashboard.
      *
      * @return array{total: int, critical: int, warning: int}
      */
@@ -363,20 +389,20 @@ class Log
     {
         try {
             $total = $this->count();
-            
+
             $critical = 0;
             foreach (['ERROR', 'CRITICAL', 'EMERGENCY', 'ALERT'] as $lvl) {
                 $critical += $this->count(['level' => $lvl]);
             }
-            
+
             $warning = $this->count(['level' => 'WARNING']);
-            
+
             return [
                 'total' => $total,
                 'critical' => $critical,
-                'warning' => $warning
+                'warning' => $warning,
             ];
-        } catch (PDOException $e) {
+        } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
@@ -386,8 +412,9 @@ class Log
                 'exception_trace' => $e->getTraceAsString(),
                 'sql_statement' => 'Dashboard Statistics Aggregation',
                 'sql_parameters' => [],
-                'identifier' => 'MySQLWrapper_Query_Failure'
+                'identifier' => 'MySQLWrapper_Query_Failure',
             ]);
+
             return ['total' => 0, 'critical' => 0, 'warning' => 0];
         }
     }

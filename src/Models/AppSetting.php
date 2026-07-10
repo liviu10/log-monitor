@@ -4,32 +4,37 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use RuntimeException;
-use InvalidArgumentException;
-use PDOException;
-use App\Utilities\MySQLWrapper;
-use App\Utilities\LogViaStream;
 use App\Enums\LogLevel;
+use App\Utilities\LogViaStream;
+use App\Utilities\MySQLWrapper;
+use InvalidArgumentException;
+use RuntimeException;
 
 /**
  * AppSetting Class
  *
- * Gestioneaza setarile specifice unei aplicatii in baza de date.
- * Implementeaza validari stricte si arhitectura defensiva Fail Fast.
+ * Manages settings specific to an application in the database.
+ * Implements strict validation and defensive Fail Fast architecture.
  *
  * @category Model
- * @package  App\Models
+ *
  * @version  1.3
+ *
  * @since    PHP 8.4
+ *
  * @author   Voica Liviu
- * @license  Proprietar
+ * @license  Proprietary
  */
 class AppSetting
 {
+    /** @var array<int, array{data: array<int, array<string, mixed>>, cached_at: int}> Static in-memory settings cache, useful for the daemon worker */
+    protected static array $settingsCache = [];
+
     /**
-     * Constructorul clasei AppSetting.
-     * Injectare dependinta prin Constructor Property Promotion.
-     * * @param MySQLWrapper $db Instanta wrapper-ului bazei de date.
+     * Constructor for the AppSetting class.
+     * Dependency injection via Constructor Property Promotion.
+     *
+     * * @param MySQLWrapper $db Database wrapper instance.
      */
     public function __construct(
         protected MySQLWrapper $db = new MySQLWrapper(
@@ -43,10 +48,10 @@ class AppSetting
     }
 
     /**
-     * Recupereaza toate setarile pentru o aplicatie.
+     * Retrieves all settings for an application.
      *
-     * @param int $appId ID-ul aplicatiei.
-     * @return array Lista setarilor gasite.
+     * @param  int  $appId  Application ID.
+     * @return array<int, array<string, mixed>> List of found settings.
      */
     public function getSettingsForApp(int $appId): array
     {
@@ -54,9 +59,24 @@ class AppSetting
             return [];
         }
 
+        $currentTime = time();
+        if (isset(self::$settingsCache[$appId])) {
+            $cached = self::$settingsCache[$appId];
+            if (($currentTime - $cached['cached_at']) < 10) {
+                return $cached['data'];
+            }
+        }
+
         try {
-            return $this->db->read('app_settings', ['app_id' => $appId]) ?: [];
-        } catch (PDOException $e) {
+            $data = $this->db->read('app_settings', ['app_id' => $appId]) ?: [];
+            /** @var array<int, array<string, mixed>> $data */
+            self::$settingsCache[$appId] = [
+                'data' => $data,
+                'cached_at' => $currentTime,
+            ];
+
+            return $data;
+        } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
@@ -66,18 +86,19 @@ class AppSetting
                 'exception_trace' => $e->getTraceAsString(),
                 'sql_statement' => 'SELECT FROM app_settings WHERE app_id = ?',
                 'sql_parameters' => ['app_id' => $appId],
-                'identifier' => 'MySQLWrapper_Query_Failure'
+                'identifier' => 'MySQLWrapper_Query_Failure',
             ]);
+
             return [];
         }
     }
 
     /**
-     * Gaseste o setare specifica pe baza app_id si key.
+     * Finds a specific setting based on app_id and key.
      *
-     * @param int    $appId ID-ul aplicatiei.
-     * @param string $key   Cheia setarii.
-     * @return array|null Datele setarii sau null daca nu exista.
+     * @param  int  $appId  Application ID.
+     * @param  string  $key  Setting key.
+     * @return array<string, mixed>|null Setting data or null if it does not exist.
      */
     public function getSetting(int $appId, string $key): ?array
     {
@@ -91,8 +112,15 @@ class AppSetting
                 'app_id' => $appId,
                 'key' => $trimmedKey,
             ]);
-            return $results ? $results[0] : null;
-        } catch (PDOException $e) {
+
+            $first = $results[0] ?? null;
+            if (is_array($first)) {
+                /** @var array<string, mixed> $first */
+                return $first;
+            }
+
+            return null;
+        } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
@@ -102,21 +130,22 @@ class AppSetting
                 'exception_trace' => $e->getTraceAsString(),
                 'sql_statement' => 'SELECT FROM app_settings WHERE app_id = ? AND key = ?',
                 'sql_parameters' => ['app_id' => $appId, 'key' => $trimmedKey],
-                'identifier' => 'MySQLWrapper_Query_Failure'
+                'identifier' => 'MySQLWrapper_Query_Failure',
             ]);
+
             return null;
         }
     }
 
     /**
-     * Salveaza sau actualizeaza o setare pentru o aplicatie.
+     * Saves or updates a setting for an application.
      *
-     * @param int    $appId ID-ul aplicatiei.
-     * @param string $key   Cheia setarii.
-     * @param string $value Valoarea setarii.
-     * @return void
-     * @throws InvalidArgumentException Daca parametrii sunt invalizi.
-     * @throws RuntimeException Daca salvarea esueaza.
+     * @param  int  $appId  Application ID.
+     * @param  string  $key  Setting key.
+     * @param  string  $value  Setting value.
+     *
+     * @throws InvalidArgumentException If parameters are invalid.
+     * @throws RuntimeException If saving fails.
      */
     public function saveSetting(int $appId, string $key, string $value): void
     {
@@ -138,18 +167,14 @@ class AppSetting
             ];
 
             try {
-                $result = $this->db->update('app_settings', [
+                $this->db->update('app_settings', [
                     'value' => $value,
                     'updated_at' => $currentTime,
                 ], [
                     'app_id' => $appId,
                     'key' => $trimmedKey,
                 ]);
-
-                if ($result === false) {
-                    throw new RuntimeException(__('Failed to update existing setting'));
-                }
-            } catch (PDOException $e) {
+            } catch (\Throwable $e) {
                 LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                     'location' => __METHOD__,
                     'line' => __LINE__,
@@ -159,7 +184,7 @@ class AppSetting
                     'exception_trace' => $e->getTraceAsString(),
                     'sql_statement' => $sql,
                     'sql_parameters' => $params,
-                    'identifier' => 'MySQLWrapper_Query_Failure'
+                    'identifier' => 'MySQLWrapper_Query_Failure',
                 ]);
                 throw new RuntimeException(__('Database error while updating setting'), 0, $e);
             }
@@ -174,10 +199,10 @@ class AppSetting
 
             try {
                 $result = $this->db->create('app_settings', $params);
-                if ($result === false) {
+                if ($result === 0 || $result === '') {
                     throw new RuntimeException(__('Failed to create new setting'));
                 }
-            } catch (PDOException $e) {
+            } catch (\Throwable $e) {
                 LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                     'location' => __METHOD__,
                     'line' => __LINE__,
@@ -187,22 +212,23 @@ class AppSetting
                     'exception_trace' => $e->getTraceAsString(),
                     'sql_statement' => $sql,
                     'sql_parameters' => $params,
-                    'identifier' => 'MySQLWrapper_Query_Failure'
+                    'identifier' => 'MySQLWrapper_Query_Failure',
                 ]);
                 throw new RuntimeException(__('Database error while creating setting'), 0, $e);
             }
         }
+        unset(self::$settingsCache[$appId]);
     }
 
     /**
-     * Actualizeaza cheia si/sau valoarea unei setari existente.
+     * Updates the key and/or value of an existing setting.
      *
-     * @param int    $appId  ID-ul aplicatiei.
-     * @param string $oldKey Vechea cheie a setarii.
-     * @param array  $data   Datele de actualizat ('key' si/sau 'value').
-     * @return void
-     * @throws InvalidArgumentException Daca cheile introduse sunt invalide.
-     * @throws RuntimeException Daca cheia noua este duplicata sau operatia esueaza.
+     * @param  int  $appId  Application ID.
+     * @param  string  $oldKey  The old setting key.
+     * @param  array<string, mixed>  $data  Data to update ('key' and/or 'value').
+     *
+     * @throws InvalidArgumentException If the provided keys are invalid.
+     * @throws RuntimeException If the new key is a duplicate or the operation fails.
      */
     public function updateSetting(int $appId, string $oldKey, array $data): void
     {
@@ -211,7 +237,8 @@ class AppSetting
             throw new InvalidArgumentException(__('Invalid master keys for setting update'));
         }
 
-        $newKey = trim($data['key'] ?? $trimmedOldKey);
+        $rawNewKey = $data['key'] ?? $trimmedOldKey;
+        $newKey = trim(is_string($rawNewKey) ? $rawNewKey : '');
         $value = $data['value'] ?? '';
 
         if ($trimmedOldKey !== $newKey) {
@@ -230,19 +257,16 @@ class AppSetting
         ];
 
         try {
-            $result = $this->db->update('app_settings', [
+            $this->db->update('app_settings', [
                 'key' => $newKey,
-                'value' => $value,
+                'value' => is_string($value) ? $value : '',
                 'updated_at' => date('Y-m-d H:i:s'),
             ], [
                 'app_id' => $appId,
                 'key' => $trimmedOldKey,
             ]);
-
-            if ($result === false) {
-                throw new RuntimeException(__('Setting update operation failed'));
-            }
-        } catch (PDOException $e) {
+            unset(self::$settingsCache[$appId]);
+        } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
@@ -252,20 +276,20 @@ class AppSetting
                 'exception_trace' => $e->getTraceAsString(),
                 'sql_statement' => $sql,
                 'sql_parameters' => $params,
-                'identifier' => 'MySQLWrapper_Query_Failure'
+                'identifier' => 'MySQLWrapper_Query_Failure',
             ]);
             throw new RuntimeException(__('Database error during settings update modification'), 0, $e);
         }
     }
 
     /**
-     * Sterge o setare a unei aplicatii.
+     * Deletes a setting of an application.
      *
-     * @param int    $appId ID-ul aplicatiei.
-     * @param string $key   Cheia setarii.
-     * @return void
-     * @throws InvalidArgumentException Daca parametrii sunt invalizi.
-     * @throws RuntimeException Daca stergerea esueaza.
+     * @param  int  $appId  Application ID.
+     * @param  string  $key  Setting key.
+     *
+     * @throws InvalidArgumentException If parameters are invalid.
+     * @throws RuntimeException If deletion fails.
      */
     public function deleteSetting(int $appId, string $key): void
     {
@@ -282,10 +306,11 @@ class AppSetting
                 'app_id' => $appId,
                 'key' => $trimmedKey,
             ]);
-            if (!$result) {
+            if (! $result) {
                 throw new RuntimeException(__('Setting not found or deletion failed'));
             }
-        } catch (PDOException $e) {
+            unset(self::$settingsCache[$appId]);
+        } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
@@ -295,7 +320,7 @@ class AppSetting
                 'exception_trace' => $e->getTraceAsString(),
                 'sql_statement' => $sql,
                 'sql_parameters' => $params,
-                'identifier' => 'MySQLWrapper_Query_Failure'
+                'identifier' => 'MySQLWrapper_Query_Failure',
             ]);
             throw new RuntimeException(__('Database error during setting removal'), 0, $e);
         }

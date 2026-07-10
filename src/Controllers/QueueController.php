@@ -4,32 +4,33 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
-use App\Utilities\MySQLWrapper;
-use App\Utilities\LogViaStream;
 use App\Enums\LogLevel;
+use App\Utilities\LogViaStream;
+use App\Utilities\MySQLWrapper;
 use PDO;
 
 /**
- * Clasa QueueController
+ * QueueController Class
  *
- * Responsabila pentru gestionarea paginii si operatiilor din cadrul Queue Manager-ului.
- * Permite listarea joburilor din coada, stergerea individuala, curatarea completa a cozii
- * si verificarea starii de functionare a worker-ului de fundal.
+ * Responsible for managing the page and operations within the Queue Manager.
+ * Allows listing jobs in the queue, individual deletion, complete purging of the queue,
+ * and checking the status of the background worker.
  *
  * @category Controller
- * @package  App\Controllers
+ *
  * @version  1.0
+ *
  * @since    PHP 8.4
+ *
  * @author   Voica Liviu
  * @license  Proprietary
  */
 class QueueController extends BaseController
 {
     /**
-     * Afiseaza pagina de vizualizare a cozii active.
+     * Displays the active queue view page.
      *
-     * @param array $queryParams Parametrii de filtrare si paginare.
-     * @return void
+     * @param  array<array-key, mixed>  $queryParams  Filtering and pagination parameters.
      */
     public function index(array $queryParams = []): void
     {
@@ -38,30 +39,34 @@ class QueueController extends BaseController
         try {
             $db = MySQLWrapper::getInstance();
 
-            // Configurare paginare
-            $page = (int)($queryParams['page'] ?? 1);
+            // Pagination configuration
+            $rawPage = $queryParams['page'] ?? 1;
+            $page = (is_int($rawPage) || is_string($rawPage)) ? (int) $rawPage : 1;
             if ($page < 1) {
                 $page = 1;
             }
 
             $allowedLimits = [10, 25, 50, 100];
-            $limit = (int)($queryParams['limit'] ?? 10);
-            if (!in_array($limit, $allowedLimits, true)) {
+            $rawLimit = $queryParams['limit'] ?? 10;
+            $limit = (is_int($rawLimit) || is_string($rawLimit)) ? (int) $rawLimit : 10;
+            if (! in_array($limit, $allowedLimits, true)) {
                 $limit = 10;
             }
             $offset = ($page - 1) * $limit;
 
-            // Obtinem parametrii de sortare din URL
-            $sortBy = (string)($queryParams['sort_by'] ?? 'id');
-            $sortDir = (string)($queryParams['sort_dir'] ?? 'DESC');
+            // Get sorting parameters from URL
+            $rawSortBy = $queryParams['sort_by'] ?? 'id';
+            $sortBy = is_string($rawSortBy) ? $rawSortBy : 'id';
+            $rawSortDir = $queryParams['sort_dir'] ?? 'DESC';
+            $sortDir = is_string($rawSortDir) ? $rawSortDir : 'DESC';
 
             $allowedSorts = ['id', 'created_at', 'app_name'];
             $allowedDirections = ['ASC', 'DESC'];
 
-            if (!in_array($sortBy, $allowedSorts, true)) {
+            if (! in_array($sortBy, $allowedSorts, true)) {
                 $sortBy = 'id';
             }
-            if (!in_array(strtoupper($sortDir), $allowedDirections, true)) {
+            if (! in_array(strtoupper($sortDir), $allowedDirections, true)) {
                 $sortDir = 'DESC';
             }
             $sortOrder = strtoupper($sortDir);
@@ -74,27 +79,39 @@ class QueueController extends BaseController
                 $orderClause = "ORDER BY q.id {$sortOrder}";
             }
 
-            // Obtinem numarul total de joburi din coada
+            // Get the total number of jobs in the queue
             $stmtCount = $db->query('SELECT COUNT(*) FROM log_queue');
-            $totalJobs = (int)$stmtCount->fetchColumn();
-            $totalPages = (int)ceil($totalJobs / $limit);
+            $totalJobs = (int) $stmtCount->fetchColumn();
+            $totalPages = (int) ceil($totalJobs / $limit);
 
-            // Obtinem elementele din coada cu JOIN pe aplicatii
-            // Securizam LIMIT si OFFSET prin interpolare ca intregi
+            // Get elements from queue with JOIN on applications
+            // Secure LIMIT and OFFSET by interpolating as integers
             $sql = "SELECT q.id, q.app_id, q.payload_raw, q.created_at, a.name as app_name 
                     FROM log_queue q 
                     LEFT JOIN apps a ON q.app_id = a.id 
                     {$orderClause} 
-                    LIMIT " . (int)$limit . " OFFSET " . (int)$offset;
+                    LIMIT ".(int) $limit.' OFFSET '.(int) $offset;
 
             $stmtJobs = $db->query($sql);
             $jobs = $stmtJobs->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
-            // Verificam starea worker-ului in fundal executand pgrep
+            // Verify background worker status
             $output = [];
             $returnVar = 0;
-            exec('pgrep -f "bin/worker.php"', $output, $returnVar);
-            $isWorkerRunning = ($returnVar === 0 && !empty($output));
+            $isWorkerRunning = false;
+            $heartbeatFile = dirname(__DIR__, 2).'/storage/worker.heartbeat';
+
+            if (file_exists($heartbeatFile)) {
+                try {
+                    $lastSeenRaw = @file_get_contents($heartbeatFile);
+                    if ($lastSeenRaw !== false) {
+                        $lastSeenTimestamp = (int) $lastSeenRaw;
+                        $isWorkerRunning = (time() - $lastSeenTimestamp) <= 30;
+                    }
+                } catch (\Throwable) {
+                    $isWorkerRunning = false;
+                }
+            }
 
             $this->render('queue/index', [
                 'jobs' => $jobs,
@@ -114,7 +131,7 @@ class QueueController extends BaseController
                 'exception_file' => $e->getFile(),
                 'exception_line' => $e->getLine(),
                 'exception_trace' => $e->getTraceAsString(),
-                'identifier' => 'QueueController_Index_Failure'
+                'identifier' => 'QueueController_Index_Failure',
             ]);
 
             throw new \RuntimeException(__('Critical error loading queue data. Please try again later.'));
@@ -122,16 +139,17 @@ class QueueController extends BaseController
     }
 
     /**
-     * Sterge un singur job specific din coada.
+     * Deletes a single specific job from the queue.
      *
-     * @param array $postData Vectorul de date transmise prin POST.
-     * @return never Redirectioneaza inapoi la pagina de coada.
+     * @param  array<array-key, mixed>  $postData  The array of data passed via POST.
+     * @return never Redirects back to the queue page.
      */
     public function delete(array $postData): never
     {
         $this->checkAuth();
 
-        $id = (int)($postData['id'] ?? 0);
+        $rawId = $postData['id'] ?? 0;
+        $id = (is_int($rawId) || is_string($rawId)) ? (int) $rawId : 0;
         if ($id <= 0) {
             setFlash('danger', __('Error'), __('Invalid job ID.'));
             $this->redirect('queue.php');
@@ -147,7 +165,7 @@ class QueueController extends BaseController
                 'line' => __LINE__,
                 'exception_message' => $e->getMessage(),
                 'job_id' => $id,
-                'identifier' => 'QueueController_DeleteJob_Failure'
+                'identifier' => 'QueueController_DeleteJob_Failure',
             ]);
             setFlash('danger', __('Error'), __('Failed to delete job from queue.'));
         }
@@ -156,9 +174,9 @@ class QueueController extends BaseController
     }
 
     /**
-     * Curata complet coada (Purge).
+     * Completely purges the queue.
      *
-     * @return never Redirectioneaza inapoi la pagina de coada.
+     * @return never Redirects back to the queue page.
      */
     public function purge(): never
     {
@@ -166,7 +184,7 @@ class QueueController extends BaseController
 
         try {
             $db = MySQLWrapper::getInstance();
-            // Curatam tabela log_queue tranzactional prin TRUNCATE
+            // Clear log_queue table transactionally via TRUNCATE
             $db->getConnection()->exec('TRUNCATE TABLE log_queue');
             setFlash('success', __('Success'), __('The queue has been completely purged.'));
         } catch (\Throwable $e) {
@@ -174,7 +192,7 @@ class QueueController extends BaseController
                 'location' => __METHOD__,
                 'line' => __LINE__,
                 'exception_message' => $e->getMessage(),
-                'identifier' => 'QueueController_Purge_Failure'
+                'identifier' => 'QueueController_Purge_Failure',
             ]);
             setFlash('danger', __('Error'), __('Failed to purge the queue.'));
         }

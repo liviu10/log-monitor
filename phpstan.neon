@@ -1,0 +1,13 @@
+parameters:
+    level: 10
+    bootstrapFiles:
+        - bootstrap.php
+    paths:
+        - src
+        - api
+        - bin
+        - bootstrap.php
+        - index.php
+        - login.php
+        - queue.php
+        - users.php

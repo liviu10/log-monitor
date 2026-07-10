@@ -1,8 +1,8 @@
-<?php include __DIR__ . '/../layouts/header.php'; ?>
+<?php include __DIR__.'/../layouts/header.php'; ?>
 
 <div class="container-fluid p-0 overflow-hidden" x-data="App.dashboardPageData()">
     <div class="row g-0 vh-100">
-        <?php include __DIR__ . '/../layouts/sidebar.php'; ?>
+        <?php include __DIR__.'/../layouts/sidebar.php'; ?>
 
         <!-- Main Content -->
         <div class="col h-100 overflow-auto bg-dark bg-opacity-25">
@@ -124,7 +124,7 @@
                 <div class="card mb-4 border-0 shadow-sm bg-dark bg-opacity-50">
                     <div class="card-body p-4">
                         <form action="index.php" method="GET" class="row g-3 align-items-end">
-                            <input type="hidden" name="limit" value="<?= htmlspecialchars((string)($limit ?? 10)) ?>">
+                            <input type="hidden" name="limit" value="<?= htmlspecialchars((string) ($limit ?? 10)) ?>">
                             
                             <!-- First row of filters -->
                             <div class="col-md-4">
@@ -140,18 +140,18 @@
                                 <label class="form-label text-secondary small fw-bold text-uppercase"><?= __('Applications') ?></label>
                                 <select name="app_id" class="form-select bg-dark border-secondary border-opacity-25 text-light">
                                     <option value=""><?= __('All Applications') ?></option>
-                                    <?php foreach ($apps as $app): ?>
-                                        <option value="<?= $app['id'] ?>" <?= ((string)($filters['app_id'] ?? '') === (string)$app['id']) ? 'selected' : '' ?>><?= htmlspecialchars((string)$app['name']) ?></option>
-                                    <?php endforeach; ?>
+                                    <?php foreach ($apps as $app) { ?>
+                                        <option value="<?= $app['id'] ?>" <?= ((string) ($filters['app_id'] ?? '') === (string) $app['id']) ? 'selected' : '' ?>><?= htmlspecialchars((string) $app['name']) ?></option>
+                                    <?php } ?>
                                 </select>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label text-secondary small fw-bold text-uppercase"><?= __('Severity Levels') ?></label>
                                 <select name="level" class="form-select bg-dark border-secondary border-opacity-25 text-light">
                                     <option value=""><?= __('All Levels') ?></option>
-                                    <?php foreach ($levels as $level): ?>
+                                    <?php foreach ($levels as $level) { ?>
                                         <option value="<?= $level ?>" <?= (($filters['level'] ?? '') === $level) ? 'selected' : '' ?>><?= $level ?></option>
-                                    <?php endforeach; ?>
+                                    <?php } ?>
                                 </select>
                             </div>
 
@@ -192,30 +192,30 @@
                            class="badge rounded-pill px-3 py-2 text-decoration-none transition-all <?= empty($filters['app_id']) ? 'bg-info text-dark fw-bold shadow-sm' : 'bg-dark text-secondary border border-secondary border-opacity-25 hover-bg-light' ?>">
                             <?= __('All Applications') ?>
                         </a>
-                        <?php foreach ($apps as $app): ?>
-                            <?php 
-                                $isActive = (string)($filters['app_id'] ?? '') === (string)$app['id'];
+                        <?php foreach ($apps as $app) { ?>
+                            <?php
+                                $isActive = (string) ($filters['app_id'] ?? '') === (string) $app['id'];
                             ?>
                             <a href="index.php?<?= http_build_query(array_merge($filters, ['app_id' => $app['id'], 'page' => 1])) ?>" 
                                class="badge rounded-pill px-3 py-2 text-decoration-none transition-all <?= $isActive ? 'bg-info text-dark fw-bold shadow-sm' : 'bg-dark text-secondary border border-secondary border-opacity-25 hover-bg-light' ?>">
-                                <?= htmlspecialchars((string)$app['name']) ?>
+                                <?= htmlspecialchars((string) $app['name']) ?>
                             </a>
-                        <?php endforeach; ?>
+                        <?php } ?>
                     </div>
                 </div>
 
                 <!-- Logs List/Timeline View -->
                 <div class="card border-0 shadow-sm overflow-hidden bg-transparent">
                     <div class="d-flex flex-column gap-2">
-                        <?php if (empty($logs)): ?>
+                        <?php if (empty($logs)) { ?>
                             <div class="card border-0 p-5 text-center text-secondary bg-dark bg-opacity-25" style="border: 1px solid rgba(51, 65, 85, 0.25) !important;">
                                 <i class="fas fa-inbox d-block fs-1 mb-3 opacity-25"></i>
                                 <?= __('No logs found for the selected filters.') ?>
                             </div>
-                        <?php endif; ?>
+                        <?php } ?>
                         
-                        <?php foreach ($logs as $log): ?>
-                            <?php 
+                        <?php foreach ($logs as $log) { ?>
+                            <?php
                                 $accentColor = match (true) {
                                     in_array($log['level'], ['ERROR', 'CRITICAL', 'EMERGENCY', 'ALERT']) => '#ef4444',
                                     $log['level'] === 'WARNING' => '#f59e0b',
@@ -223,22 +223,22 @@
                                     $log['level'] === 'NOTICE' => '#10b981',
                                     default => '#6b7280'
                                 };
-                                
-                                $badgeClass = match (true) {
-                                    in_array($log['level'], ['ERROR', 'CRITICAL', 'EMERGENCY', 'ALERT']) => 'bg-danger bg-opacity-10 text-danger border-danger border-opacity-25',
-                                    $log['level'] === 'WARNING' => 'bg-warning bg-opacity-10 text-warning border-warning border-opacity-25',
-                                    $log['level'] === 'INFO' => 'bg-info bg-opacity-10 text-info border-info border-opacity-25',
-                                    $log['level'] === 'NOTICE' => 'bg-success bg-opacity-10 text-success border-success border-opacity-25',
-                                    default => 'bg-secondary bg-opacity-10 text-secondary border-secondary border-opacity-25'
-                                };
-                                
-                                $logJson = json_encode([
-                                    'app' => $log['app_name'] ?? 'Unknown',
-                                    'level' => $log['level'] ?? 'INFO',
-                                    'message' => $log['message'] ?? '',
-                                    'timestamp' => $log['created_at'] ?? '',
-                                    'context' => $log['context'] ? json_decode((string)$log['context'], true) : null
-                                ]);
+
+                            $badgeClass = match (true) {
+                                in_array($log['level'], ['ERROR', 'CRITICAL', 'EMERGENCY', 'ALERT']) => 'bg-danger bg-opacity-10 text-danger border-danger border-opacity-25',
+                                $log['level'] === 'WARNING' => 'bg-warning bg-opacity-10 text-warning border-warning border-opacity-25',
+                                $log['level'] === 'INFO' => 'bg-info bg-opacity-10 text-info border-info border-opacity-25',
+                                $log['level'] === 'NOTICE' => 'bg-success bg-opacity-10 text-success border-success border-opacity-25',
+                                default => 'bg-secondary bg-opacity-10 text-secondary border-secondary border-opacity-25'
+                            };
+
+                            $logJson = json_encode([
+                                'app' => $log['app_name'] ?? 'Unknown',
+                                'level' => $log['level'] ?? 'INFO',
+                                'message' => $log['message'] ?? '',
+                                'timestamp' => $log['created_at'] ?? '',
+                                'context' => $log['context'] ? json_decode((string) $log['context'], true) : null,
+                            ]);
                             ?>
                             <div class="card log-timeline-card border-0 border-start border-4 shadow-sm p-3 transition-all" 
                                  style="border-left-color: <?= $accentColor ?> !important; background-color: #1e293b;"
@@ -246,7 +246,7 @@
                                 <div class="row align-items-center g-2">
                                     <div class="col-md-2 col-sm-3 d-flex align-items-center gap-2">
                                         <span class="badge bg-secondary bg-opacity-25 text-light px-2 py-1 font-monospace text-truncate" style="max-width: 140px;">
-                                            <?= htmlspecialchars((string)($log['app_name'] ?? 'Unknown')) ?>
+                                            <?= htmlspecialchars((string) ($log['app_name'] ?? 'Unknown')) ?>
                                         </span>
                                     </div>
                                     <div class="col-md-2 col-sm-3">
@@ -256,13 +256,13 @@
                                     </div>
                                     <div class="col col-md-5 col-sm-6 text-truncate">
                                         <span class="text-light opacity-90 fw-medium font-monospace message-text">
-                                            <?= htmlspecialchars((string)($log['message'] ?? '')) ?>
+                                            <?= htmlspecialchars((string) ($log['message'] ?? '')) ?>
                                         </span>
-                                        <?php if ($log['context']): ?>
+                                        <?php if ($log['context']) { ?>
                                             <span class="badge bg-dark text-info ms-1 small" title="<?= __('Contains JSON context') ?>">
                                                 <i class="fas fa-code fs-xs me-1"></i> JSON
                                             </span>
-                                        <?php endif; ?>
+                                        <?php } ?>
                                     </div>
                                     <div class="col-md-2 col-sm-12 text-secondary font-monospace small">
                                         <?= date('H:i:s d.m.Y', strtotime($log['created_at'])) ?>
@@ -274,50 +274,50 @@
                                     </div>
                                 </div>
                             </div>
-                        <?php endforeach; ?>
+                        <?php } ?>
                     </div>
                 </div>
 
                 <!-- Pagination & Page Size controls -->
                 <?php
-                    $currentPage = (int)($page ?? 1);
-                    $range = 2; // Range of pages to show around the current page
-                    $startPage = max(1, $currentPage - $range);
-                    $endPage = min($totalPages ?? 1, $currentPage + $range);
-                    $limitOptions = [10, 25, 50, 100];
-                    $paginationParams = array_merge(array_filter($filters ?? []), [
-                        'sort_by' => $sortBy ?? 'id',
-                        'sort_dir' => $sortDir ?? 'DESC'
-                    ]);
-                ?>
+                    $currentPage = (int) ($page ?? 1);
+$range = 2; // Range of pages to show around the current page
+$startPage = max(1, $currentPage - $range);
+$endPage = min($totalPages ?? 1, $currentPage + $range);
+$limitOptions = [10, 25, 50, 100];
+$paginationParams = array_merge(array_filter($filters ?? []), [
+    'sort_by' => $sortBy ?? 'id',
+    'sort_dir' => $sortDir ?? 'DESC',
+]);
+?>
                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mt-4">
                     <!-- Page Size Selector -->
                     <div class="d-flex align-items-center gap-2">
                         <label class="text-secondary small text-nowrap mb-0"><?= __('Rows per page:') ?></label>
                         <select class="form-select form-select-sm bg-dark border-secondary border-opacity-25 text-light" style="width: auto; cursor: pointer;" @change="window.location.href = $event.target.value">
-                            <?php foreach ($limitOptions as $l): ?>
+                            <?php foreach ($limitOptions as $l) { ?>
                                 <?php
-                                    $urlParams = array_merge($paginationParams, [
-                                        'page' => 1,
-                                        'limit' => $l
-                                    ]);
-                                    $url = '?' . http_build_query($urlParams);
+                    $urlParams = array_merge($paginationParams, [
+                        'page' => 1,
+                        'limit' => $l,
+                    ]);
+                                $url = '?'.http_build_query($urlParams);
                                 ?>
                                 <option value="<?= htmlspecialchars($url) ?>" <?= ($limit === $l) ? 'selected' : '' ?>>
                                     <?= $l ?>
                                 </option>
-                            <?php endforeach; ?>
+                            <?php } ?>
                         </select>
                     </div>
 
                     <!-- Pagination Links -->
-                    <?php if (($totalPages ?? 0) > 1): ?>
+                    <?php if (($totalPages ?? 0) > 1) { ?>
                         <nav aria-label="<?= __('Pagination') ?>">
                             <ul class="pagination mb-0 gap-1 align-items-center">
                                 <!-- First Page -->
                                 <li class="page-item <?= ($currentPage <= 1) ? 'disabled' : '' ?>">
                                     <a class="page-link rounded bg-dark border-secondary border-opacity-25 text-light" 
-                                       href="<?= ($currentPage <= 1) ? '#' : '?' . http_build_query(array_merge($paginationParams, ['page' => 1, 'limit' => $limit])) ?>" 
+                                       href="<?= ($currentPage <= 1) ? '#' : '?'.http_build_query(array_merge($paginationParams, ['page' => 1, 'limit' => $limit])) ?>" 
                                        title="<?= __('First') ?>">
                                         <i class="fas fa-angle-double-left small"></i>
                                     </a>
@@ -326,48 +326,48 @@
                                 <!-- Prev Link -->
                                 <li class="page-item <?= ($currentPage <= 1) ? 'disabled' : '' ?>">
                                     <a class="page-link rounded bg-dark border-secondary border-opacity-25 text-light" 
-                                       href="<?= ($currentPage <= 1) ? '#' : '?' . http_build_query(array_merge($paginationParams, ['page' => $currentPage - 1, 'limit' => $limit])) ?>" 
+                                       href="<?= ($currentPage <= 1) ? '#' : '?'.http_build_query(array_merge($paginationParams, ['page' => $currentPage - 1, 'limit' => $limit])) ?>" 
                                        title="<?= __('Previous') ?>">
                                         <i class="fas fa-chevron-left small"></i>
                                     </a>
                                 </li>
 
                                 <!-- First Page Number if range starts after page 1 -->
-                                <?php if ($startPage > 1): ?>
+                                <?php if ($startPage > 1) { ?>
                                     <li class="page-item">
                                         <a class="page-link rounded bg-dark border-secondary border-opacity-25 text-light" 
                                            href="?<?= http_build_query(array_merge($paginationParams, ['page' => 1, 'limit' => $limit])) ?>">1</a>
                                     </li>
-                                    <?php if ($startPage > 2): ?>
+                                    <?php if ($startPage > 2) { ?>
                                         <li class="page-item disabled"><span class="page-link rounded bg-dark border-secondary border-opacity-25 text-secondary">...</span></li>
-                                    <?php endif; ?>
-                                <?php endif; ?>
+                                    <?php } ?>
+                                <?php } ?>
 
                                 <!-- Intermediate Page Links -->
-                                <?php for ($i = $startPage; $i <= $endPage; $i++): ?>
+                                <?php for ($i = $startPage; $i <= $endPage; $i++) { ?>
                                     <li class="page-item <?= ($currentPage === $i) ? 'active' : '' ?>">
                                         <a class="page-link rounded bg-dark border-secondary border-opacity-25 text-light" 
                                            href="?<?= http_build_query(array_merge($paginationParams, ['page' => $i, 'limit' => $limit])) ?>">
                                             <?= $i ?>
                                         </a>
                                     </li>
-                                <?php endfor; ?>
+                                <?php } ?>
 
                                 <!-- Last Page Number if range ends before totalPages -->
-                                <?php if ($endPage < $totalPages): ?>
-                                    <?php if ($endPage < $totalPages - 1): ?>
+                                <?php if ($endPage < $totalPages) { ?>
+                                    <?php if ($endPage < $totalPages - 1) { ?>
                                         <li class="page-item disabled"><span class="page-link rounded bg-dark border-secondary border-opacity-25 text-secondary">...</span></li>
-                                    <?php endif; ?>
+                                    <?php } ?>
                                     <li class="page-item">
                                         <a class="page-link rounded bg-dark border-secondary border-opacity-25 text-light" 
                                            href="?<?= http_build_query(array_merge($paginationParams, ['page' => $totalPages, 'limit' => $limit])) ?>"><?= $totalPages ?></a>
                                     </li>
-                                <?php endif; ?>
+                                <?php } ?>
 
                                 <!-- Next Link -->
                                 <li class="page-item <?= ($currentPage >= $totalPages) ? 'disabled' : '' ?>">
                                     <a class="page-link rounded bg-dark border-secondary border-opacity-25 text-light" 
-                                       href="<?= ($currentPage >= $totalPages) ? '#' : '?' . http_build_query(array_merge($paginationParams, ['page' => $currentPage + 1, 'limit' => $limit])) ?>" 
+                                       href="<?= ($currentPage >= $totalPages) ? '#' : '?'.http_build_query(array_merge($paginationParams, ['page' => $currentPage + 1, 'limit' => $limit])) ?>" 
                                        title="<?= __('Next') ?>">
                                         <i class="fas fa-chevron-right small"></i>
                                     </a>
@@ -376,14 +376,14 @@
                                 <!-- Last Page -->
                                 <li class="page-item <?= ($currentPage >= $totalPages) ? 'disabled' : '' ?>">
                                     <a class="page-link rounded bg-dark border-secondary border-opacity-25 text-light" 
-                                       href="<?= ($currentPage >= $totalPages) ? '#' : '?' . http_build_query(array_merge($paginationParams, ['page' => $totalPages, 'limit' => $limit])) ?>" 
+                                       href="<?= ($currentPage >= $totalPages) ? '#' : '?'.http_build_query(array_merge($paginationParams, ['page' => $totalPages, 'limit' => $limit])) ?>" 
                                        title="<?= __('Last') ?>">
                                         <i class="fas fa-angle-double-right small"></i>
                                     </a>
                                 </li>
                             </ul>
                         </nav>
-                    <?php endif; ?>
+                    <?php } ?>
                 </div>
             </main>
         </div>
@@ -438,8 +438,18 @@
                     </div>
                     <div class="modal-footer border-secondary border-opacity-25 bg-black bg-opacity-10 p-3">
                         <button type="button" class="btn btn-secondary px-4 btn-sm" @click="showModal = false"><?= __('Close') ?></button>
-                        <button type="button" class="btn btn-info px-4 btn-sm text-dark fw-bold" @click="navigator.clipboard.writeText(JSON.stringify(selectedLog, null, 4)); alert(__('Copied to clipboard!'))">
-                            <i class="fas fa-copy me-2"></i> <?= __('Copy Log') ?>
+                        <button 
+                            type="button" 
+                            class="btn px-4 btn-sm text-dark fw-bold transition-all" 
+                            :class="payloadCopied ? 'btn-success' : 'btn-info'"
+                            @click="copyLog()"
+                        >
+                            <span x-show="!payloadCopied">
+                                <i class="fas fa-copy me-2"></i> <?= __('Copy Log') ?>
+                            </span>
+                            <span x-show="payloadCopied" x-cloak>
+                                <i class="fas fa-check me-2"></i> <?= __('Log Copied') ?>
+                            </span>
                         </button>
                     </div>
                 </div>
@@ -449,4 +459,4 @@
 </div>
 
 
-<?php include __DIR__ . '/../layouts/footer.php'; ?>
+<?php include __DIR__.'/../layouts/footer.php'; ?>

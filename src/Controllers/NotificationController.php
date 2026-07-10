@@ -4,107 +4,130 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
-use App\Models\AppSetting;
-use App\Utilities\SendNotification;
-use App\Utilities\LogViaStream;
 use App\Enums\LogLevel;
+use App\Models\AppSetting;
+use App\Utilities\LogViaStream;
+use App\Utilities\SendNotification;
 
 /**
- * Clasa NotificationController
+ * NotificationController Class
  *
- * Responsabila pentru gestionarea si trimiterea de alerte automate
- * prin diverse canale alternative configurate din aplicatie (E-mail, Teams etc.).
+ * Responsible for managing and sending automated alerts
+ * through various alternative channels configured in the application (Email, Teams, etc.).
  *
  * @category Controller
- * @package  App\Controllers
+ *
  * @version  1.6
+ *
  * @since    PHP 8.4
+ *
  * @author   Voica Liviu
  * @license  Proprietary
  */
 class NotificationController extends BaseController
 {
     /**
-     * Trimite o alerta pe baza setarilor aplicatiei si a datelor din log.
-     * Suporta utilizarea de canale multiple (ex: "email,teams").
+     * Sends an alert based on application settings and log data.
+     * Supports the use of multiple channels (e.g., "email,teams").
      *
-     * @param array $app        Datele aplicatiei procesate.
-     * @param array $logPayload Datele continutului din logul generat.
+     * @param  array<array-key, mixed>  $app  The processed application data.
+     * @param  array<array-key, mixed>  $logPayload  The content data of the generated log.
+     * @param  array<array-key, mixed>|null  $settings  Pre-loaded application settings (optional).
      */
-    public function sendAlert(array $app, array $logPayload): void
+    public function sendAlert(array $app, array $logPayload, ?array $settings = null): void
     {
         try {
-            $appSettingModel = new AppSetting();
-            $settingsRaw = $appSettingModel->getSettingsForApp((int)$app['id']);
-            
-            $settings = [];
-            foreach ($settingsRaw as $row) {
-                $settings[$row['key']] = $row['value'];
+            if ($settings === null) {
+                $appSettingModel = new AppSetting;
+                $rawAppId = $app['id'] ?? null;
+                $appId = (is_int($rawAppId) || is_string($rawAppId)) ? (int) $rawAppId : 0;
+                $settingsRaw = $appSettingModel->getSettingsForApp($appId);
+
+                $settings = [];
+                foreach ($settingsRaw as $row) {
+                    $rowKey = $row['key'] ?? null;
+                    if (is_string($rowKey) || is_int($rowKey)) {
+                        $settings[$rowKey] = $row['value'] ?? null;
+                    }
+                }
             }
 
-            $channels = array_map('trim', explode(',', strtolower($settings['notification_channel'] ?? '')));
+            $rawChannel = $settings['notification_channel'] ?? '';
+            $channels = array_map('trim', explode(',', strtolower(is_string($rawChannel) ? $rawChannel : '')));
             $levelsRaw = $settings['notification_levels'] ?? '';
-            $levels = array_map('trim', explode(',', strtolower($levelsRaw)));
-            $currentLevel = strtolower($logPayload['level']);
+            $levels = array_map('trim', explode(',', strtolower(is_string($levelsRaw) ? $levelsRaw : '')));
+            $rawLevel = $logPayload['level'] ?? '';
+            $currentLevel = strtolower(is_string($rawLevel) ? $rawLevel : '');
 
-            if (!in_array($currentLevel, $levels, true)) {
+            if (! in_array($currentLevel, $levels, true)) {
                 return;
             }
 
-            // Tratare exhaustiva a prioritatilor folosind structura moderna match din PHP 8.x
+            // Exhaustive handling of priorities using the modern PHP 8.x match structure
             $priority = match ($currentLevel) {
                 'emergency', 'alert', 'critical', 'error' => 1,
-                'warning', 'notice'                        => 3,
-                'info', 'debug'                            => 5,
-                default                                    => 3
+                'warning', 'notice' => 3,
+                'info', 'debug' => 5,
+                default => 3
             };
 
             $contextStr = '';
-            if (!empty($logPayload['context'])) {
+            if (! empty($logPayload['context'])) {
                 $contextStr = json_encode($logPayload['context'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
             }
 
-            $subject = sprintf("[%s] Log Alert %s - %s", strtoupper($logPayload['level']), $app['name'], APP_NAME);
-            
-            $emailMessage = "A fost inregistrat un log de nivel mare:\n\n"
-                . "Aplicatie: " . $app['name'] . "\n"
-                . "Nivel: " . strtoupper($logPayload['level']) . "\n"
-                . "Mesaj: " . $logPayload['message'] . "\n"
-                . "Data: " . date('Y-m-d H:i:s') . "\n";
+            $rawLevelStr = $logPayload['level'] ?? '';
+            $appNameStr = $app['name'] ?? '';
+            $subject = sprintf(
+                '[%s] Log Alert %s - %s',
+                strtoupper(is_string($rawLevelStr) ? $rawLevelStr : ''),
+                is_string($appNameStr) ? $appNameStr : '',
+                APP_NAME
+            );
+
+            $appNameVal = $app['name'] ?? '';
+            $levelVal = $logPayload['level'] ?? '';
+            $messageVal = $logPayload['message'] ?? '';
+
+            $emailMessage = "A high-level log was recorded:\n\n"
+                .'Application: '.(is_string($appNameVal) ? $appNameVal : '')."\n"
+                .'Level: '.strtoupper(is_string($levelVal) ? $levelVal : '')."\n"
+                .'Message: '.(is_string($messageVal) ? $messageVal : '')."\n"
+                .'Date: '.date('Y-m-d H:i:s')."\n";
 
             if ($contextStr !== '') {
-                $emailMessage .= "Context:\n" . $contextStr . "\n";
+                $emailMessage .= "Context:\n".$contextStr."\n";
             }
 
-            // 1. Canal comunicare Email standard
+            // 1. Standard Email communication channel
             if (in_array('email', $channels, true)) {
                 $emailRecipient = $settings['notification_email'] ?? null;
-                if (!empty($emailRecipient)) {
-                    $notifier = new SendNotification();
+                if (is_string($emailRecipient) && $emailRecipient !== '') {
+                    $notifier = new SendNotification;
                     $notifier->handle([
                         'to' => $emailRecipient,
                         'message' => $emailMessage,
                         'subject' => $subject,
-                        'priority' => $priority
+                        'priority' => $priority,
                     ]);
                 }
             }
 
-            // 2. Canal comunicare Microsoft Teams direct pe adresa canalului dedicat
+            // 2. Microsoft Teams communication channel directly to the dedicated channel address
             if (in_array('teams', $channels, true)) {
                 $teamsEmail = $settings['notification_teams_email'] ?? null;
-                if (!empty($teamsEmail)) {
-                    $notifier = new SendNotification();
+                if (is_string($teamsEmail) && $teamsEmail !== '') {
+                    $notifier = new SendNotification;
                     $notifier->handle([
                         'to' => $teamsEmail,
                         'message' => $emailMessage,
                         'subject' => $subject,
-                        'priority' => $priority
+                        'priority' => $priority,
                     ]);
                 }
             }
         } catch (\Throwable $e) {
-            LogViaStream::send(LogLevel::ERROR->value, 'Eroare la procesarea/trimiterea notificarii automate: ' . $e->getMessage(), [
+            LogViaStream::send(LogLevel::ERROR->value, 'Error processing/sending automated notification: '.$e->getMessage(), [
                 'location' => __METHOD__,
                 'line' => __LINE__,
                 'exception_message' => $e->getMessage(),
@@ -112,7 +135,7 @@ class NotificationController extends BaseController
                 'exception_line' => $e->getLine(),
                 'exception_trace' => $e->getTraceAsString(),
                 'app_id' => $app['id'] ?? null,
-                'log_level' => $logPayload['level'] ?? null
+                'log_level' => $logPayload['level'] ?? null,
             ]);
         }
     }

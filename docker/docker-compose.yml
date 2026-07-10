@@ -2,22 +2,89 @@ version: '3.8'
 name: log-monitor
 
 services:
+  # 1. Edge Proxy (Nginx) - Corectat pentru medii rootless si injectie openssl
+  proxy:
+    image: docker.io/library/nginx:alpine
+    container_name: log-monitor-proxy
+    restart: always
+    ports:
+      - "8080:80"   # Mapeaza portul 8080 de pe gazda catre portul 80 din container
+      - "8443:443"  # Mapeaza portul 8443 de pe gazda catre portul 443 din container
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro,Z  # Adaugat flag-ul Z pentru permisiuni SELinux
+      - certbot_etc:/etc/letsencrypt:ro
+      - certbot_www:/var/www/certbot:ro
+      - proxy_ssl:/etc/nginx/ssl:Z
+    entrypoint: >
+      /bin/sh -c "
+      apk add --no-cache openssl;
+      mkdir -p /etc/nginx/ssl;
+      if [ ! -f /etc/letsencrypt/live/log-monitor.local/fullchain.pem ]; then
+        echo 'Certificat real lipsa. Generez certificat dummy pentru boot...';
+        openssl req -x509 -nodes -days 1 -newkey rsa:2048 -keyout /etc/nginx/ssl/privkey.pem -out /etc/nginx/ssl/fullchain.pem -subj '/CN=log-monitor.local';
+      fi;
+      (
+        USING_DUMMY=1;
+        while :; do
+          if [ -f /etc/letsencrypt/live/log-monitor.local/fullchain.pem ]; then
+            cp /etc/letsencrypt/live/log-monitor.local/fullchain.pem /etc/nginx/ssl/fullchain.pem;
+            cp /etc/letsencrypt/live/log-monitor.local/privkey.pem /etc/nginx/ssl/privkey.pem;
+            nginx -s reload;
+            USING_DUMMY=0;
+          fi;
+          if [ \"$$USING_DUMMY\" = \"1\" ]; then
+            sleep 10;
+          else
+            sleep 1d;
+          fi;
+        done;
+      ) &
+      exec nginx -g 'daemon off;';
+      "
+    depends_on:
+      - app
+
+  # 2. Certbot Sidecar - Sincronizat cu pornirea proxy-ului
+  certbot:
+    image: docker.io/certbot/certbot:latest
+    container_name: log-monitor-certbot
+    restart: always
+    volumes:
+      - certbot_etc:/etc/letsencrypt:Z
+      - certbot_www:/var/www/certbot:Z
+    entrypoint: >
+      /bin/sh -c "
+      trap exit TERM;
+      until nc -z proxy 80; do sleep 2; done;
+      if [ ! -f /etc/letsencrypt/live/log-monitor.local/fullchain.pem ]; then
+        certbot certonly --webroot -w /var/www/certbot -d log-monitor.local --email admin@domeniu.com --agree-tos --no-eff-email --non-interactive;
+      fi;
+      while :; do
+        certbot renew;
+        sleep 12h;
+      done;
+      "
+    depends_on:
+      - proxy  # Asigura ordinea corecta de rezolutie DNS in reteaua interna
+
+  # 3. Serviciul Web Principal (FrankenPHP) - Actualizat cu Bind Mount
   app:
     build:
       context: ..
       dockerfile: docker/Dockerfile
     container_name: log-monitor-app
     restart: always
-    ports:
-      - "8080:80"
     volumes:
-      - ..:/var/www/html:Z
+      - ../:/var/www/html:z                  # Sincronizeaza codul de pe gazda in container in timp real
+      - /var/www/html/vendor                 # Pastreaza folderul vendor generat in container (nu il suprascrie cu cel de pe gazda)
+      - storage_data:/var/www/html/storage:z # Volumul partajat pentru date persistente
     env_file:
       - ../.env
     environment:
       - TZ=${TZ:-Europe/Bucharest}
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/login.php"]
       interval: 30s
@@ -25,12 +92,67 @@ services:
       retries: 3
       start_period: 20s
 
+  # 4. Worker - Consumator de cozi CLI - Actualizat cu Bind Mount
+  worker:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: log-monitor-worker
+    restart: always
+    command: ["php", "bin/worker.php"]
+    blkio_config:
+      device_write_bps:
+        - path: /dev/nvme0n1
+          rate: 300mb
+      device_read_bps:
+        - path: /dev/nvme0n1
+          rate: 300mb
+    volumes:
+      - ../:/var/www/html:z                  # Sincronizare cod
+      - /var/www/html/vendor                 # Protectie vendor
+      - storage_data:/var/www/html/storage:z
+    env_file:
+      - ../.env
+    environment:
+      - TZ=${TZ:-Europe/Bucharest}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # 5. Cron - Task-uri programate de mentenanta - Actualizat cu Bind Mount
+  cron:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: log-monitor-cron
+    restart: always
+    command: ["crond", "-f", "-l", "2"]
+    volumes:
+      - ../:/var/www/html:z                  # Sincronizare cod
+      - /var/www/html/vendor                 # Protectie vendor
+      - storage_data:/var/www/html/storage:z
+    env_file:
+      - ../.env
+    environment:
+      - TZ=${TZ:-Europe/Bucharest}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # 6. Baza de Date - MariaDB
   db:
-    image: docker.io/library/mariadb:latest
+    image: docker.io/library/mariadb:12.3.2
     container_name: log-monitor-db
     restart: always
     ports:
       - "33061:3306"
+    blkio_config:
+      device_write_bps:
+        - path: /dev/nvme0n1
+          rate: 300mb
+      device_read_bps:
+        - path: /dev/nvme0n1
+          rate: 300mb
     env_file:
       - ../.env
     environment:
@@ -41,12 +163,16 @@ services:
       - TZ=${TZ:-Europe/Bucharest}
     volumes:
       - db_data:/var/lib/mysql:Z
-      - ./my.cnf:/etc/mysql/conf.d/my.cnf:ro
+      - ./my.cnf:/etc/mysql/conf.d/my.cnf:ro,Z
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD-SHELL", "mariadb-admin ping -u root -p\"$$MYSQL_ROOT_PASSWORD\""]
       interval: 10s
       timeout: 5s
       retries: 5
 
 volumes:
   db_data:
+  storage_data:
+  certbot_etc:
+  certbot_www:
+  proxy_ssl:

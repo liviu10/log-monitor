@@ -4,24 +4,27 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
 use App\Controllers\NotificationController;
 use App\Models\App;
 use App\Models\AppSetting;
+use Tests\TestCase;
 
 class NotificationControllerTest extends TestCase
 {
     private App $appModel;
+
     private AppSetting $settingModel;
+
     private NotificationController $controller;
+
     private array $app;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->appModel = new App();
-        $this->settingModel = new AppSetting();
-        $this->controller = new NotificationController();
+        $this->appModel = new App;
+        $this->settingModel = new AppSetting;
+        $this->controller = new NotificationController;
 
         $this->db()->getConnection()->exec('SET FOREIGN_KEY_CHECKS=0;');
         $this->db()->getConnection()->exec('TRUNCATE TABLE app_settings;');
@@ -32,7 +35,7 @@ class NotificationControllerTest extends TestCase
         $this->app = $this->appModel->findByApiKey('alert-key-1');
     }
 
-    public function testSendAlertFiltersByLogLevel(): void
+    public function test_send_alert_filters_by_log_level(): void
     {
         // Setup app to only alert on CRITICAL levels via Email
         $this->settingModel->saveSetting($this->app['id'], 'notification_channel', 'email');
@@ -44,7 +47,7 @@ class NotificationControllerTest extends TestCase
         $logPayload = [
             'level' => 'INFO',
             'message' => 'Standard flow log message',
-            'context' => []
+            'context' => [],
         ];
 
         // Should exit early and not trigger any exceptions since level doesn't match

@@ -4,30 +4,32 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
-use App\Models\User;
-use App\Utilities\Validation;
-use App\Utilities\LogViaStream;
 use App\Enums\LogLevel;
+use App\Models\User;
+use App\Utilities\LogViaStream;
+use App\Utilities\Validation;
 
 /**
- * Clasa AuthController
+ * AuthController Class
  *
- * Gestioneaza procesele de autentificare, autorizare si delogare pentru utilizatorii administratori.
- * Include logica pentru afisarea formularului de login, validarea credentialelor utilizand hash-uri Argon2id/BCRYPT
- * si managementul sesiunilor active intr-un mod securizat.
+ * Manages the authentication, authorization, and logout processes for admin users.
+ * Includes logic for displaying the login form, validating credentials using Argon2id/BCRYPT hashes,
+ * and secure active session management.
  *
  * @category Controller
- * @package  App\Controllers
+ *
  * @version  1.3
+ *
  * @since    PHP 8.4
+ *
  * @author   Voica Liviu
  * @license  Proprietary
  */
 class AuthController extends BaseController
 {
     /**
-     * Afiseaza pagina de login.
-     * Daca utilizatorul este deja autentificat, il redirectioneaza spre dashboard.
+     * Displays the login page.
+     * If the user is already authenticated, redirects them to the dashboard.
      */
     public function showLogin(): void
     {
@@ -38,13 +40,15 @@ class AuthController extends BaseController
     }
 
     /**
-     * Proceseaza tentativa de autentificare a unui utilizator.
-     * Valideaza datele de intrare si verifica parola utilizand functii securizate native.
+     * Processes a user authentication attempt.
+     * Validates input data and verifies password using native secure functions.
+     *
+     * @param  array<array-key, mixed>  $data
      */
     public function login(array $data): never
     {
         $payload = $data;
-        
+
         $validator = new Validation([
             'username' => __('Username'),
             'password' => __('Password'),
@@ -55,32 +59,36 @@ class AuthController extends BaseController
             'password' => ['required', 'string'],
         ], $payload);
 
-        if (!empty($errors)) {
+        if (! empty($errors)) {
             $_SESSION['errors'] = $errors;
             $this->redirect('login.php');
         }
 
         try {
-            $userModel = new User();
-            $user = $userModel->findByUsername(trim($payload['username']));
+            $userModel = new User;
+            $usernameVal = $payload['username'] ?? '';
+            $user = $userModel->findByUsername(trim(is_string($usernameVal) ? $usernameVal : ''));
 
-            if ($user && password_verify($payload['password'], $user['password_hash'])) {
-                // Prevenirea atacurilor de tip Session Fixation prin regenerarea ID-ului sesiunii
+            $passwordVal = $payload['password'] ?? null;
+            $passwordHashVal = $user['password_hash'] ?? null;
+
+            if ($user && is_string($passwordVal) && is_string($passwordHashVal) && password_verify($passwordVal, $passwordHashVal)) {
+                // Prevent Session Fixation attacks by regenerating the session ID
                 session_regenerate_id(true);
-                
+
                 $_SESSION['auth.user'] = [
                     'id' => $user['id'],
                     'username' => $user['username'],
                 ];
                 $this->redirect('index.php');
             }
-            
-            // Logare audit pentru esec autentificare (potential atac fortat)
+
+            // Audit log for authentication failure (potential brute force attack)
             LogViaStream::send(LogLevel::WARNING->value, 'Failed authentication attempt', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
                 'username' => $payload['username'],
-                'identifier' => 'AuthController_Login_FailedAttempt'
+                'identifier' => 'AuthController_Login_FailedAttempt',
             ]);
         } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Critical authentication exception process', [
@@ -90,7 +98,7 @@ class AuthController extends BaseController
                 'exception_file' => $e->getFile(),
                 'exception_line' => $e->getLine(),
                 'exception_trace' => $e->getTraceAsString(),
-                'identifier' => 'AuthController_Login_SystemException'
+                'identifier' => 'AuthController_Login_SystemException',
             ]);
         }
 
@@ -99,33 +107,36 @@ class AuthController extends BaseController
     }
 
     /**
-     * Delogheaza utilizatorul si distruge complet orice urma a sesiunii active.
+     * Logs the user out and completely destroys any trace of the active session.
      */
     public function logout(): never
     {
-        // 1. Golirea completa a vectorului global $_SESSION pentru a sterge datele din memoria runtime
+        // 1. Completely clear the global $_SESSION array to erase data from runtime memory
         $_SESSION = [];
 
-        // 2. Stergerea si invalidarea totala a cookie-ului de sesiune de pe client (browser)
+        // 2. Erase and fully invalidate the session cookie on the client (browser)
         if (ini_get('session.use_cookies')) {
             $params = session_get_cookie_params();
-            setcookie(
-                session_name(),
-                '',
-                time() - 42000,
-                $params['path'],
-                $params['domain'],
-                (bool)$params['secure'],
-                (bool)$params['httponly']
-            );
+            $sessionName = session_name();
+            if (is_string($sessionName)) {
+                setcookie(
+                    $sessionName,
+                    '',
+                    time() - 42000,
+                    $params['path'],
+                    $params['domain'],
+                    (bool) $params['secure'],
+                    (bool) $params['httponly']
+                );
+            }
         }
 
-        // 3. Distrugerea fizica a datelor sesiunii de pe server
+        // 3. Physically destroy session data on the server
         if (session_status() === PHP_SESSION_ACTIVE) {
             session_destroy();
         }
 
-        // 4. Redirectionare defensiva catre pagina de login
+        // 4. Defensive redirection to the login page
         $this->redirect('login.php');
     }
 }

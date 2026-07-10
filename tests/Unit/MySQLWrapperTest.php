@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Unit;
 
-use Tests\TestCase;
 use App\Utilities\MySQLWrapper;
-use RuntimeException;
 use PDO;
+use RuntimeException;
+use Tests\TestCase;
 
 class MySQLWrapperTest extends TestCase
 {
@@ -17,34 +17,34 @@ class MySQLWrapperTest extends TestCase
     {
         parent::setUp();
         $this->dbWrapper = MySQLWrapper::getInstance();
-        
+
         $this->dbWrapper->getConnection()->exec('SET FOREIGN_KEY_CHECKS=0;');
         $this->dbWrapper->getConnection()->exec('TRUNCATE TABLE apps;');
         $this->dbWrapper->getConnection()->exec('SET FOREIGN_KEY_CHECKS=1;');
     }
 
-    public function testSingletonInstanceIsUnique(): void
+    public function test_singleton_instance_is_unique(): void
     {
         $instance1 = MySQLWrapper::getInstance();
         $instance2 = MySQLWrapper::getInstance();
-        
+
         $this->assertSame($instance1, $instance2);
     }
 
-    public function testGetConnectionReturnsPdoInstance(): void
+    public function test_get_connection_returns_pdo_instance(): void
     {
         $conn = $this->dbWrapper->getConnection();
         $this->assertInstanceOf(PDO::class, $conn);
     }
 
-    public function testCrudOperationsOnDatabase(): void
+    public function test_crud_operations_on_database(): void
     {
         $table = 'apps';
-        
+
         // 1. Create
         $insertData = [
             'name' => 'MySQLWrapper Integration App',
-            'api_key' => 'wrapper-key-999'
+            'api_key' => 'wrapper-key-999',
         ];
         $insertResult = $this->dbWrapper->create($table, $insertData);
         $this->assertGreaterThan(0, $insertResult);
@@ -72,7 +72,7 @@ class MySQLWrapperTest extends TestCase
         $this->assertEmpty($recordsAfterDelete);
     }
 
-    public function testDeleteWithoutConditionsThrowsException(): void
+    public function test_delete_without_conditions_throws_exception(): void
     {
         $this->expectException(RuntimeException::class);
         $this->dbWrapper->delete('apps', []);

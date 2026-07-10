@@ -16,15 +16,12 @@
     # Enable compression
     encode zstd gzip 
 
-
-
     # Protect sensitive files and directories by faking a 404 Not Found
     @forbidden {
         path /bin /bin/*
         path /db /db/*
         path /dist /dist/*
         path /docker /docker/*
-        path /integrations /integrations/*
 		path /lang /lang/*
 		path /src /src/*
         path /tests /tests/*
@@ -34,12 +31,12 @@
         path .gitignore
         path /composer.json
         path /composer.lock
-        path /phinx.php
         path /phpunit.xml
-        path /rector.php
     }
     respond @forbidden "Not Found" 404
 
     # Execute PHP files
-    php_server 
+    php_server {
+        worker api/log.php 2
+    }
 }
