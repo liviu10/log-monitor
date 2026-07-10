@@ -57,32 +57,17 @@ LogMonitor uses a decoupled, queue-first architecture to handle high-throughput 
 
 ## 📊 Performance Benchmarks & Stress Tests
 
-LogMonitor includes a comprehensive benchmarking suite to measure maximum throughput, CPU overhead, RAM consumption, and SSD I/O impact under load.
+LogMonitor includes a comprehensive benchmarking suite to measure maximum throughput under load.
 
 ### ⚡ Running the Benchmark
 
-You can trigger a full 50,000 log stress-test using the host monitoring script:
+You can trigger a full 50,000 log stress-test in isolation using PHPUnit:
 
 ```bash
-# Execute from the host terminal (requires development environment)
-./dashboard.sh
+podman exec -it log-monitor-app vendor/bin/phpunit --group benchmark
 ```
 
-### 📋 Benchmark Report Details
-
-The script automatically generates a detailed Markdown report saved to:
-👉 [storage/reports/test_performanta_50000_loguri.txt](file:///home/liviuvoica/Projects/log-monitor/storage/reports/test_performanta_50000_loguri.txt)
-
-This report details:
-1. **Ingestion Phase Speed**: Average requests/second and duration. (Target: **~3,000+ req/s**).
-2. **Processing Phase Speed**: Queue worker throughput. (Target: **~11,000+ logs/s**).
-3. **Net Resource Consumption**: Idle baselines are automatically subtracted to report **active net CPU and RAM** per container.
-4. **SSD I/O Impact**: Reads and writes in MB and MB/s per container.
-
-> [!TIP]
-> **Cold Start vs. Warm Start Behavior**
-> * **Cold Start (1st run)**: CPU usage is slightly higher (~170%) because PHP's OpCache is empty. The server must read files from disk and compile them to bytecode, and the database buffer pool is not yet warmed up.
-> * **Warm Start (Subsequent runs)**: CPU usage drops to **under 40%** (less than 2.5% of a 16-core system) because compiled opcodes are served directly from RAM and database buffers are fully loaded.
+This will run the bulk database ingestion and processing operations, printing the duration and rate of logs per second directly to your terminal.
 
 ---
 
@@ -241,9 +226,9 @@ To generate standalone release bundles for environments running older PHP versio
 ```text
 log-monitor/
 ├── api/                 # Fast API Ingestion Endpoints (log.php)
-├── bin/                 # CLI Utilities (purge-logs.php, worker.php, simulate-logs.php, rector.php)
+├── bin/                 # CLI Utilities (purge-logs.php, worker.php, rector.php)
 ├── db/                  # Phinx migrations, data seeds, and configuration (phinx.php)
-├── docker/              # Container configuration (Dockerfile, Caddyfile, php.ini, entrypoints, dashboard.sh)
+├── docker/              # Container configuration (Dockerfile, Caddyfile, php.ini, entrypoints)
 ├── lang/                # Translation dictionary JSON files (en.json, ro.json)
 ├── queue.php            # Queue Manager router/entrypoint
 ├── src/                 # Application Core (Controllers, Models, Utilities)
