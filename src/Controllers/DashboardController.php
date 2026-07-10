@@ -30,7 +30,7 @@ class DashboardController extends BaseController
     /**
      * Displays the main dashboard page with the list of filtered logs.
      *
-     * @param array<array-key, mixed> $queryParams
+     * @param  array<array-key, mixed>  $queryParams
      */
     public function index(array $queryParams = []): void
     {

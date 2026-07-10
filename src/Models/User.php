@@ -67,6 +67,7 @@ class User
                 /** @var array<string, mixed> $first */
                 return $first;
             }
+
             return null;
         } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [

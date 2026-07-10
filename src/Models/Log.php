@@ -168,6 +168,7 @@ class Log
         try {
             $stmt = $this->db->query($sql, $params);
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
             /** @var array<int, array<string, mixed>> $rows */
             return $rows;
         } catch (\Throwable $e) {
@@ -297,6 +298,7 @@ class Log
         try {
             $stmt = $this->db->query($sql, $params);
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
             /** @var array<int, array<string, mixed>> $rows */
             return $rows;
         } catch (\Throwable $e) {

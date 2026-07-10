@@ -95,6 +95,7 @@ class App
     {
         try {
             $results = $this->db->read('apps', [], ['*']) ?: [];
+
             /** @var array<int, array<string, mixed>> $results */
             return $results;
         } catch (\Throwable $e) {

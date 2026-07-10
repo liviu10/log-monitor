@@ -44,8 +44,8 @@ class SendNotification
      * Processes data and sends the email according to the configuration.
      *
      * @param array{
-     * to: string,
-     * message: string,
+     * to?: string,
+     * message?: string,
      * priority?: int,
      * attachmentPath?: string|array<int, string>|null,
      * from?: string|null,
@@ -61,12 +61,26 @@ class SendNotification
             throw new RuntimeException(__('Notification system is disabled in this runtime environment.'));
         }
 
-        $to = $emailData['to'];
-        $message = $emailData['message'];
+        $to = $emailData['to'] ?? throw new RuntimeException(__('The recipient field is required.'));
+        $message = $emailData['message'] ?? throw new RuntimeException(__('The message body field is required.'));
         $priority = $emailData['priority'] ?? 3;
         $attachmentPath = $emailData['attachmentPath'] ?? null;
         $from = $emailData['from'] ?? null;
         $subject = $emailData['subject'] ?? null;
+        if ($attachmentPath !== null) {
+            $attachments = is_array($attachmentPath) ? $attachmentPath : [$attachmentPath];
+
+            foreach ($attachments as $filePath) {
+                $normalizedPath = realpath($filePath);
+
+                if ($normalizedPath === false || ! is_readable($normalizedPath) || is_dir($normalizedPath)) {
+                    LogViaStream::send(LogLevel::ERROR->value, 'The provided attachment file is inaccessible or invalid.', [
+                        'file' => $filePath,
+                    ]);
+                    throw new RuntimeException(__('The provided attachment file is inaccessible or invalid.'));
+                }
+            }
+        }
 
         $mail = new PHPMailer(true);
 
@@ -139,15 +153,9 @@ class SendNotification
 
                 foreach ($attachments as $filePath) {
                     $normalizedPath = realpath($filePath);
-
-                    if ($normalizedPath === false || ! is_readable($normalizedPath) || is_dir($normalizedPath)) {
-                        LogViaStream::send(LogLevel::ERROR->value, 'The provided attachment file is inaccessible or invalid.', [
-                            'file' => $filePath,
-                        ]);
-                        throw new RuntimeException(__('The provided attachment file is inaccessible or invalid.'));
+                    if (is_string($normalizedPath)) {
+                        $mail->addAttachment($normalizedPath);
                     }
-
-                    $mail->addAttachment($normalizedPath);
                 }
             }
 

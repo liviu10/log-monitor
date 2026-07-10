@@ -10,6 +10,8 @@ use Tests\TestCase;
 
 class LogViaStreamTest extends TestCase
 {
+    private bool $handlersRegistered = false;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -21,12 +23,22 @@ class LogViaStreamTest extends TestCase
 
         $_ENV['LOG_API_KEY'] = '';
         $_ENV['LOG_SERVER_URL'] = '';
+        $this->handlersRegistered = false;
+    }
+
+    protected function tearDown(): void
+    {
+        if ($this->handlersRegistered) {
+            restore_error_handler();
+            restore_exception_handler();
+        }
+        parent::tearDown();
     }
 
     public function test_register_handlers_throws_exception_when_no_api_key_is_present(): void
     {
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Configuratie invalida: LOG_API_KEY lipseste sau este visa.');
+        $this->expectExceptionMessage('Invalid configuration: LOG_API_KEY is missing or empty.');
         LogViaStream::registerHandlers();
     }
 
@@ -36,7 +48,7 @@ class LogViaStreamTest extends TestCase
         $_ENV['LOG_SERVER_URL'] = '';
 
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Configuratie invalida: LOG_SERVER_URL lipseste sau nu este un URL valid.');
+        $this->expectExceptionMessage('Invalid configuration: LOG_SERVER_URL is missing or not a valid URL.');
         LogViaStream::registerHandlers();
     }
 
@@ -46,6 +58,7 @@ class LogViaStreamTest extends TestCase
         $_ENV['LOG_SERVER_URL'] = 'http://localhost:54321/non-existent-endpoint'; // Should fail connection
 
         LogViaStream::registerHandlers();
+        $this->handlersRegistered = true;
 
         $result = LogViaStream::send('ERROR', 'Test connection failure');
         $this->assertFalse($result);

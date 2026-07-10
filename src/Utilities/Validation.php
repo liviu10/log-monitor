@@ -115,7 +115,15 @@ class Validation
     private function checkMin(string $rule, mixed $value): bool
     {
         $min = (int) substr($rule, 4);
-        $checkValue = is_array($value) ? count($value) : (is_numeric($value) ? (float) $value : mb_strlen(is_string($value) ? $value : ''));
+        if (is_array($value)) {
+            $checkValue = count($value);
+        } elseif (is_string($value)) {
+            $checkValue = mb_strlen($value);
+        } elseif (is_numeric($value)) {
+            $checkValue = (float) $value;
+        } else {
+            $checkValue = 0;
+        }
 
         return $checkValue >= $min;
     }
@@ -130,7 +138,15 @@ class Validation
     private function checkMax(string $rule, mixed $value): bool
     {
         $max = (int) substr($rule, 4);
-        $checkValue = is_numeric($value) ? (float) $value : mb_strlen(is_string($value) ? $value : '');
+        if (is_array($value)) {
+            $checkValue = count($value);
+        } elseif (is_string($value)) {
+            $checkValue = mb_strlen($value);
+        } elseif (is_numeric($value)) {
+            $checkValue = (float) $value;
+        } else {
+            $checkValue = 0;
+        }
 
         return $checkValue <= $max;
     }

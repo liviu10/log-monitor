@@ -232,6 +232,7 @@ class MySQLWrapper
 
         $stmt = $this->query($sql, $params);
         $results = $stmt->fetchAll();
+
         /** @var array<int, array<string, mixed>> $results */
         return $results;
     }

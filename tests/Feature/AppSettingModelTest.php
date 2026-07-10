@@ -7,6 +7,7 @@ namespace Tests\Feature;
 use App\Models\App;
 use App\Models\AppSetting;
 use InvalidArgumentException;
+use RuntimeException;
 use Tests\TestCase;
 
 class AppSettingModelTest extends TestCase

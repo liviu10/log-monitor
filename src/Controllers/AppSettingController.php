@@ -29,7 +29,7 @@ class AppSettingController extends BaseController
     /**
      * Returns all settings for a specific application as a JSON response.
      *
-     * @param array<string, mixed> $getData
+     * @param  array<string, mixed>  $getData
      */
     public function index(array $getData): void
     {
@@ -53,7 +53,7 @@ class AppSettingController extends BaseController
     /**
      * Adds a new setting or multiple settings simultaneously for an application.
      *
-     * @param array<string, mixed> $postData
+     * @param  array<string, mixed>  $postData
      */
     public function store(array $postData): void
     {
@@ -168,6 +168,9 @@ class AppSettingController extends BaseController
                 'message' => __('Setting saved successfully.'),
             ]);
         } catch (\Throwable $e) {
+            if (str_ends_with(get_class($e), 'HttpResponseException')) {
+                throw $e;
+            }
             LogViaStream::send(LogLevel::ERROR->value, 'Single setting storage exception', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
@@ -179,14 +182,14 @@ class AppSettingController extends BaseController
                 'setting_key' => $key,
                 'identifier' => 'AppSettingController_Store_Exception',
             ]);
-            $this->jsonResponse(['success' => false, 'message' => __('Internal server error.')], 500);
+            $this->jsonResponse(['success' => false, 'message' => __('Error saving setting in the database.')], 500);
         }
     }
 
     /**
      * Updates an existing setting or multiple settings simultaneously.
      *
-     * @param array<string, mixed> $postData
+     * @param  array<string, mixed>  $postData
      */
     public function update(array $postData): void
     {
@@ -327,7 +330,7 @@ class AppSettingController extends BaseController
     /**
      * Deletes a setting of an application.
      *
-     * @param array<string, mixed> $postData
+     * @param  array<string, mixed>  $postData
      */
     public function delete(array $postData): void
     {

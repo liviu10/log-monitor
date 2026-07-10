@@ -111,7 +111,7 @@ do {
 
     while ($done = curl_multi_info_read($mh)) {
         $ch = $done['handle'] ?? null;
-        if ($ch instanceof \CurlHandle) {
+        if ($ch instanceof CurlHandle) {
             $info = curl_getinfo($ch);
 
             if ($info['http_code'] === 202) {

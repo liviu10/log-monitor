@@ -46,7 +46,7 @@ class AppController extends BaseController
      * Processes adding a new application to the system.
      * Automatically generates a secure 64-character API key.
      *
-     * @param array<string, mixed> $postData
+     * @param  array<string, mixed>  $postData
      */
     public function store(array $postData): never
     {
@@ -92,8 +92,8 @@ class AppController extends BaseController
     /**
      * Processes updating an application name or regenerating the API key.
      *
-     * @param array<string, mixed> $postData
-     * @param array<string, mixed> $getData
+     * @param  array<string, mixed>  $postData
+     * @param  array<string, mixed>  $getData
      */
     public function update(array $postData, array $getData = []): never
     {
@@ -154,7 +154,7 @@ class AppController extends BaseController
     /**
      * Deletes an application from the system based on the ID provided via POST.
      *
-     * @param array<string, mixed> $postData
+     * @param  array<string, mixed>  $postData
      */
     public function delete(array $postData): never
     {

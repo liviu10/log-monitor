@@ -66,7 +66,7 @@ $appsCache = [];
 $lastHeartbeat = 0;
 $notificationController = new NotificationController;
 
-    // @phpstan-ignore while.alwaysTrue
+// @phpstan-ignore while.alwaysTrue
 while (true) {
     $currentTime = time();
     if (($currentTime - $lastHeartbeat) >= 10) {
@@ -219,7 +219,7 @@ while (true) {
 
         // Ensure defensive rollback in case of active transaction failure
         try {
-            if (isset($pdo) && $pdo instanceof \PDO && $pdo->inTransaction()) {
+            if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) {
                 $pdo->rollBack();
             }
         } catch (Throwable) {

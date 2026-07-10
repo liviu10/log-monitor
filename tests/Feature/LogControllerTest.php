@@ -171,10 +171,13 @@ class LogControllerTest extends TestCase
     {
         $_SERVER['HTTP_X_API_KEY'] = 'non-existent-api-key';
 
-        $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('Application not found for the provided API key');
-
-        $this->controller->store();
+        try {
+            $this->controller->store();
+            $this->fail('Expected HttpResponseException to be thrown');
+        } catch (HttpResponseException $e) {
+            $this->assertEquals(403, $e->statusCode);
+            $this->assertEquals('Invalid or inactive API Key', $e->data['error']);
+        }
     }
 
     public function test_accepts_valid_payload_and_inserts_into_database(): void

@@ -86,7 +86,7 @@ if (file_exists($targetBuildScript)) {
 echo "Pre-processing enums in target directory...\n";
 $di = new RecursiveDirectoryIterator($targetDir);
 foreach (new RecursiveIteratorIterator($di) as $filename => $file) {
-    if ($file instanceof \SplFileInfo && $file->isFile() && $file->getExtension() === 'php') {
+    if ($file instanceof SplFileInfo && $file->isFile() && $file->getExtension() === 'php') {
         $pathname = $file->getPathname();
         $content = file_get_contents($pathname);
         if ($content === false) {
@@ -236,7 +236,7 @@ if ($exitCode === 0) {
     // accessing the ->value property on them would throw a Notice/Error.
     $di = new RecursiveDirectoryIterator($targetDir);
     foreach (new RecursiveIteratorIterator($di) as $filename => $file) {
-        if ($file instanceof \SplFileInfo && $file->isFile() && $file->getExtension() === 'php') {
+        if ($file instanceof SplFileInfo && $file->isFile() && $file->getExtension() === 'php') {
             $pathname = $file->getPathname();
             $content = file_get_contents($pathname);
             if ($content === false) {

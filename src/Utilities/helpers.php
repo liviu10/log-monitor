@@ -211,6 +211,7 @@ if (! function_exists('generateCsrfToken')) {
         }
 
         $token = $_SESSION['csrf_token'] ?? '';
+
         return is_string($token) ? $token : '';
     }
 }
@@ -229,6 +230,7 @@ if (! function_exists('verifyCsrfToken')) {
         }
 
         $sessionToken = $_SESSION['csrf_token'];
+
         return hash_equals(is_string($sessionToken) ? $sessionToken : '', $token);
     }
 }
@@ -294,6 +296,7 @@ if (! function_exists('getLang')) {
         }
 
         $lang = $_SESSION['app_lang'];
+
         return is_string($lang) ? $lang : 'en';
     }
 }

@@ -8,9 +8,9 @@ set_time_limit(5);
 // Load base application configuration
 require_once dirname(__DIR__).'/bootstrap.php';
 
-use App\Utilities\MySQLWrapper;
-use App\Utilities\LogViaStream;
 use App\Enums\LogLevel;
+use App\Utilities\LogViaStream;
+use App\Utilities\MySQLWrapper;
 
 // Determine if we are running in the context of a FrankenPHP worker
 $isFrankenPhpWorker = function_exists('frankenphp_handle_request');

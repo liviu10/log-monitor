@@ -31,6 +31,36 @@ foreach ($phpunitEnvBackup as $key => $value) {
     putenv("{$key}={$value}");
 }
 
+// Automatically create the test database and grant permissions if possible
+try {
+    $host = $_ENV['DB_HOST'] ?? 'db';
+    $port = $_ENV['DB_PORT'] ?? '3306';
+    $dbName = $_ENV['DB_DATABASE'] ?? $_ENV['DB_NAME'] ?? 'log_monitor_test';
+    $user = $_ENV['DB_USERNAME'] ?? $_ENV['DB_USER'] ?? 'user';
+
+    // Try to connect as root to create database and grant privileges
+    $rootPass = $_ENV['MYSQL_ROOT_PASSWORD'] ?? 'rootpassword';
+    $dsn = "mysql:host={$host};port={$port};charset=utf8mb4";
+
+    try {
+        $pdo = new PDO($dsn, 'root', $rootPass, [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        ]);
+        $pdo->exec("CREATE DATABASE IF NOT EXISTS `{$dbName}`;");
+        $pdo->exec("GRANT ALL PRIVILEGES ON `{$dbName}`.* TO '{$user}'@'%';");
+        $pdo->exec('FLUSH PRIVILEGES;');
+    } catch (Throwable $rootException) {
+        // Fallback: try connecting as normal user to create it
+        $pass = $_ENV['DB_PASSWORD'] ?? $_ENV['DB_PASS'] ?? 'password';
+        $pdo = new PDO($dsn, $user, $pass, [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        ]);
+        $pdo->exec("CREATE DATABASE IF NOT EXISTS `{$dbName}`;");
+    }
+} catch (Throwable $e) {
+    // Fail silently, letting PHPUnit's connection handle the error report if it persists
+}
+
 // Define core constants for test execution context
 if (! defined('APP_NAME')) {
     define('APP_NAME', 'LogMonitorTest');

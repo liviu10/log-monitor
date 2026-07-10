@@ -43,7 +43,7 @@ class AuthController extends BaseController
      * Processes a user authentication attempt.
      * Validates input data and verifies password using native secure functions.
      *
-     * @param array<array-key, mixed> $data
+     * @param  array<array-key, mixed>  $data
      */
     public function login(array $data): never
     {

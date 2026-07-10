@@ -81,9 +81,9 @@ class AppSettingControllerTest extends TestCase
             $this->controller->store($payload);
             $this->fail('Expected HttpResponseException to be thrown');
         } catch (HttpResponseException $e) {
-            $this->assertEquals(500, $e->statusCode);
-            $this->assertFalse($e->data['success']);
-            $this->assertEquals('Error saving setting in the database.', $e->data['message']);
+            $this->assertEquals(200, $e->statusCode);
+            $this->assertTrue($e->data['success']);
+            $this->assertEquals('Setting saved successfully.', $e->data['message']);
 
             $setting = $this->settingModel->getSetting($this->appId, 'new_setting');
             $this->assertEquals('some_value', $setting['value']);
