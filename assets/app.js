@@ -1,6 +1,6 @@
 const App = {
     /**
-     * Gestionare notificari de tip Toast
+     * Toast notification management
      */
     handleToast(toastContent) {
         const { type, title, message, toastDelay, redirectUrl } = toastContent;
@@ -41,7 +41,7 @@ const App = {
 
         toastEl.appendChild(toastHeader);
 
-        // Bara de progres (Timer)
+        // Progress bar (Timer)
         if (toastDelay > 0) {
             const progress = document.createElement("div");
             progress.className = `toast-progress-bar bg-${type}`;
@@ -80,17 +80,17 @@ const App = {
     },
 
     /**
-     * Metoda unica globala pentru copiere si feedback vizual
+     * Global utility method for clipboard copying and visual feedback
      */
     copyPayload(alpineContext, dataObject, stateKey) {
         if (!dataObject) return;
 
-        // Daca obiectul are payload_raw (pagina queue) trimitem payload_raw, altfel intreg obiectul (pagina dashboard)
+        // If the object has payload_raw (queue page) copy payload_raw, otherwise copy the entire object (dashboard page)
         const textToCopy = dataObject.payload_raw ? dataObject.payload_raw : JSON.stringify(dataObject, null, 4);
 
         navigator.clipboard.writeText(textToCopy)
             .then(() => {
-                // Modificam starea din contextul Alpine primit ca parametru
+                // Modify the state in the Alpine context passed as a parameter
                 alpineContext[stateKey] = true;
 
                 setTimeout(() => {
@@ -103,7 +103,7 @@ const App = {
     },
 
     /**
-     * Constructor date Alpine.js pentru pagina Dashboard.
+     * Alpine.js data constructor for the Dashboard page.
      */
     dashboardPageData() {
         return {
@@ -159,7 +159,7 @@ const App = {
     },
 
     /**
-     * Constructor date Alpine.js pentru pagina de gestionare aplicatii (Manage Applications).
+     * Alpine.js data constructor for the Manage Applications page.
      */
     appsPageData() {
         return {
@@ -452,7 +452,7 @@ const App = {
     },
 
     /**
-     * Constructor date Alpine.js pentru pagina de gestionare coada (Queue Manager).
+     * Alpine.js data constructor for the Queue Manager page.
      */
     queuePageData() {
         return {

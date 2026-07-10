@@ -14,24 +14,24 @@ use App\Enums\LogLevel;
 /**
  * AppSetting Class
  *
- * Gestioneaza setarile specifice unei aplicatii in baza de date.
- * Implementeaza validari stricte si arhitectura defensiva Fail Fast.
+ * Manages settings specific to an application in the database.
+ * Implements strict validation and defensive Fail Fast architecture.
  *
  * @category Model
  * @package  App\Models
  * @version  1.3
  * @since    PHP 8.4
  * @author   Voica Liviu
- * @license  Proprietar
+ * @license  Proprietary
  */
 class AppSetting
 {
-    /** @var array Cache static in memorie pentru setari, foarte util pentru daemon worker */
+    /** @var array Static in-memory settings cache, useful for the daemon worker */
     protected static array $settingsCache = [];
     /**
-     * Constructorul clasei AppSetting.
-     * Injectare dependinta prin Constructor Property Promotion.
-     * * @param MySQLWrapper $db Instanta wrapper-ului bazei de date.
+     * Constructor for the AppSetting class.
+     * Dependency injection via Constructor Property Promotion.
+     * * @param MySQLWrapper $db Database wrapper instance.
      */
     public function __construct(
         protected MySQLWrapper $db = new MySQLWrapper(
@@ -45,10 +45,10 @@ class AppSetting
     }
 
     /**
-     * Recupereaza toate setarile pentru o aplicatie.
+     * Retrieves all settings for an application.
      *
-     * @param int $appId ID-ul aplicatiei.
-     * @return array Lista setarilor gasite.
+     * @param int $appId Application ID.
+     * @return array List of found settings.
      */
     public function getSettingsForApp(int $appId): array
     {
@@ -68,7 +68,7 @@ class AppSetting
                 'cached_at' => $currentTime
             ];
             return $data;
-        } catch (PDOException $e) {
+        } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
@@ -85,11 +85,11 @@ class AppSetting
     }
 
     /**
-     * Gaseste o setare specifica pe baza app_id si key.
+     * Finds a specific setting based on app_id and key.
      *
-     * @param int    $appId ID-ul aplicatiei.
-     * @param string $key   Cheia setarii.
-     * @return array|null Datele setarii sau null daca nu exista.
+     * @param int    $appId Application ID.
+     * @param string $key   Setting key.
+     * @return array|null Setting data or null if it does not exist.
      */
     public function getSetting(int $appId, string $key): ?array
     {
@@ -104,7 +104,7 @@ class AppSetting
                 'key' => $trimmedKey,
             ]);
             return $results ? $results[0] : null;
-        } catch (PDOException $e) {
+        } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
@@ -121,14 +121,14 @@ class AppSetting
     }
 
     /**
-     * Salveaza sau actualizeaza o setare pentru o aplicatie.
+     * Saves or updates a setting for an application.
      *
-     * @param int    $appId ID-ul aplicatiei.
-     * @param string $key   Cheia setarii.
-     * @param string $value Valoarea setarii.
+     * @param int    $appId Application ID.
+     * @param string $key   Setting key.
+     * @param string $value Setting value.
      * @return void
-     * @throws InvalidArgumentException Daca parametrii sunt invalizi.
-     * @throws RuntimeException Daca salvarea esueaza.
+     * @throws InvalidArgumentException If parameters are invalid.
+     * @throws RuntimeException If saving fails.
      */
     public function saveSetting(int $appId, string $key, string $value): void
     {
@@ -161,7 +161,7 @@ class AppSetting
                 if ($result === false) {
                     throw new RuntimeException(__('Failed to update existing setting'));
                 }
-            } catch (PDOException $e) {
+            } catch (\Throwable $e) {
                 LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                     'location' => __METHOD__,
                     'line' => __LINE__,
@@ -189,7 +189,7 @@ class AppSetting
                 if ($result === false) {
                     throw new RuntimeException(__('Failed to create new setting'));
                 }
-            } catch (PDOException $e) {
+            } catch (\Throwable $e) {
                 LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                     'location' => __METHOD__,
                     'line' => __LINE__,
@@ -208,14 +208,14 @@ class AppSetting
     }
 
     /**
-     * Actualizeaza cheia si/sau valoarea unei setari existente.
+     * Updates the key and/or value of an existing setting.
      *
-     * @param int    $appId  ID-ul aplicatiei.
-     * @param string $oldKey Vechea cheie a setarii.
-     * @param array  $data   Datele de actualizat ('key' si/sau 'value').
+     * @param int    $appId  Application ID.
+     * @param string $oldKey The old setting key.
+     * @param array  $data   Data to update ('key' and/or 'value').
      * @return void
-     * @throws InvalidArgumentException Daca cheile introduse sunt invalide.
-     * @throws RuntimeException Daca cheia noua este duplicata sau operatia esueaza.
+     * @throws InvalidArgumentException If the provided keys are invalid.
+     * @throws RuntimeException If the new key is a duplicate or the operation fails.
      */
     public function updateSetting(int $appId, string $oldKey, array $data): void
     {
@@ -256,7 +256,7 @@ class AppSetting
                 throw new RuntimeException(__('Setting update operation failed'));
             }
             unset(self::$settingsCache[$appId]);
-        } catch (PDOException $e) {
+        } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
@@ -273,13 +273,13 @@ class AppSetting
     }
 
     /**
-     * Sterge o setare a unei aplicatii.
+     * Deletes a setting of an application.
      *
-     * @param int    $appId ID-ul aplicatiei.
-     * @param string $key   Cheia setarii.
+     * @param int    $appId Application ID.
+     * @param string $key   Setting key.
      * @return void
-     * @throws InvalidArgumentException Daca parametrii sunt invalizi.
-     * @throws RuntimeException Daca stergerea esueaza.
+     * @throws InvalidArgumentException If parameters are invalid.
+     * @throws RuntimeException If deletion fails.
      */
     public function deleteSetting(int $appId, string $key): void
     {
@@ -300,7 +300,7 @@ class AppSetting
                 throw new RuntimeException(__('Setting not found or deletion failed'));
             }
             unset(self::$settingsCache[$appId]);
-        } catch (PDOException $e) {
+        } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,
                 'line' => __LINE__,

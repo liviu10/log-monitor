@@ -11,11 +11,11 @@ use App\Utilities\Validation;
 use App\Utilities\LogViaStream;
 
 /**
- * Clasa LogController
+ * LogController Class
  *
- * Responsabila pentru gestionarea cererilor de tip API dedicate inregistrarii de loguri.
- * Asigura securitatea prin verificarea User-Agent (pentru prevenirea expunerii cheilor in browser),
- * validarea stricta a headerului Content-Type si verificarea cheilor API unice per aplicatie.
+ * Responsible for handling API requests dedicated to log recording.
+ * Ensures security by checking User-Agent (to prevent key exposure in the browser),
+ * strict validation of the Content-Type header, and verifying unique API keys per application.
  *
  * @category Controller
  * @package  App\Controllers
@@ -27,11 +27,11 @@ use App\Utilities\LogViaStream;
 class LogController extends BaseController
 {
     /**
-     * Proceseaza si stocheaza o noua intrare de log primita prin POST (cerere API JSON).
+     * Processes and stores a new log entry received via POST (JSON API request).
      */
     public function store(): never
     {
-        // 1. Verificare User-Agent pentru protectie server-to-server
+        // 1. Check User-Agent for server-to-server protection
         $userAgent = $this->getRequestHeader('User-Agent') ?? '';
         $browserSignatures = ['Mozilla', 'Chrome', 'Safari', 'Edge', 'Opera', 'Firefox'];
         
@@ -44,13 +44,13 @@ class LogController extends BaseController
             }
         }
 
-        // 2. Verificare Content-Type
+        // 2. Check Content-Type
         $contentType = $this->getRequestHeader('Content-Type') ?? '';
         if (!str_contains($contentType, 'application/json')) {
             $this->jsonResponse(['error' => 'Content-Type must be application/json'], 415);
         }
 
-        // 3. Verificare prezenta si validitate API Key
+        // 3. Check presence and validity of the API Key
         $apiKey = $this->getRequestHeader('X-API-KEY');
         if (!$apiKey) {
             $this->jsonResponse(['error' => 'X-API-KEY header is missing'], 401);
@@ -66,7 +66,7 @@ class LogController extends BaseController
             $this->jsonResponse(['error' => 'Invalid or inactive API Key'], 403);
         }
 
-        // 4. Utilizare functionalitate nativa PHP 8.4 json_validate pentru performanta si protectie
+        // 4. Use native PHP 8.4 json_validate for performance and protection
         $rawPayload = file_get_contents('php://input');
         if (!json_validate($rawPayload)) {
             $this->jsonResponse(['error' => 'Invalid JSON payload structure'], 400);
@@ -99,7 +99,7 @@ class LogController extends BaseController
             $this->jsonResponse(['errors' => $errorMessages], 422);
         }
 
-        // 5. Inregistrare log in baza de date si alertare automata
+        // 5. Record log in database and send automatic alerts
         try {
             $logModel = new Log();
             $result = $logModel->create(
@@ -137,10 +137,10 @@ class LogController extends BaseController
     }
 
     /**
-     * Purgeaza si arhiveaza logurile mai vechi de un numar specificat de zile.
+     * Purges and archives logs older than a specified number of days.
      *
-     * @param int    $days       Numarul de zile salvat ca prag de retentie.
-     * @param string $backupPath Calea absoluta catre fisierul de backup salvat.
+     * @param int    $days       The number of days saved as retention cutoff.
+     * @param string $backupPath The absolute path to the saved backup file.
      * @return array
      */
     public function purge(int $days, string $backupPath): array
@@ -225,7 +225,7 @@ class LogController extends BaseController
     }
 
     /**
-     * Returneaza valoarea unui header din request, case-insensitive.
+     * Returns the value of a request header, case-insensitively.
      */
     private function getRequestHeader(string $name): ?string
     {

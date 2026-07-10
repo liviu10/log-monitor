@@ -5,17 +5,17 @@ declare(strict_types=1);
 use Rector\Config\RectorConfig;
 
 /**
- * Configurare Rector: Transpilare, downgrade si curatare cod.
+ * Rector Configuration: Code transpiling, downgrade, and cleaning.
  *
  * @category Configuration
  * @package  Rector
  * @version  1.0
  * @since    PHP 8.4
  * @author   Voica Liviu
- * @license  Proprietar
+ * @license  Proprietary
  */
 
-// Citim versiunea tinta din variabila de mediu (implicit 74 pentru PHP 7.4)
+// Read the target version from environment variable (default is 74 for PHP 7.4)
 $targetPhp = getenv('TARGET_PHP') ?: '74';
 
 $skips = [

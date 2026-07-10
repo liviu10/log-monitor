@@ -14,23 +14,23 @@ use App\Enums\LogLevel;
 /**
  * User class
  *
- * Gestioneaza utilizatorii administratori ai sistemului de logare.
- * Ofera functionalitati sigure pentru autentificare si inregistrare.
- * Toate parolele sunt stocate hashuit utilizand exclusiv standardul Argon2id.
+ * Manages administrative users of the logging system.
+ * Offers secure functionalities for authentication and registration.
+ * All passwords are saved as hashes using exclusively the Argon2id standard.
  *
  * @category Model
  * @package  App\Models
  * @version  1.2
  * @since    PHP 8.4
  * @author   Voica Liviu
- * @license  Proprietar
+ * @license  Proprietary
  */
 class User
 {
     /**
-     * Constructorul clasei User.
-     * Utilizeaza Constructor Property Promotion pentru injectarea dependintei bazei de date.
-     * * @param MySQLWrapper $db Wrapper-ul bazei de date injected.
+     * Constructor for the User class.
+     * Uses Constructor Property Promotion for database dependency injection.
+     * * @param MySQLWrapper $db Injected database wrapper.
      */
     public function __construct(
         protected MySQLWrapper $db = new MySQLWrapper(
@@ -44,11 +44,11 @@ class User
     }
 
     /**
-     * Gaseste un utilizator in baza de date pe baza numelui de utilizator (username).
+     * Finds a user in the database based on the username.
      *
-     * @param string $username Numele de utilizator cautat.
-     * @return array|null Datele utilizatorului sau null daca nu exista.
-     * @throws InvalidArgumentException Daca username-ul furnizat este gol.
+     * @param string $username The username to look for.
+     * @return array|null The user's data or null if they do not exist.
+     * @throws InvalidArgumentException If the provided username is empty.
      */
     public function findByUsername(string $username): ?array
     {
@@ -60,7 +60,7 @@ class User
         try {
             $results = $this->db->read('users', ['username' => $trimmedUsername]);
             return $results ? $results[0] : null;
-        } catch (PDOException $e) {
+        } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
@@ -77,14 +77,14 @@ class User
     }
 
     /**
-     * Inregistreaza un nou utilizator administrator in sistem.
-     * Modernizat pentru a utiliza exclusiv hashing PASSWORD_ARGON2ID conform directivelor OWASP.
+     * Registers a new administrator user in the system.
+     * Upgraded to exclusively use PASSWORD_ARGON2ID hashing per OWASP guidelines.
      *
-     * @param string $username Numele de utilizator dorit.
-     * @param string $password Parola in text clar (va fi securizata instant).
-     * @return int ID-ul utilizatorului nou inregistrat.
-     * @throws InvalidArgumentException Daca inputul furnizat este necorespunzator.
-     * @throws RuntimeException Daca scrierea in baza de date esueaza sau hash-ul esueaza.
+     * @param string $username Desired username.
+     * @param string $password Clear-text password (will be secured instantly).
+     * @return int ID of the newly registered user.
+     * @throws InvalidArgumentException If the provided input is invalid.
+     * @throws RuntimeException If database write or hashing fails.
      */
     public function create(string $username, string $password): int
     {
@@ -93,7 +93,7 @@ class User
             throw new InvalidArgumentException(__('Username and password cannot be empty'));
         }
 
-        // Utilizare PASSWORD_ARGON2ID - Standardul de top in securitatea parolelor moderne (PHP 8+)
+        // Use PASSWORD_ARGON2ID - The top standard in modern password security (PHP 8+)
         $hash = password_hash($password, PASSWORD_ARGON2ID);
         if ($hash === false) {
             throw new RuntimeException(__('Secure password hashing hashing failed internally'));
@@ -111,7 +111,7 @@ class User
                 throw new RuntimeException(__('Failed to save administrative user record'));
             }
             return (int)$result;
-        } catch (PDOException $e) {
+        } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,
                 'line' => __LINE__,

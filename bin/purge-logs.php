@@ -9,18 +9,18 @@ use App\Utilities\LogViaStream;
 use App\Enums\LogLevel;
 
 /**
- * Script de Mentenanta: Arhivare in format TXT si curatare (purge) din baza de date.
- * Executie: php bin/purge-logs.php [zile]
+ * Maintenance Script: Archive to TXT format and purge logs from database.
+ * Execution: php bin/purge-logs.php [days]
  *
  * @category Maintenance
  * @package  Bin
  * @version  1.3
  * @since    PHP 8.4
  * @author   Voica Liviu
- * @license  Proprietar
+ * @license  Proprietary
  */
 
-// Validarea argumentelor din linia de comanda
+// Command line arguments validation
 $daysArgument = $argv[1] ?? '30';
 if (!is_numeric($daysArgument) || (int)$daysArgument < 1) {
     echo json_encode([

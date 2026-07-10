@@ -10,11 +10,11 @@ use App\Enums\LogLevel;
 use PDO;
 
 /**
- * Clasa QueueController
+ * QueueController Class
  *
- * Responsabila pentru gestionarea paginii si operatiilor din cadrul Queue Manager-ului.
- * Permite listarea joburilor din coada, stergerea individuala, curatarea completa a cozii
- * si verificarea starii de functionare a worker-ului de fundal.
+ * Responsible for managing the page and operations within the Queue Manager.
+ * Allows listing jobs in the queue, individual deletion, complete purging of the queue,
+ * and checking the status of the background worker.
  *
  * @category Controller
  * @package  App\Controllers
@@ -26,9 +26,9 @@ use PDO;
 class QueueController extends BaseController
 {
     /**
-     * Afiseaza pagina de vizualizare a cozii active.
+     * Displays the active queue view page.
      *
-     * @param array $queryParams Parametrii de filtrare si paginare.
+     * @param array $queryParams Filtering and pagination parameters.
      * @return void
      */
     public function index(array $queryParams = []): void
@@ -38,7 +38,7 @@ class QueueController extends BaseController
         try {
             $db = MySQLWrapper::getInstance();
 
-            // Configurare paginare
+            // Pagination configuration
             $page = (int)($queryParams['page'] ?? 1);
             if ($page < 1) {
                 $page = 1;
@@ -51,7 +51,7 @@ class QueueController extends BaseController
             }
             $offset = ($page - 1) * $limit;
 
-            // Obtinem parametrii de sortare din URL
+            // Get sorting parameters from URL
             $sortBy = (string)($queryParams['sort_by'] ?? 'id');
             $sortDir = (string)($queryParams['sort_dir'] ?? 'DESC');
 
@@ -74,13 +74,13 @@ class QueueController extends BaseController
                 $orderClause = "ORDER BY q.id {$sortOrder}";
             }
 
-            // Obtinem numarul total de joburi din coada
+            // Get the total number of jobs in the queue
             $stmtCount = $db->query('SELECT COUNT(*) FROM log_queue');
             $totalJobs = (int)$stmtCount->fetchColumn();
             $totalPages = (int)ceil($totalJobs / $limit);
 
-            // Obtinem elementele din coada cu JOIN pe aplicatii
-            // Securizam LIMIT si OFFSET prin interpolare ca intregi
+            // Get elements from queue with JOIN on applications
+            // Secure LIMIT and OFFSET by interpolating as integers
             $sql = "SELECT q.id, q.app_id, q.payload_raw, q.created_at, a.name as app_name 
                     FROM log_queue q 
                     LEFT JOIN apps a ON q.app_id = a.id 
@@ -90,7 +90,7 @@ class QueueController extends BaseController
             $stmtJobs = $db->query($sql);
             $jobs = $stmtJobs->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
-            // Verificam starea worker-ului in fundal executand pgrep
+            // Verify background worker status
             $output = [];
             $returnVar = 0;
             $isWorkerRunning = false;
@@ -134,10 +134,10 @@ class QueueController extends BaseController
     }
 
     /**
-     * Sterge un singur job specific din coada.
+     * Deletes a single specific job from the queue.
      *
-     * @param array $postData Vectorul de date transmise prin POST.
-     * @return never Redirectioneaza inapoi la pagina de coada.
+     * @param array $postData The array of data passed via POST.
+     * @return never Redirects back to the queue page.
      */
     public function delete(array $postData): never
     {
@@ -168,9 +168,9 @@ class QueueController extends BaseController
     }
 
     /**
-     * Curata complet coada (Purge).
+     * Completely purges the queue.
      *
-     * @return never Redirectioneaza inapoi la pagina de coada.
+     * @return never Redirects back to the queue page.
      */
     public function purge(): never
     {
@@ -178,7 +178,7 @@ class QueueController extends BaseController
 
         try {
             $db = MySQLWrapper::getInstance();
-            // Curatam tabela log_queue tranzactional prin TRUNCATE
+            // Clear log_queue table transactionally via TRUNCATE
             $db->getConnection()->exec('TRUNCATE TABLE log_queue');
             setFlash('success', __('Success'), __('The queue has been completely purged.'));
         } catch (\Throwable $e) {

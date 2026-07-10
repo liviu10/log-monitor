@@ -5,7 +5,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../src/Utilities/helpers.php';
 
-// Salveaza variabilele de mediu existente setate de PHPUnit pentru a evita suprascrierea lor
+// Back up existing environment variables set by PHPUnit to avoid overwriting them
 $phpunitEnvBackup = [];
 foreach (['DB_HOST', 'DB_DATABASE', 'DB_NAME', 'DB_USERNAME', 'DB_USER', 'DB_PASSWORD', 'DB_PASS', 'DB_PORT'] as $key) {
     if (isset($_ENV[$key])) {
@@ -15,7 +15,7 @@ foreach (['DB_HOST', 'DB_DATABASE', 'DB_NAME', 'DB_USERNAME', 'DB_USER', 'DB_PAS
     }
 }
 
-// Incarcam variabilele din fisierul .env
+// Load variables from the .env file
 if (file_exists(__DIR__ . '/../.env.test')) {
     $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/..', '.env.test');
     $dotenv->load();
@@ -24,7 +24,7 @@ if (file_exists(__DIR__ . '/../.env.test')) {
     $dotenv->safeLoad();
 }
 
-// Restauram variabilele specifice PHPUnit si le setam si in putenv pentru compatibilitate cu Phinx si PDO
+// Restore PHPUnit-specific variables and set them in putenv for Phinx and PDO compatibility
 foreach ($phpunitEnvBackup as $key => $value) {
     $_ENV[$key] = $value;
     $_SERVER[$key] = $value;

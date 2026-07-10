@@ -14,23 +14,23 @@ use App\Enums\LogLevel;
 /**
  * App Class
  *
- * Gestioneaza entitatile de tip aplicatie care pot trimite loguri in sistem.
- * Ofera metode pentru identificarea aplicatiei via API key, recuperare,
- * creare, actualizare si stergere securizata.
+ * Manages application entities that can send logs to the system.
+ * Offers methods for application identification via API key, retrieval,
+ * creation, updates, and secure deletion.
  *
  * @category Model
  * @package  App\Models
  * @version  1.3
  * @since    PHP 8.4
  * @author   Voica Liviu
- * @license  Proprietar
+ * @license  Proprietary
  */
 class App
 {
     /**
-     * Constructorul clasei App.
-     * Utilizeaza Constructor Property Promotion pentru injectarea dependintei bazei de date.
-     * * @param MySQLWrapper $db Instanta wrapper-ului de baza de date.
+     * Constructor for the App class.
+     * Uses Constructor Property Promotion for database dependency injection.
+     * * @param MySQLWrapper $db Database wrapper instance.
      */
     public function __construct(
         protected MySQLWrapper $db = new MySQLWrapper(
@@ -44,12 +44,12 @@ class App
     }
 
     /**
-     * Gaseste o aplicatie in baza de date folosind cheia unica API.
+     * Finds an application in the database using the unique API key.
      *
-     * @param string $apiKey Cheia API pentru cautare.
-     * @return array Aplicatia gasita.
-     * @throws InvalidArgumentException Daca cheia este goala.
-     * @throws RuntimeException Daca aplicatia nu este gasita.
+     * @param string $apiKey API key for lookup.
+     * @return array The found application.
+     * @throws InvalidArgumentException If the key is empty.
+     * @throws RuntimeException If the application is not found.
      */
     public function findByApiKey(string $apiKey): array
     {
@@ -64,7 +64,7 @@ class App
                 throw new RuntimeException(__('Application not found for the provided API key'));
             }
             return $results[0];
-        } catch (PDOException $e) {
+        } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
@@ -81,15 +81,15 @@ class App
     }
 
     /**
-     * Recupereaza toate aplicatiile inregistrate.
+     * Retrieves all registered applications.
      *
-     * @return array Lista de aplicatii.
+     * @return array List of applications.
      */
     public function getAll(): array
     {
         try {
             return $this->db->read('apps', [], ['*']) ?: [];
-        } catch (PDOException $e) {
+        } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
@@ -106,13 +106,13 @@ class App
     }
 
     /**
-     * Inregistreaza o aplicatie noua in sistem.
+     * Registers a new application in the system.
      *
-     * @param string $name   Numele aplicatiei.
-     * @param string $apiKey Cheia API generata.
-     * @return int ID-ul noii inregistrari.
-     * @throws InvalidArgumentException Daca datele furnizate sunt invalide.
-     * @throws RuntimeException Daca salvarea a esuat.
+     * @param string $name   Application name.
+     * @param string $apiKey Generated API key.
+     * @return int ID of the new record.
+     * @throws InvalidArgumentException If the provided data is invalid.
+     * @throws RuntimeException If saving fails.
      */
     public function create(string $name, string $apiKey): int
     {
@@ -132,7 +132,7 @@ class App
                 throw new RuntimeException(__('Failed to create application record'));
             }
             return (int)$result;
-        } catch (PDOException $e) {
+        } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
@@ -149,13 +149,13 @@ class App
     }
 
     /**
-     * Actualizeaza datele unei aplicatii.
+     * Updates an application's data.
      *
-     * @param int   $id   ID-ul aplicatiei.
-     * @param array $data Datele pentru actualizare.
+     * @param int   $id   Application ID.
+     * @param array $data Data for update.
      * @return void
-     * @throws InvalidArgumentException Daca datele sunt goale.
-     * @throws RuntimeException Daca actualizarea a esuat.
+     * @throws InvalidArgumentException If the data is empty.
+     * @throws RuntimeException If update fails.
      */
     public function update(int $id, array $data): void
     {
@@ -172,7 +172,7 @@ class App
             if ($result === false) {
                 throw new RuntimeException(__('Failed to update application'));
             }
-        } catch (PDOException $e) {
+        } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
@@ -189,12 +189,12 @@ class App
     }
 
     /**
-     * Sterge o aplicatie din sistem pe baza ID-ului.
+     * Deletes an application from the system based on its ID.
      *
-     * @param int $id ID-ul aplicatiei.
+     * @param int $id Application ID.
      * @return void
-     * @throws InvalidArgumentException Daca ID-ul este invalid.
-     * @throws RuntimeException Daca stergerea a esuat.
+     * @throws InvalidArgumentException If the ID is invalid.
+     * @throws RuntimeException If deletion fails.
      */
     public function delete(int $id): void
     {
@@ -210,7 +210,7 @@ class App
             if (!$result) {
                 throw new RuntimeException(__('Application deletion failed or record does not exist'));
             }
-        } catch (PDOException $e) {
+        } catch (\Throwable $e) {
             LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                 'location' => __METHOD__,
                 'line' => __LINE__,

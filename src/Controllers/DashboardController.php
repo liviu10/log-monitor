@@ -10,11 +10,11 @@ use App\Enums\LogLevel;
 use App\Utilities\LogViaStream;
 
 /**
- * Clasa DashboardController
+ * DashboardController Class
  *
- * Responsabila pentru afisarea si gestionarea paginii principale a panoului de control (Dashboard).
- * Gestioneaza preluarea filtrelor de cautare, configurarea paginatiei si recuperarea datelor
- * necesare pentru vizualizarea logurilor sistemului intr-un mod organizat.
+ * Responsible for displaying and managing the main page of the control panel (Dashboard).
+ * Manages fetching search filters, configuring pagination, and retrieving necessary
+ * data for viewing the system logs in an organized manner.
  *
  * @category Controller
  * @package  App\Controllers
@@ -26,7 +26,7 @@ use App\Utilities\LogViaStream;
 class DashboardController extends BaseController
 {
     /**
-     * Afiseaza pagina principala de dashboard cu lista logurilor filtrate.
+     * Displays the main dashboard page with the list of filtered logs.
      */
     public function index(array $queryParams = []): void
     {
@@ -90,7 +90,7 @@ class DashboardController extends BaseController
                 'identifier' => 'DashboardController_Index_Failure'
             ]);
             
-            // Fail Fast defensiv: nu se permite incarcarea paginii partiale cu date incomplete
+            // Defensive Fail Fast: do not allow loading a partial page with incomplete data
             throw new \RuntimeException(__('Critical error loading dashboard data. Please try again later.'));
         }
     }

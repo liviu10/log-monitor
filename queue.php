@@ -18,9 +18,25 @@ try {
         'GET' => $controller->index($_GET),
         default => throw new RuntimeException(__('Unsupported HTTP method: ') . htmlspecialchars($_SERVER['REQUEST_METHOD'] ?? 'UNKNOWN', ENT_QUOTES, 'UTF-8')),
     };
-} catch (Throwable $e) {
+} catch (\Throwable $e) {
+    if (class_exists('App\\Utilities\\LogViaStream')) {
+        \App\Utilities\LogViaStream::send(\App\Enums\LogLevel::ERROR->value, 'Queue action execution failure', [
+            'location' => __METHOD__,
+            'line' => __LINE__,
+            'exception_message' => $e->getMessage(),
+            'exception_file' => $e->getFile(),
+            'exception_line' => $e->getLine(),
+            'exception_trace' => $e->getTraceAsString(),
+            'request_method' => $_SERVER['REQUEST_METHOD'] ?? '',
+            'request_uri' => $_SERVER['REQUEST_URI'] ?? '',
+            'get_params' => $_GET,
+            'post_params' => $_POST,
+            'identifier' => 'Queue_Action_Failure'
+        ]);
+    }
+
     http_response_code(400);
-    // Daca este o cerere normala, redirectionam inapoi cu flash error
+    // If it is a normal request, redirect back with a flash error
     if (session_status() !== PHP_SESSION_NONE) {
         setFlash('danger', __('Error'), $e->getMessage());
         header('Location: queue.php');

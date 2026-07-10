@@ -10,11 +10,11 @@ use App\Utilities\LogViaStream;
 use App\Enums\LogLevel;
 
 /**
- * Clasa AppController
+ * AppController Class
  *
- * Gestioneaza interfata de administrare pentru aplicatiile inregistrate.
- * Permite listarea, crearea, actualizarea si stergerea aplicatiilor, asigurand
- * generarea de chei API unice si validarea stricta a datelor introduse.
+ * Manages the administration interface for registered applications.
+ * Allows listing, creating, updating, and deleting applications, ensuring
+ * the generation of unique API keys and strict validation of input data.
  *
  * @category Controller
  * @package  App\Controllers
@@ -26,7 +26,7 @@ use App\Enums\LogLevel;
 class AppController extends BaseController
 {
     /**
-     * Afiseaza lista tuturor aplicatiilor inregistrate.
+     * Displays a list of all registered applications.
      */
     public function index(): void
     {
@@ -41,8 +41,8 @@ class AppController extends BaseController
     }
 
     /**
-     * Proceseaza adaugarea unei noi aplicatii in sistem.
-     * Genereaza automat o cheie API securizata de 64 de caractere.
+     * Processes adding a new application to the system.
+     * Automatically generates a secure 64-character API key.
      */
     public function store(array $postData): never
     {
@@ -85,7 +85,7 @@ class AppController extends BaseController
     }
 
     /**
-     * Proceseaza actualizarea numelui unei aplicatii sau regenerarea cheii API.
+     * Processes updating an application name or regenerating the API key.
      */
     public function update(array $postData, array $getData = []): never
     {
@@ -143,7 +143,7 @@ class AppController extends BaseController
     }
 
     /**
-     * Sterge o aplicatie din sistem pe baza ID-ului furnizat prin POST.
+     * Deletes an application from the system based on the ID provided via POST.
      */
     public function delete(array $postData): never
     {

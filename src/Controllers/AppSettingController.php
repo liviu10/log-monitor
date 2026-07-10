@@ -10,10 +10,10 @@ use App\Utilities\LogViaStream;
 use App\Enums\LogLevel;
 
 /**
- * Clasa AppSettingController
+ * AppSettingController Class
  *
- * Gestioneaza setarile aplicatiilor in panoul de administrare.
- * Permite listarea, crearea, actualizarea si stergerea setarilor (individual sau in masa).
+ * Manages application settings in the administration panel.
+ * Allows listing, creating, updating, and deleting settings (individually or in bulk).
  *
  * @category Controller
  * @package  App\Controllers
@@ -25,7 +25,7 @@ use App\Enums\LogLevel;
 class AppSettingController extends BaseController
 {
     /**
-     * Returneaza toate setarile pentru o aplicatie specifica sub forma de raspuns JSON.
+     * Returns all settings for a specific application as a JSON response.
      */
     public function index(array $getData): void
     {
@@ -46,7 +46,7 @@ class AppSettingController extends BaseController
     }
 
     /**
-     * Adauga o setare noua sau mai multe setari simultan pentru o aplicatie.
+     * Adds a new setting or multiple settings simultaneously for an application.
      */
     public function store(array $postData): void
     {
@@ -182,7 +182,7 @@ class AppSettingController extends BaseController
     }
 
     /**
-     * Actualizeaza o setare existenta sau mai multe setari simultan.
+     * Updates an existing setting or multiple settings simultaneously.
      */
     public function update(array $postData): void
     {
@@ -321,7 +321,7 @@ class AppSettingController extends BaseController
     }
 
     /**
-     * Sterge o setare a unei aplicatii.
+     * Deletes a setting of an application.
      */
     public function delete(array $postData): void
     {

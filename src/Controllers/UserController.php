@@ -11,11 +11,11 @@ use App\Utilities\LogViaStream;
 use App\Enums\LogLevel;
 
 /**
- * Clasa UserController
+ * UserController Class
  *
- * Gestioneaza conturile de utilizatori administratori care au acces la panoul de loguri.
- * Ofera operatiuni de vizualizare, creare si eliminare de conturi, implementand logici defensive
- * pentru prevenirea auto-stergerii accidentale.
+ * Manages administrator user accounts that have access to the log panel.
+ * Offers view, creation, and removal operations for accounts, implementing defensive logic
+ * to prevent accidental self-deletion.
  *
  * @category Controller
  * @package  App\Controllers
@@ -27,7 +27,7 @@ use App\Enums\LogLevel;
 class UserController extends BaseController
 {
     /**
-     * Afiseaza lista tuturor utilizatorilor administratori inregistrati.
+     * Displays a list of all registered administrator users.
      */
     public function index(): void
     {
@@ -55,8 +55,8 @@ class UserController extends BaseController
     }
 
     /**
-     * Proceseaza crearea unui nou cont de utilizator administrator.
-     * Valideaza complexitatea minima a parolei si unicitatea numelui.
+     * Processes the creation of a new administrator user account.
+     * Validates the minimum complexity of the password and uniqueness of the username.
      */
     public function store(array $data): never
     {
@@ -101,8 +101,8 @@ class UserController extends BaseController
     }
 
     /**
-     * Sterge un utilizator din sistem pe baza ID-ului trimis prin POST.
-     * Include o verificare stricta pentru a bloca auto-stergerea utilizatorului curent.
+     * Deletes a user from the system based on the ID sent via POST.
+     * Includes a strict check to block the self-deletion of the current user.
      */
     public function delete(array $data): never
     {

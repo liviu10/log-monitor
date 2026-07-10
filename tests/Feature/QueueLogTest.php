@@ -9,7 +9,7 @@ use App\Models\App;
 use App\Models\Log;
 use App\Utilities\MySQLWrapper;
 
-// Importam functiile din worker daca este posibil, altfel le redefinim local pentru testare unitara
+// Import functions from the worker if possible, otherwise redefine them locally for unit testing
 if (!function_exists('sanitizeSensitivePayloadTest')) {
     function sanitizeSensitivePayloadTest(array $data): array
     {
@@ -114,7 +114,7 @@ class QueueLogTest extends TestCase
             ]
         ];
 
-        // 1. Inseram direct in coada log_queue (simulam log.php)
+        // 1. Insert directly into the log_queue queue (simulate log.php)
         $db = $this->db();
         $db->create('log_queue', [
             'app_id' => $appId,
@@ -125,7 +125,7 @@ class QueueLogTest extends TestCase
         $this->assertCount(1, $queued);
         $this->assertEquals($appId, $queued[0]['app_id']);
 
-        // 2. Procesam elementul din coada (simulam bin/worker.php)
+        // 2. Process the queue item (simulate bin/worker.php)
         $job = $queued[0];
         $jobId = (int)$job['id'];
         $appId = (int)$job['app_id'];
@@ -138,14 +138,14 @@ class QueueLogTest extends TestCase
         $message = sanitizeLogMessageTest(trim((string)($decoded['message'] ?? '')));
         $context = sanitizeSensitivePayloadTest($decoded['context'] ?? []);
 
-        // Salvam in logs
+        // Save to logs
         $logId = $this->logModel->create($appId, $level, $message, $context);
         $this->assertGreaterThan(0, $logId);
 
-        // Stergem din coada
+        // Remove from the queue
         $db->delete('log_queue', ['id' => $jobId]);
 
-        // 3. Verificam ca a fost eliminat din coada si mutat in logs
+        // 3. Verify it was removed from the queue and moved to logs
         $this->assertCount(0, $db->read('log_queue'));
         
         $logs = $this->logModel->getPaginated(['app_id' => $appId]);

@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/vendor/autoload.php';
 
-// Includere utilitare globale mai devreme pentru a avea acces la functia __()
+// Include global helpers early to have access to the __() function
 require_once __DIR__ . '/src/Utilities/helpers.php';
 
-// Determinarea scriptului curent solicitat
+// Determine the currently requested script
 $currentScript = basename($_SERVER['SCRIPT_NAME'] ?? '');
 
-// Abordare Fail Fast: Oprirea imediata a executiei daca fisierul .env lipseste
+// Fail Fast approach: Terminate execution immediately if the .env file is missing
 if (!file_exists(__DIR__ . '/.env')) {
     http_response_code(500);
     
@@ -27,14 +27,14 @@ if (!file_exists(__DIR__ . '/.env')) {
     exit;
 }
 
-// Incarcare securizata a variabilelor de mediu
+// Secure loading of environment variables
 $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
 $dotenv->load();
 
-// Inregistrare error handler global pentru stream logging
+// Register global error handler for stream logging
 \App\Utilities\LogViaStream::registerHandlers();
 
-// Sesiunea se porneste DOAR daca nu suntem pe endpoint-ul de logare prin cURL (API)
+// Session is started ONLY if we are not on the cURL logging endpoint (API)
 if ($currentScript !== 'log.php') {
     if (session_status() === PHP_SESSION_NONE) {
         ini_set('session.gc_maxlifetime', '86400');
@@ -50,20 +50,20 @@ if ($currentScript !== 'log.php') {
         session_start();
     }
     
-    // Injectam headerele de securitate runtime specifice aplicatiei web/dashboard
+    // Inject runtime security headers specific to the web/dashboard application
     injectRuntimeSecurityHeaders();
 }
 
-// Configurare aplicatie securizata contra atacurilor de tip Injection
+// Configure application, secured against injection attacks
 define('APP_NAME', htmlspecialchars($_ENV['APP_NAME'] ?? 'LogMonitor', ENT_QUOTES, 'UTF-8'));
 define('APP_URL', constructUrl());
 
-// Generare Nonce criptografic securizat pentru blocuri de script si stil inline (Protectie CSP)
+// Generate a secure cryptographic nonce for inline scripts and styles (CSP protection)
 if (!defined('APP_NONCE')) {
     define('APP_NONCE', bin2hex(random_bytes(16)));
 }
 
-// Trimitere header Content Security Policy optimizat pentru CDN-urile utilizate si AlpineJS
+// Send Content Security Policy header optimized for utilized CDNs and AlpineJS
 header(
     "Content-Security-Policy: default-src 'self'; " .
     "script-src 'self' https://cdn.jsdelivr.net 'unsafe-eval' 'nonce-" . APP_NONCE . "'; " .
@@ -75,7 +75,7 @@ header(
 );
 
 /**
- * Genereaza un camp input ascuns pentru protectia CSRF in formularele HTML.
+ * Generates a hidden input field for CSRF protection in HTML forms.
  */
 if (!function_exists('csrf_field')) {
     function csrf_field(): string {

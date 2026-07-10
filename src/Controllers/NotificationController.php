@@ -10,10 +10,10 @@ use App\Utilities\LogViaStream;
 use App\Enums\LogLevel;
 
 /**
- * Clasa NotificationController
+ * NotificationController Class
  *
- * Responsabila pentru gestionarea si trimiterea de alerte automate
- * prin diverse canale alternative configurate din aplicatie (E-mail, Teams etc.).
+ * Responsible for managing and sending automated alerts
+ * through various alternative channels configured in the application (Email, Teams, etc.).
  *
  * @category Controller
  * @package  App\Controllers
@@ -25,12 +25,12 @@ use App\Enums\LogLevel;
 class NotificationController extends BaseController
 {
     /**
-     * Trimite o alerta pe baza setarilor aplicatiei si a datelor din log.
-     * Suporta utilizarea de canale multiple (ex: "email,teams").
+     * Sends an alert based on application settings and log data.
+     * Supports the use of multiple channels (e.g., "email,teams").
      *
-     * @param array $app        Datele aplicatiei procesate.
-     * @param array $logPayload Datele continutului din logul generat.
-     * @param array|null $settings Setarile aplicatiei pre-incarcate (optional).
+     * @param array $app        The processed application data.
+     * @param array $logPayload The content data of the generated log.
+     * @param array|null $settings Pre-loaded application settings (optional).
      */
     public function sendAlert(array $app, array $logPayload, ?array $settings = null): void
     {
@@ -54,7 +54,7 @@ class NotificationController extends BaseController
                 return;
             }
 
-            // Tratare exhaustiva a prioritatilor folosind structura moderna match din PHP 8.x
+            // Exhaustive handling of priorities using the modern PHP 8.x match structure
             $priority = match ($currentLevel) {
                 'emergency', 'alert', 'critical', 'error' => 1,
                 'warning', 'notice'                        => 3,
@@ -69,17 +69,17 @@ class NotificationController extends BaseController
 
             $subject = sprintf("[%s] Log Alert %s - %s", strtoupper($logPayload['level']), $app['name'], APP_NAME);
             
-            $emailMessage = "A fost inregistrat un log de nivel mare:\n\n"
-                . "Aplicatie: " . $app['name'] . "\n"
-                . "Nivel: " . strtoupper($logPayload['level']) . "\n"
-                . "Mesaj: " . $logPayload['message'] . "\n"
-                . "Data: " . date('Y-m-d H:i:s') . "\n";
+            $emailMessage = "A high-level log was recorded:\n\n"
+                . "Application: " . $app['name'] . "\n"
+                . "Level: " . strtoupper($logPayload['level']) . "\n"
+                . "Message: " . $logPayload['message'] . "\n"
+                . "Date: " . date('Y-m-d H:i:s') . "\n";
 
             if ($contextStr !== '') {
                 $emailMessage .= "Context:\n" . $contextStr . "\n";
             }
 
-            // 1. Canal comunicare Email standard
+            // 1. Standard Email communication channel
             if (in_array('email', $channels, true)) {
                 $emailRecipient = $settings['notification_email'] ?? null;
                 if (!empty($emailRecipient)) {
@@ -93,7 +93,7 @@ class NotificationController extends BaseController
                 }
             }
 
-            // 2. Canal comunicare Microsoft Teams direct pe adresa canalului dedicat
+            // 2. Microsoft Teams communication channel directly to the dedicated channel address
             if (in_array('teams', $channels, true)) {
                 $teamsEmail = $settings['notification_teams_email'] ?? null;
                 if (!empty($teamsEmail)) {
@@ -107,7 +107,7 @@ class NotificationController extends BaseController
                 }
             }
         } catch (\Throwable $e) {
-            LogViaStream::send(LogLevel::ERROR->value, 'Eroare la procesarea/trimiterea notificarii automate: ' . $e->getMessage(), [
+            LogViaStream::send(LogLevel::ERROR->value, 'Error processing/sending automated notification: ' . $e->getMessage(), [
                 'location' => __METHOD__,
                 'line' => __LINE__,
                 'exception_message' => $e->getMessage(),

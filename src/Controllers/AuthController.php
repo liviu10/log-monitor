@@ -10,11 +10,11 @@ use App\Utilities\LogViaStream;
 use App\Enums\LogLevel;
 
 /**
- * Clasa AuthController
+ * AuthController Class
  *
- * Gestioneaza procesele de autentificare, autorizare si delogare pentru utilizatorii administratori.
- * Include logica pentru afisarea formularului de login, validarea credentialelor utilizand hash-uri Argon2id/BCRYPT
- * si managementul sesiunilor active intr-un mod securizat.
+ * Manages the authentication, authorization, and logout processes for admin users.
+ * Includes logic for displaying the login form, validating credentials using Argon2id/BCRYPT hashes,
+ * and secure active session management.
  *
  * @category Controller
  * @package  App\Controllers
@@ -26,8 +26,8 @@ use App\Enums\LogLevel;
 class AuthController extends BaseController
 {
     /**
-     * Afiseaza pagina de login.
-     * Daca utilizatorul este deja autentificat, il redirectioneaza spre dashboard.
+     * Displays the login page.
+     * If the user is already authenticated, redirects them to the dashboard.
      */
     public function showLogin(): void
     {
@@ -38,8 +38,8 @@ class AuthController extends BaseController
     }
 
     /**
-     * Proceseaza tentativa de autentificare a unui utilizator.
-     * Valideaza datele de intrare si verifica parola utilizand functii securizate native.
+     * Processes a user authentication attempt.
+     * Validates input data and verifies password using native secure functions.
      */
     public function login(array $data): never
     {
@@ -65,7 +65,7 @@ class AuthController extends BaseController
             $user = $userModel->findByUsername(trim($payload['username']));
 
             if ($user && password_verify($payload['password'], $user['password_hash'])) {
-                // Prevenirea atacurilor de tip Session Fixation prin regenerarea ID-ului sesiunii
+                // Prevent Session Fixation attacks by regenerating the session ID
                 session_regenerate_id(true);
                 
                 $_SESSION['auth.user'] = [
@@ -75,7 +75,7 @@ class AuthController extends BaseController
                 $this->redirect('index.php');
             }
             
-            // Logare audit pentru esec autentificare (potential atac fortat)
+            // Audit log for authentication failure (potential brute force attack)
             LogViaStream::send(LogLevel::WARNING->value, 'Failed authentication attempt', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
@@ -99,14 +99,14 @@ class AuthController extends BaseController
     }
 
     /**
-     * Delogheaza utilizatorul si distruge complet orice urma a sesiunii active.
+     * Logs the user out and completely destroys any trace of the active session.
      */
     public function logout(): never
     {
-        // 1. Golirea completa a vectorului global $_SESSION pentru a sterge datele din memoria runtime
+        // 1. Completely clear the global $_SESSION array to erase data from runtime memory
         $_SESSION = [];
 
-        // 2. Stergerea si invalidarea totala a cookie-ului de sesiune de pe client (browser)
+        // 2. Erase and fully invalidate the session cookie on the client (browser)
         if (ini_get('session.use_cookies')) {
             $params = session_get_cookie_params();
             setcookie(
@@ -120,12 +120,12 @@ class AuthController extends BaseController
             );
         }
 
-        // 3. Distrugerea fizica a datelor sesiunii de pe server
+        // 3. Physically destroy session data on the server
         if (session_status() === PHP_SESSION_ACTIVE) {
             session_destroy();
         }
 
-        // 4. Redirectionare defensiva catre pagina de login
+        // 4. Defensive redirection to the login page
         $this->redirect('login.php');
     }
 }

@@ -7,7 +7,7 @@ use Phinx\Migration\AbstractMigration;
 class CreateLogQueueTable extends AbstractMigration
 {
     /**
-     * Creaza tabela log_queue pentru coada de mesaje asincrona.
+     * Creates the log_queue table for the asynchronous message queue.
      */
     public function change(): void
     {

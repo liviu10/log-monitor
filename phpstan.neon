@@ -1,0 +1,11 @@
+parameters:
+    level: 10
+    paths:
+        - src
+        - api
+        - bin
+        - bootstrap.php
+        - index.php
+        - login.php
+        - queue.php
+        - users.php

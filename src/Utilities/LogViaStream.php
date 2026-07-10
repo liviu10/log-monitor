@@ -9,17 +9,17 @@ use ErrorException;
 use RuntimeException;
 
 /**
- * Clasa LogViaStream
+ * LogViaStream Class
  *
- * Centralizeaza si securizeaza logurile prin stream-uri native PHP.
- * Include protectie impotriva DDoS-ului intern si a buclelor infinite (Rate Limiting Local si Global).
+ * Centralizes and secures logs via native PHP streams.
+ * Includes protection against internal DDoS and infinite loops (Local and Global Rate Limiting).
  *
  * @category Utilities
  * @package  App\Utilities
  * @version  5.0
  * @since    PHP 8.4
  * @author   Voica Liviu
- * @license  Proprietar
+ * @license  Proprietary
  */
 final class LogViaStream
 {
@@ -30,47 +30,47 @@ final class LogViaStream
     private static string $apiKey = '';
     private static string $url = '';
     
-    // Contor intern pentru request-ul curent (Protectie Bucla Infinite / Foreach)
+    // Internal counter for the current request (Infinite Loop / Foreach Protection)
     private static int $logCountInRequest = 0;
     
-    // Limite stricte de siguranta (Configurabile architectural)
-    private const int MAX_LOGS_PER_REQUEST = 30;  // Maxim loguri transmise de un singur script/apel
-    private const int MAX_LOGS_PER_MINUTE = 300;  // Maxim loguri acceptate global de pe tot serverul intr-un minut
+    // Strict safety limits (Architecturally configurable)
+    private const int MAX_LOGS_PER_REQUEST = 30;  // Maximum logs transmitted by a single script/call
+    private const int MAX_LOGS_PER_MINUTE = 300;  // Maximum logs accepted globally from the entire server in one minute
 
     /**
-     * Constructor privat pentru a preveni instantierea unei clase pur statice.
+     * Private constructor to prevent instantiation of a purely static class.
      */
     private function __construct()
     {
     }
 
     /**
-     * Inregistreaza handlerul global si valideaza existenta configuratiilor (Fail-Fast).
+     * Registers the global handler and validates config presence (Fail-Fast).
      *
-     * @throws RuntimeException Daca variabilele de mediu esentiale lipsesc sau sunt invalide.
+     * @throws RuntimeException If essential environment variables are missing or invalid.
      */
     public static function registerHandlers(): void
     {
         self::$startTime = (float)($_SERVER['REQUEST_TIME_FLOAT'] ?? microtime(true));
 
-        // Alocare rezerva de memorie (500 KB) pentru situatii de urgenta (OOM)
+        // Allocate memory reserve (500 KB) for emergency situations (OOM)
         self::$memoryReserve = str_repeat('x', 1024 * 500);
 
         $envApiKey = $_ENV['LOG_API_KEY'] ?? null;
         $envUrl = $_ENV['LOG_SERVER_URL'] ?? null;
 
         if (!is_string($envApiKey) || trim($envApiKey) === '') {
-            throw new RuntimeException('Configuratie invalida: LOG_API_KEY lipseste sau este lipsa.');
+            throw new RuntimeException('Invalid configuration: LOG_API_KEY is missing or empty.');
         }
 
         if (!is_string($envUrl) || filter_var($envUrl, FILTER_VALIDATE_URL) === false) {
-            throw new RuntimeException('Configuratie invalida: LOG_SERVER_URL lipseste sau nu este un URL valid.');
+            throw new RuntimeException('Invalid configuration: LOG_SERVER_URL is missing or not a valid URL.');
         }
 
         self::$apiKey = $envApiKey;
         self::$url = $envUrl;
 
-        // 1. Interceptare erori native PHP prin transformare in ErrorException
+        // 1. Intercept native PHP errors by converting them to ErrorException
         set_error_handler(static function (int $severity, string $message, string $file, int $line): bool {
             if (!(error_reporting() & $severity)) {
                 return false;
@@ -78,19 +78,21 @@ final class LogViaStream
             throw new ErrorException($message, 0, $severity, $file, $line);
         });
 
-        // 2. Interceptare exceptii netratate
+        // 2. Intercept unhandled exceptions
         set_exception_handler(static function (Throwable $exception): void {
             self::handleException($exception);
         });
 
         // 3. Interceptare erori fatale (Shutdown Function) cu protectie de buffer
         register_shutdown_function(static function (): void {
-            self::$memoryReserve = null; // Eliberare imediata spatiu RAM
+        // 3. Intercept fatal errors (Shutdown Function) with buffer protection
+        register_shutdown_function(static function (): void {
+            self::$memoryReserve = null; // Immediate release of RAM space
 
             $error = error_get_last();
             $bufferContent = '';
 
-            // Golire defensiva a bufferelor evitand blocajele infinite
+            // Defensive clearing of buffers, avoiding infinite locks
             try {
                 while (ob_get_level() > 0) {
                     $status = ob_get_status(true);
@@ -107,7 +109,7 @@ final class LogViaStream
                     }
                 }
             } catch (Throwable) {
-                // Ignoram esecul bufferului in faza terminala pentru a nu masca eroarea principala
+                // Ignore buffer failure in the terminal phase to avoid masking the main error
             }
 
             $hasFatalError = ($error !== null && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true));
@@ -133,7 +135,7 @@ final class LogViaStream
                         'captured_output_buffer' => substr($bufferContent, 0, 4000)
                     ]);
                 } else {
-                    self::send('WARNING', "Script terminat neasteptat cu output buffer nirendat.", [
+                    self::send('WARNING', "Script terminated unexpectedly with unrendered output buffer.", [
                         'type' => 'Orphaned Buffer',
                         'captured_output_buffer' => substr($bufferContent, 0, 4000)
                     ]);
@@ -143,7 +145,7 @@ final class LogViaStream
     }
 
     /**
-     * Proceseaza si formateaza exceptiile interceptate.
+     * Processes and formats intercepted exceptions.
      */
     private static function handleException(Throwable $exception): void
     {
@@ -181,29 +183,29 @@ final class LogViaStream
     }
 
     /**
-     * Expediaza logul catre serverul centralizat in mod controlat si securizat.
+     * Dispatches the log to the centralized server in a controlled and secure manner.
      */
     public static function send(string $level, string $message, array $context = []): bool
     {
-        // Preventie recursivitate / bucla circulara pe endpoint-ul API log.php
+        // Prevent recursion / circular loop on the API log.php endpoint
         $currentScript = basename($_SERVER['SCRIPT_NAME'] ?? '');
         if ($currentScript === 'log.php') {
             error_log(sprintf("[%s] Internal Log: %s | Context: %s", strtoupper($level), $message, json_encode($context)));
             return true;
         }
 
-        // Preventie bucle de recursivitate
+        // Prevent recursion loops
         if (self::$isLogging) {
             return false;
         }
 
-        // 1. Rate Limit Local: Opreste scriptul curent daca a generat prea multe loguri (ex: eroare in foreach)
+        // 1. Local Rate Limit: Stops the current script if it generated too many logs (e.g. error in foreach)
         if (self::$logCountInRequest >= self::MAX_LOGS_PER_REQUEST) {
             error_log("LogViaStream Alert: S-a atins limita maxima de loguri per request (" . self::MAX_LOGS_PER_REQUEST . ").");
             return false;
         }
 
-        // 2. Rate Limit Global: Opreste flood-ul la nivel de server pe minut (Multi-Process Safe)
+        // 2. Global Rate Limit: Stops flooding at the server level per minute (Multi-Process Safe)
         if (!self::checkGlobalRateLimit()) {
             error_log("LogViaStream Alert: Rate limit-ul global a fost depasit (" . self::MAX_LOGS_PER_MINUTE . "/min). Log blocat preventiv.");
             return false;
@@ -270,7 +272,7 @@ final class LogViaStream
 
         } catch (Throwable $e) {
             error_log(json_encode([
-                'error'             => 'Eroare critica in transmisia logului prin Stream',
+                'error'             => 'Critical error in log transmission via Stream',
                 'exception_message' => $e->getMessage(),
                 'identifier'        => 'LogViaStream_Transmission_Failure'
             ], JSON_UNESCAPED_SLASHES));
@@ -282,13 +284,13 @@ final class LogViaStream
     }
 
     /**
-     * Verifica in mod concurent daca s-a atins limita de loguri admisa pe minut la nivel de server web.
+     * Concurrently checks if the allowed log limit per minute has been reached at the web server level.
      */
     private static function checkGlobalRateLimit(): bool
     {
         $limitFile = sys_get_temp_dir() . '/log_rate_limit.json';
         $now = time();
-        $minuteWindow = $now - ($now % 60); // Identificator unic pentru minutul curent
+        $minuteWindow = $now - ($now % 60); // Unique identifier for the current minute
 
         if (!file_exists($limitFile)) {
             @file_put_contents($limitFile, json_encode(['window' => $minuteWindow, 'count' => 0]));
@@ -296,16 +298,16 @@ final class LogViaStream
 
         $fp = @fopen($limitFile, 'c+');
         if (!$fp) {
-            return true; // Fail-open principle: Daca nu putem citi limitatorul, lasam logul sa treaca
+            return true; // Fail-open principle: If we cannot read the limiter, let the log pass
         }
 
-        // Lock exclusiv pentru a impiedica race conditions intre procesele FPM paralele
+        // Exclusive lock to prevent race conditions between parallel FPM processes
         if (flock($fp, LOCK_EX)) {
             $content = stream_get_contents($fp);
             $data = json_decode(is_string($content) ? $content : '', true);
 
             if (!is_array($data) || ($data['window'] ?? 0) !== $minuteWindow) {
-                // Minutul s-a schimbat sau structura e invalida -> resetam fereastra de timp
+                // The minute has changed or the structure is invalid -> reset the time window
                 $data = ['window' => $minuteWindow, 'count' => 1];
             } else {
                 $data['count']++;
@@ -330,7 +332,7 @@ final class LogViaStream
     }
 
     /**
-     * Calculeaza dinamic timeout-ul de retea ramas disponibil.
+     * Dynamically calculates the remaining network timeout available.
      */
     private static function calculateDynamicTimeout(): float
     {
@@ -350,7 +352,7 @@ final class LogViaStream
     }
 
     /**
-     * Ascunde datele sensibile din string-urile de conexiune baze de date (Multiline Safe).
+     * Hides sensitive data in database connection strings (Multiline Safe).
      */
     private static function maskDatabaseSecrets(string $message): string
     {
@@ -373,7 +375,7 @@ final class LogViaStream
     }
 
     /**
-     * Igienizeaza recursiv structurile de date primite ca parametru (Inclusiv JSON ascuns).
+     * Recursively sanitizes data structures received as parameters (Including hidden JSON).
      */
     private static function sanitizeData(array $data): array
     {
@@ -388,7 +390,7 @@ final class LogViaStream
                 if (in_array($lowerKey, $sensitiveKeys, true)) {
                     $data[$key] = '******';
                 } else {
-                    // Implementare nativa PHP 8.4 json_validate pentru payload-uri imbricate sub forma de text
+                    // Native PHP 8.4 json_validate implementation for nested text payloads
                     if (json_validate($value)) {
                         try {
                             $decoded = json_decode($value, true, 512, JSON_THROW_ON_ERROR);
@@ -396,7 +398,7 @@ final class LogViaStream
                                 $data[$key] = json_encode(self::sanitizeData($decoded), JSON_UNESCAPED_SLASHES);
                             }
                         } catch (Throwable) {
-                            // Ignoram erorile de decodare fortata
+                            // Ignore forced decoding errors
                         }
                     }
                 }
@@ -406,7 +408,7 @@ final class LogViaStream
     }
 
     /**
-     * Masking rapid pentru mesaje text simple.
+     * Rapid masking for simple text messages.
      */
     private static function sanitizeMessage(string $message): string
     {
@@ -414,7 +416,7 @@ final class LogViaStream
     }
 
     /**
-     * Formateaza stack trace-ul exceptiei intr-un mod lizibil.
+     * Formats the exception stack trace in a readable format.
      */
     private static function formatTrace(Throwable $exception): array
     {
@@ -440,7 +442,7 @@ final class LogViaStream
     }
 
     /**
-     * Transforma octetii intr-un format uman lizibil.
+     * Formats bytes into a human-readable format.
      */
     private static function formatBytes(int $bytes): string
     {

@@ -5,40 +5,40 @@ declare(strict_types=1);
 namespace App\Utilities;
 
 /**
- * Clasa Validation
+ * Validation Class
  *
- * Motor extensibil pentru validarea datelor intrate.
- * Mesajele generate intern folosesc in mod exclusiv chei in engleza pasate catre __().
+ * Extensible engine for validating incoming data.
+ * Internally generated messages exclusively use English keys passed to __().
  *
- * @category Utilitare
+ * @category Utilities
  * @package  App\Utilities
  * @version  1.4
  * @since    PHP 8.4
  * @author   Voica Liviu
- * @license  Proprietar
+ * @license  Proprietary
  */
 class Validation
 {
     use ValidateEmail;
 
-    /** @var array Erorile stranse in timpul procesului curent de validare. */
+    /** @var array Errors collected during the current validation process. */
     private array $errors = [];
 
     /**
-     * Constructor clasa. Promoveaza proprietatile transmise.
+     * Class constructor. Promotes passed properties.
      *
-     * @param array $fieldNames Aliasuri pentru campuri folosite in randarea mesajelor.
+     * @param array $fieldNames Aliases for fields used in rendering messages.
      */
     public function __construct(
         private array $fieldNames = []
     ) {}
 
     /**
-     * Ruleaza setul de reguli peste payload-ul primit ca argument.
+     * Runs the set of rules over the payload passed as an argument.
      *
-     * @param array $rules Regulile de validare (ex: ['email' => ['required', 'email']]).
-     * @param array $payload Datele primite din cererea HTTP.
-     * @return array Vectorul final cu erori structurate pe campuri.
+     * @param array $rules Validation rules (e.g. ['email' => ['required', 'email']]).
+     * @param array $payload Data received from HTTP request.
+     * @return array Final array with errors structured by fields.
      */
     public function validate(array $rules, array $payload): array
     {
@@ -75,11 +75,11 @@ class Validation
     }
 
     /**
-     * Aplica o regula specifica utilizand potrivirea exhaustiva prin expresia match.
+     * Applies a specific rule using exhaustive matching via match expression.
      *
-     * @param string $field Numele campului verificat.
-     * @param string $rule Regula de validat.
-     * @param mixed $value Valoarea supusa verificarii.
+     * @param string $field Name of verified field.
+     * @param string $rule Rule to validate.
+     * @param mixed $value Value subjected to check.
      * @return void
      */
     private function applyRule(string $field, string $rule, mixed $value): void
@@ -102,11 +102,11 @@ class Validation
     }
 
     /**
-     * Verifica daca o valoare respecta limita minima setata.
+     * Checks if a value respects the set minimum limit.
      *
-     * @param string $rule Regula continand valoarea de minim (ex: min:3).
-     * @param mixed $value Valoarea inspectata.
-     * @return bool True daca valoarea este mai mare sau egala cu minimul impus.
+     * @param string $rule Rule containing the minimum value (e.g., min:3).
+     * @param mixed $value Inspected value.
+     * @return bool True if the value is greater than or equal to the required minimum.
      */
     private function checkMin(string $rule, mixed $value): bool
     {
@@ -116,11 +116,11 @@ class Validation
     }
 
     /**
-     * Verifica daca o valoare se incadreaza sub limita maxima declarata.
+     * Checks if a value falls under the declared maximum limit.
      *
-     * @param string $rule Regula continand valoarea de maxim (ex: max:10).
-     * @param mixed $value Valoarea inspectata.
-     * @return bool True daca valoarea este mai mica sau egala cu maximul impus.
+     * @param string $rule Rule containing the maximum value (e.g., max:10).
+     * @param mixed $value Inspected value.
+     * @return bool True if the value is less than or equal to the required maximum.
      */
     private function checkMax(string $rule, mixed $value): bool
     {
@@ -130,11 +130,11 @@ class Validation
     }
 
     /**
-     * Intoarce textul tradus corespunzator erorilor gasite folosind chei in engleza.
+     * Returns the translated text corresponding to the errors found, using English keys.
      *
-     * @param string $field Denumirea tehnica a campului.
-     * @param string $rule Regula incalcata.
-     * @return string Mesajul de eroare interpretat si returnat fara diacritice.
+     * @param string $field Technical field name.
+     * @param string $rule Violated rule.
+     * @return string Interpreted error message, returned without diacritics.
      */
     public function messages(string $field, string $rule): string
     {

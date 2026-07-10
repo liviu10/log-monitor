@@ -11,28 +11,28 @@ use Throwable;
 use App\Enums\LogLevel;
 
 /**
- * Clasa MySQLWrapper
+ * MySQLWrapper Class
  *
- * Implementeaza un sablon Singleton securizat peste PDO.
- * Operatiile genereaza exceptii detaliate trimise exclusiv catre cURL.
- * Toate mesajele text destinate exceptiilor folosesc functia __().
+ * Implements a secure Singleton pattern over PDO.
+ * Operations throw detailed exceptions sent exclusively via cURL.
+ * All text messages destined for exceptions use the __() function.
  *
- * @category Utilitare
+ * @category Utilities
  * @package  App\Utilities
  * @version  1.7
  * @since    PHP 8.4
  * @author   Voica Liviu
- * @license  Proprietar
+ * @license  Proprietary
  */
 class MySQLWrapper
 {
-    /** @var MySQLWrapper|null Instanta Singleton a clasei. */
+    /** @var MySQLWrapper|null Singleton instance of the class. */
     private static ?self $instance = null;
 
-    /** @var PDO|null Obiectul conexiunii active PDO. */
+    /** @var PDO|null Active PDO connection object. */
     private ?PDO $connection = null;
 
-    /** @var array Configurari standard de securitate si comportament pentru PDO. */
+    /** @var array Standard security and behavior configurations for PDO. */
     private array $options = [
         PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
@@ -41,14 +41,14 @@ class MySQLWrapper
     ];
 
     /**
-     * Constructor privat pentru restrictionarea instantierii directe.
+     * Private constructor to restrict direct instantiation.
      *
-     * @param string $host Gazda bazei de date.
-     * @param string $db Numele bazei de date.
-     * @param string $user Utilizatorul bazei de date.
-     * @param string $pass Parola de acces.
-     * @param string $port Portul de comunicare.
-     * @param string $charset Setul de caractere utilizat.
+     * @param string $host Database host.
+     * @param string $db Database name.
+     * @param string $user Database user.
+     * @param string $pass Access password.
+     * @param string $port Communication port.
+     * @param string $charset Utilized character set.
      */
     public function __construct(
         private readonly string $host,
@@ -62,9 +62,9 @@ class MySQLWrapper
     }
 
     /**
-     * Returneaza instanta unica a clasei wrapper.
+     * Returns the single instance of the wrapper class.
      *
-     * @return self Instanta unica.
+     * @return self Unique instance.
      */
     public static function getInstance(): self
     {
@@ -78,9 +78,9 @@ class MySQLWrapper
     }
 
     /**
-     * Initializeaza conexiunea nativa PDO si trimite erorile direct catre cURL.
+     * Initializes the native PDO connection and sends errors directly to cURL.
      *
-     * @throws RuntimeException Daca initializarea conexiunii esueaza.
+     * @throws RuntimeException If connection initialization fails.
      * @return void
      */
     public function connect(): void
@@ -109,10 +109,10 @@ class MySQLWrapper
     }
 
     /**
-     * Returneaza conexiunea activa sau arunca o exceptie daca aceasta nu exista.
+     * Returns the active connection or throws an exception if it doesn't exist.
      *
-     * @throws RuntimeException Daca proprietatea de conexiune este nula.
-     * @return PDO Obiectul PDO valid.
+     * @throws RuntimeException If the connection property is null.
+     * @return PDO Valid PDO object.
      */
     public function getConnection(): PDO
     {
@@ -123,7 +123,7 @@ class MySQLWrapper
     }
 
     /**
-     * Intrerupe conexiunea curenta cu baza de date.
+     * Closes the current database connection.
      *
      * @return void
      */
@@ -133,12 +133,12 @@ class MySQLWrapper
     }
 
     /**
-     * Executa o interogare SQL securizata si trimite detaliile tehnice complete prin cURL in caz de eroare.
+     * Executes a secure SQL query and dispatches full technical details via cURL on failure.
      *
-     * @param string $sql Comanda SQL de executat.
-     * @param array $params Parametrii asociati marcajelor de substitutie.
-     * @throws RuntimeException Cand executia intampina erori de sintaxa sau retea.
-     * @return PDOStatement Obiectul rezultat in urma executiei cu succes.
+     * @param string $sql SQL statement to execute.
+     * @param array $params Parameters associated with placeholders.
+     * @throws RuntimeException When execution encounters syntax or network errors.
+     * @return PDOStatement The statement object on successful execution.
      */
     public function query(string $sql, array $params = []): PDOStatement
     {
@@ -169,11 +169,11 @@ class MySQLWrapper
     }
 
     /**
-     * Insereaza o inregistrare noua intr-o tabela specificata.
+     * Inserts a new record into a specified table.
      *
-     * @param string $table Numele tabelei vizate.
-     * @param array $data Setul de date in format coloana => valoare.
-     * @return string|int ID-ul ultimei inregistrari inserate sau numarul de randuri afectate.
+     * @param string $table Name of target table.
+     * @param array $data Dataset in column => value format.
+     * @return string|int ID of the last inserted record or row count of affected rows.
      */
     public function create(string $table, array $data): string|int
     {
@@ -197,13 +197,13 @@ class MySQLWrapper
     }
 
     /**
-     * Interogheaza baza de date si returneaza toate potrivirile gasite.
+     * Queries the database and returns all matches found.
      *
-     * @param string $table Numele tabelei.
-     * @param array $conditions Conditii de filtrare de tip coloana => valoare.
-     * @param array $columns Lista coloanelor selectate.
-     * @param string $logic Operatorul logic folosit intre filtre (AND/OR).
-     * @return array Tablou multidimensional cu rezultatele gasite.
+     * @param string $table Table name.
+     * @param array $conditions Filtering conditions of type column => value.
+     * @param array $columns List of selected columns.
+     * @param string $logic Logical operator used between filters (AND/OR).
+     * @return array Multidimensional array with matching results.
      */
     public function read(string $table, array $conditions = [], array $columns = ['*'], string $logic = 'AND'): array
     {
@@ -226,13 +226,13 @@ class MySQLWrapper
     }
 
     /**
-     * Modifica inregistrarile dintr-o tabela in baza unor criterii clare.
+     * Modifies records in a table based on clear criteria.
      *
-     * @param string $table Tabela afectata.
-     * @param array $data Noile informatii care trebuiesc salvate.
-     * @param array $conditions Conditiile de determinare a randurilor modificate.
-     * @param string $logic Legatura logica dintre filtre.
-     * @return int Numarul total de randuri modificate de operatie.
+     * @param string $table Affected table.
+     * @param array $data New information to be saved.
+     * @param array $conditions Conditions determining modified rows.
+     * @param string $logic Logical relation between filters.
+     * @return int Total number of rows modified by the operation.
      */
     public function update(string $table, array $data, array $conditions, string $logic = 'AND'): int
     {
@@ -260,12 +260,12 @@ class MySQLWrapper
     }
 
     /**
-     * Sterge inregistrari din tabela protejand operatia contra stergerilor globale accidentale.
+     * Deletes records from the table, protecting against accidental global deletes.
      *
-     * @param string $table Tabela vizata.
-     * @param array $conditions Conditii obligatorii de stergere randuri.
-     * @param string $logic Operatorul de legatura pentru clauza WHERE.
-     * @return int Numarul randurilor sterse definitiv.
+     * @param string $table Target table.
+     * @param array $conditions Mandatory row deletion conditions.
+     * @param string $logic Linking operator for the WHERE clause.
+     * @return int Number of permanently deleted rows.
      */
     public function delete(string $table, array $conditions, string $logic = 'AND'): int
     {
@@ -287,10 +287,10 @@ class MySQLWrapper
     }
 
     /**
-     * Scrie un log de urgenta in caz de esec al bazei de date.
+     * Writes an emergency log in case of database failure.
      *
-     * @param string $message Mesajul de eroare.
-     * @param array $context Informatiile suplimentare de context.
+     * @param string $message Error message.
+     * @param array $context Additional context information.
      * @return void
      */
     private function logEmergency(string $message, array $context): void
@@ -327,7 +327,7 @@ class MySQLWrapper
                 throw new RuntimeException("Failed to write to file '{$filePath}'.");
             }
         } catch (Throwable $logException) {
-            // Trimitem eroarea catre logul nativ de sistem (error_log) ca fallback de ultima instanta
+            // Send the error to the native system log (error_log) as a last resort fallback
             error_log("Emergency logging failed: " . $logException->getMessage());
         }
     }

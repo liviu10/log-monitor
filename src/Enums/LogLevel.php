@@ -6,44 +6,44 @@ namespace App\Enums;
 
 /**
  * LogLevel Enum
- * * Defineste nivelurile de logare permise in sistem, conform standardului RFC 5424.
- * Se utilizeaza un Native Backed Enum (string) pentru tipizare stricta si validare automata.
+ * * Defines the allowed logging levels in the system, according to RFC 5424.
+ * A Native Backed Enum (string) is used for strict typing and automatic validation.
  *
  * @category Enum
  * @package  App\Enums
  * @version  1.3
  * @since    PHP 8.4
  * @author   Voica Liviu
- * @license  Proprietar
+ * @license  Proprietary
  */
 enum LogLevel: string
 {
-    /** Sistemul este inutilizabil. */
+    /** The system is unusable. */
     case EMERGENCY = 'EMERGENCY';
 
-    /** Trebuie actionat imediat. */
+    /** Action must be taken immediately. */
     case ALERT = 'ALERT';
 
-    /** Conditii critice. */
+    /** Critical conditions. */
     case CRITICAL = 'CRITICAL';
 
-    /** Conditii de eroare. */
+    /** Error conditions. */
     case ERROR = 'ERROR';
 
-    /** Conditii de avertisment. */
+    /** Warning conditions. */
     case WARNING = 'WARNING';
 
-    /** Conditie normala, dar semnificativa. */
+    /** Normal but significant condition. */
     case NOTICE = 'NOTICE';
 
-    /** Mesaje informationale. */
+    /** Informational messages. */
     case INFO = 'INFO';
 
-    /** Mesaje de depanare (debug). */
+    /** Debug messages. */
     case DEBUG = 'DEBUG';
 
     /**
-     * Returneaza toate valorile brute (string) ale nivelurilor de logare.
+     * Returns all raw (string) values of the logging levels.
      * * @return array<int, string>
      */
     public static function all(): array
@@ -52,9 +52,9 @@ enum LogLevel: string
     }
 
     /**
-     * Verifica daca un string dat este un nivel de logare valid.
-     * Implementeaza filozofia Fail Fast prin procesarea defensiva a inputului.
-     * * @param string $level Nivelul care trebuie verificat.
+     * Verifies if a given string is a valid logging level.
+     * Implements Fail Fast philosophy via defensive input processing.
+     * * @param string $level The level to check.
      * @return bool
      */
     public static function isValid(string $level): bool

@@ -2,30 +2,30 @@
 
 declare(strict_types=1);
 
-// Dezactivam complet limitarea timpului de executie, desi executia trebuie sa fie sub 2-3 ms
+// Disable execution time limit completely, though execution should be under 2-3 ms
 set_time_limit(5);
 
-// Incarcam configuratiile de baza ale aplicatiei
+// Load base application configuration
 require_once dirname(__DIR__) . '/bootstrap.php';
 
 use App\Utilities\MySQLWrapper;
 
-// Determinam daca rulam in contextul unui worker FrankenPHP
+// Determine if we are running in the context of a FrankenPHP worker
 $isFrankenPhpWorker = function_exists('frankenphp_handle_request');
 
 $handler = function () {
-    // Suport CORS: Permitem cererile de tip Preflight (OPTIONS) venite din browsere externe
+    // CORS Support: Allow Preflight (OPTIONS) requests from external browsers
     if (($_SERVER['REQUEST_METHOD'] ?? '') === 'OPTIONS') {
         header('Access-Control-Allow-Origin: *');
         header('Access-Control-Allow-Methods: POST, OPTIONS');
-        // Am lasat doar X-API-KEY in lista de headere permise
+        // Only X-API-KEY is left in the allowed headers list
         header('Access-Control-Allow-Headers: X-API-KEY, Content-Type, Authorization');
-        header('Access-Control-Max-Age: 86400'); // Cache la preflight pentru 24 ore
+        header('Access-Control-Max-Age: 86400'); // Cache preflight for 24 hours
         http_response_code(204); // No Content
         return;
     }
 
-    // Validam metoda HTTP: acceptam doar cereri de tip POST pentru ingestia de date
+    // Validate HTTP method: only accept POST requests for data ingestion
     if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
         header('Content-Type: application/json');
         http_response_code(405);
@@ -33,14 +33,14 @@ $handler = function () {
         return;
     }
 
-    // Adaugam header-ul de origine si pentru raspunsul request-ului de tip POST
+    // Add origin header for POST request response as well
     header('Access-Control-Allow-Origin: *');
 
-    // Extragem EXCLUSIV API Key-ul din headere
+    // Extract the API Key EXCLUSIVELY from headers
     $apiKey = $_SERVER['HTTP_X_API_KEY'] ?? $_SERVER['X_API_KEY'] ?? null;
 
     if (!$apiKey) {
-        // Fallback case-insensitive prin getallheaders daca functia este disponibila
+        // Case-insensitive fallback via getallheaders if the function is available
         if (function_exists('getallheaders')) {
             $headers = getallheaders();
             if (is_array($headers)) {
@@ -54,7 +54,7 @@ $handler = function () {
         }
     }
 
-    // Fail-Fast: Daca lipseste cheia API, respingem cererea direct
+    // Fail-Fast: If the API key is missing, reject the request directly
     if (!$apiKey || trim((string)$apiKey) === '') {
         header('Content-Type: application/json');
         http_response_code(400);
@@ -62,7 +62,7 @@ $handler = function () {
         return;
     }
 
-    // Validare interna: gasim ID-ul aplicatiei direct din baza de date
+    // Internal validation: find application ID directly from the database
     try {
         $db = MySQLWrapper::getInstance();
         $stmt = $db->query('SELECT id FROM apps WHERE api_key = ? LIMIT 1', [trim((string)$apiKey)]);
@@ -77,6 +77,22 @@ $handler = function () {
 
         $appId = (int)$app['id'];
     } catch (\Throwable $e) {
+        if (class_exists('App\\Utilities\\LogViaStream')) {
+            LogViaStream::send(LogLevel::ERROR->value, 'Log API query failure event', [
+                'location' => __METHOD__,
+                'line' => __LINE__,
+                'exception_message' => $e->getMessage(),
+                'exception_file' => $e->getFile(),
+                'exception_line' => $e->getLine(),
+                'exception_trace' => $e->getTraceAsString(),
+                'sql_statement' => 'Log API query failure event',
+                'sql_parameters' => [
+                    'api_key' => $apiKey
+                ],
+                'identifier' => 'Log_API_Query_Failure'
+            ]);
+        }
+
         header('Content-Type: application/json');
         http_response_code(500);
         echo json_encode(['error' => __('Database connection or query failed.')]);
@@ -93,20 +109,37 @@ $handler = function () {
         return;
     }
 
-    // Inseram rapid payload-ul in tabela de coada log_queue fara validare ou decodare JSON
+    // Quickly insert payload into the log_queue table without validation or JSON decoding
     try {
         $db->create('log_queue', [
             'app_id' => $appId,
             'payload_raw' => $rawPayload
         ]);
     } catch (\Throwable $e) {
+        if (class_exists('App\\Utilities\\LogViaStream')) {
+            LogViaStream::send(LogLevel::ERROR->value, 'Failed to queue the log payload', [
+                'location' => __METHOD__,
+                'line' => __LINE__,
+                'exception_message' => $e->getMessage(),
+                'exception_file' => $e->getFile(),
+                'exception_line' => $e->getLine(),
+                'exception_trace' => $e->getTraceAsString(),
+                'sql_statement' => 'INSERT INTO log_queue',
+                'sql_parameters' => [
+                    'app_id' => $appId,
+                    'payload_raw' => $rawPayload
+                ],
+                'identifier' => 'Log_Queue_Failure'
+            ]);
+        }
+
         header('Content-Type: application/json');
         http_response_code(500);
         echo json_encode(['error' => __('Failed to queue the log payload.')]);
         return;
     }
 
-    // Returnam instant statusul 202 Accepted cu raspunsul standard JSON
+    // Instantly return 202 Accepted status with standard JSON response
     header('Content-Type: application/json');
     http_response_code(202);
     echo json_encode(['status' => 'queued']);
@@ -114,23 +147,34 @@ $handler = function () {
 
 if ($isFrankenPhpWorker) {
     try {
-        // Bucla de worker FrankenPHP
-        $maxRequests = 500; // Pentru a preveni memory leaks
+        // FrankenPHP worker loop
+        $maxRequests = 500; // To prevent memory leaks
         for ($nbRequests = 0; $nbRequests < $maxRequests; ++$nbRequests) {
             $keepRunning = frankenphp_handle_request($handler);
             if (!$keepRunning) {
                 break;
             }
         }
-    } catch (\RuntimeException $e) {
-        if (str_contains($e->getMessage(), 'not in worker mode')) {
-            // Daca nu suntem in mod worker (ex: request standard), executam direct handlerul
+    } catch (\Throwable $e) {
+        if ($e instanceof \RuntimeException && str_contains($e->getMessage(), 'not in worker mode')) {
+            // If not in worker mode (e.g. standard request), execute the handler directly
             $handler();
         } else {
+            if (class_exists('App\\Utilities\\LogViaStream')) {
+                LogViaStream::send(LogLevel::ERROR->value, 'FrankenPHP worker loop execution failure', [
+                    'location' => __METHOD__,
+                    'line' => __LINE__,
+                    'exception_message' => $e->getMessage(),
+                    'exception_file' => $e->getFile(),
+                    'exception_line' => $e->getLine(),
+                    'exception_trace' => $e->getTraceAsString(),
+                    'identifier' => 'FrankenPHP_Worker_Failure'
+                ]);
+            }
             throw $e;
         }
     }
 } else {
-    // Rulare normala (ex: PHP-FPM sau CLI direct)
+    // Normal execution (e.g. PHP-FPM or direct CLI)
     $handler();
 }

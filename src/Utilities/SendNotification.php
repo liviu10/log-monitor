@@ -10,26 +10,26 @@ use App\Enums\LogLevel;
 use App\Utilities\LogViaStream;
 
 /**
- * Clasa SendNotification
+ * SendNotification Class
  *
- * Gestioneaza expedierea email-urilor via PHPMailer cu suport pentru proxy corporate.
- * Toate exceptiile colecteaza detaliile complete si le trimit catre cURL.
- * Toate mesajele text destinate exceptiilor folosesc functia __().
+ * Manages sending emails via PHPMailer with corporate proxy support.
+ * All exceptions collect full details and dispatch them via cURL.
+ * All text messages intended for exceptions use the __() function.
  *
- * @category Pachete
+ * @category Packages
  * @package  App\Utilities
  * @version  1.6
  * @since    PHP 8.4
  * @author   Voica Liviu
- * @license  Proprietar
+ * @license  Proprietary
  */
 class SendNotification
 {
-    /** @var bool $canSendNotification Permisiune de rulare in functie de mediu. */
+    /** @var bool $canSendNotification Execution permission based on environment. */
     private bool $canSendNotification = true;
 
     /**
-     * Constructor clasa. Dezactiveaza interactiunea cu serverul de mail in medii locale (DEV).
+     * Class constructor. Disables email server interaction in local environments (DEV).
      */
     public function __construct()
     {
@@ -40,7 +40,7 @@ class SendNotification
     }
 
     /**
-     * Proceseaza datele si trimite email-ul conform configuratiei.
+     * Processes data and sends the email according to the configuration.
      *
      * @param array{
      * to: string,
@@ -49,9 +49,9 @@ class SendNotification
      * attachmentPath?: string|array<int, string>|null,
      * from?: string|null,
      * subject?: string|null
-     * } $emailData Setul complet de informatii pentru livrare.
-     * @throws RuntimeException Cand datele obligatorii lipsesc sau expedierea esueaza.
-     * @return string Continutul MIME complet (.eml) al mesajului transmis.
+     * } $emailData Complete set of delivery information.
+     * @throws RuntimeException When required data is missing or transmission fails.
+     * @return string Complete MIME content (.eml) of the transmitted message.
      */
     public function handle(array $emailData): string
     {

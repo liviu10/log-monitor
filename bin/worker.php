@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-// Setam limita timpului de executie la zero pentru a rula la nesfarsit ca daemon CLI
+// Set the execution time limit to zero to run indefinitely as a CLI daemon
 set_time_limit(0);
 
-// Incarcam setarile de baza ale aplicatiei
+// Load base application configuration
 require_once dirname(__DIR__) . '/bootstrap.php';
 
 use App\Utilities\MySQLWrapper;
@@ -13,10 +13,10 @@ use App\Models\Log;
 use App\Controllers\NotificationController;
 
 /**
- * Curata recursiv vectorul de context pentru a masca datele confidentiale/sensibile.
+ * Recursively sanitizes the context array to mask confidential/sensitive data.
  *
- * @param array $data Vectorul de date din context.
- * @return array Vectorul curatat de date sensibile.
+ * @param array $data The context data array.
+ * @return array The sanitized array.
  */
 function sanitizeSensitivePayload(array $data): array
 {
@@ -30,7 +30,7 @@ function sanitizeSensitivePayload(array $data): array
             if (in_array($lowerKey, $sensitiveKeys, true)) {
                 $data[$key] = '******';
             } else {
-                // Daca valoarea este un string JSON valid, o decodam si o curatam recursiv
+                // If the value is a valid JSON string, decode and sanitize it recursively
                 if (json_validate($value)) {
                     try {
                         $decoded = json_decode($value, true, 512, JSON_THROW_ON_ERROR);
@@ -38,7 +38,7 @@ function sanitizeSensitivePayload(array $data): array
                             $data[$key] = json_encode(sanitizeSensitivePayload($decoded), JSON_UNESCAPED_SLASHES);
                         }
                     } catch (\Throwable) {
-                        // Ignoram erorile daca decodarea esueaza dintr-un motiv oarecare
+                        // Ignore errors if decoding fails for any reason
                     }
                 }
             }
@@ -49,17 +49,17 @@ function sanitizeSensitivePayload(array $data): array
 }
 
 /**
- * Mascheaza datele sensibile din mesajul de log.
+ * Masks sensitive data in the log message.
  *
- * @param string $message Mesajul original.
- * @return string Mesajul curatat.
+ * @param string $message The original message.
+ * @return string The sanitized message.
  */
 function sanitizeLogMessage(string $message): string
 {
     return (string)preg_replace('/(password|pass|pwd|token|api_key)\s*=\s*[^\s&]+/ims', '$1=******', $message);
 }
 
-// Bucla principala infinita a worker-ului CLI
+// Main infinite loop of the CLI worker
 $appsCache = [];
 $lastHeartbeat = 0;
 $notificationController = new NotificationController();
@@ -72,7 +72,7 @@ while (true) {
             file_put_contents($heartbeatFile, (string)$currentTime, LOCK_EX);
             $lastHeartbeat = $currentTime;
         } catch (\Throwable) {
-            // Executie defensiva: prevenim blocarea worker-ului daca apar probleme temporare de I/O
+            // Defensive execution: prevent the worker from blocking if temporary I/O issues occur
         }
     }
     
@@ -80,10 +80,10 @@ while (true) {
         $db = MySQLWrapper::getInstance();
         $pdo = $db->getConnection();
 
-        // Initiem o tranzactie locala pentru a garanta stergerea atomica si blocarea randurilor selectate
+        // Initiate a local transaction to guarantee atomic deletion and row locking
         $pdo->beginTransaction();
 
-        // Selectam pana la 2000 de joburi folosind FOR UPDATE SKIP LOCKED
+        // Select up to 2000 jobs using FOR UPDATE SKIP LOCKED
         $stmt = $db->query('SELECT id, app_id, payload_raw FROM log_queue ORDER BY id ASC LIMIT 2000 FOR UPDATE SKIP LOCKED');
         $jobs = $stmt->fetchAll();
 
@@ -99,7 +99,7 @@ while (true) {
 
                 $idsToDelete[] = $jobId;
 
-                // Validam payload-ul utilizand functionalitatea json_validate din PHP 8.4
+                // Validate payload using the json_validate function from PHP 8.4
                 if (json_validate($payloadRaw)) {
                     $payload = json_decode($payloadRaw, true);
 
@@ -107,7 +107,7 @@ while (true) {
                         $level = strtoupper(trim((string)($payload['level'] ?? 'INFO')));
                         $message = trim((string)($payload['message'] ?? ''));
 
-                        // Sanitizam datele sensibile din mesaj si context
+                        // Sanitize sensitive data from the message and context
                         $message = sanitizeLogMessage($message);
                         $context = isset($payload['context']) && is_array($payload['context'])
                             ? sanitizeSensitivePayload($payload['context'])
@@ -118,14 +118,14 @@ while (true) {
                             $jsonContext = json_encode($context, JSON_THROW_ON_ERROR);
                         }
 
-                        // Pregatim parametrii pentru insert-ul bulk
+                        // Prepare parameters for bulk insert
                         $insertRows[] = '(?, ?, ?, ?)';
                         $insertValues[] = $appId;
                         $insertValues[] = $level;
                         $insertValues[] = $message;
                         $insertValues[] = $jsonContext;
 
-                        // Trimitem alerte automate daca sunt configurate
+                        // Send automatic alerts if configured
                         $currentTime = time();
                         if (!isset($appsCache[$appId]) || ($currentTime - $appsCache[$appId]['cached_at']) > 10) {
                             $stmtApp = $db->query('SELECT * FROM apps WHERE id = ? LIMIT 1', [$appId]);
@@ -163,7 +163,7 @@ while (true) {
                 $stmtInsert->execute($insertValues);
             }
 
-            // Stergerea batch din coada log_queue
+            // Batch delete from log_queue
             if (!empty($idsToDelete)) {
                 $placeholders = implode(', ', array_fill(0, count($idsToDelete), '?'));
                 $sqlDelete = "DELETE FROM log_queue WHERE id IN ({$placeholders})";
@@ -174,22 +174,34 @@ while (true) {
             $pdo->commit();
 
         } else {
-            // Daca nu exista mesaje de procesat, eliberam tranzactia si punem procesul in asteptare
+            // If there are no messages to process, commit the transaction and put the process to sleep
             $pdo->commit();
-            usleep(500000); // 0.5 secunde pentru a evita utilizarea excesiva a procesorului (idle)
+            usleep(500000); // 0.5 seconds to avoid excessive CPU usage (idle)
         }
 
     } catch (\Throwable $e) {
-        // Asiguram rollback defensiv in caz de esec al tranzactiei active
+        if (class_exists('App\\Utilities\\LogViaStream')) {
+            \App\Utilities\LogViaStream::send(\App\Enums\LogLevel::ERROR->value, 'CLI Worker execution failure', [
+                'location' => __METHOD__,
+                'line' => __LINE__,
+                'exception_message' => $e->getMessage(),
+                'exception_file' => $e->getFile(),
+                'exception_line' => $e->getLine(),
+                'exception_trace' => $e->getTraceAsString(),
+                'identifier' => 'CLI_Worker_Failure'
+            ]);
+        }
+
+        // Ensure defensive rollback in case of active transaction failure
         try {
             if (isset($pdo) && $pdo->inTransaction()) {
                 $pdo->rollBack();
             }
         } catch (\Throwable) {
-            // Ignoram erorile la nivel de rollback
+            // Ignore errors at the rollback level
         }
 
-        // Scriem eroarea critica intr-un fisier local de urgenta localizat in /storage/logs/
+        // Write critical error to a local emergency file in /storage/logs/
         try {
             $logDir = dirname(__DIR__) . '/storage/logs';
             if (!is_dir($logDir)) {
@@ -199,7 +211,7 @@ while (true) {
             $logFile = $logDir . '/worker_emergency.log';
             $timestamp = date('Y-m-d H:i:s');
             $errorMessage = sprintf(
-                "[%s] Eroare critica intampinata in CLI Worker: %s\nTrace:\n%s\n%s\n",
+                "[%s] Critical error encountered in CLI Worker: %s\nTrace:\n%s\n%s\n",
                 $timestamp,
                 $e->getMessage(),
                 $e->getTraceAsString(),
@@ -208,11 +220,11 @@ while (true) {
 
             @file_put_contents($logFile, $errorMessage, FILE_APPEND | LOCK_EX);
         } catch (\Throwable) {
-            // Fallback final catre error_log din PHP daca sistemul de fisiere este blocat
+            // Final fallback to PHP error_log if the filesystem is blocked
             error_log("Worker emergency logging failure: " . $e->getMessage());
         }
 
-        // Introducem o intarziere defensiva de 5 secunde inainte de reincercare pentru a preveni buclele rapide
+        // Introduce a defensive delay of 5 seconds before retrying to prevent rapid loops
         sleep(5);
     }
 }
