@@ -239,4 +239,4 @@ log-monitor/
 ---
 
 ## 📄 License
-Proprietary. All rights reserved.
+Commercial. All rights reserved. See LICENSE.md for the full legal text.

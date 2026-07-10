@@ -1,21 +1,42 @@
-MIT License
+# CONTRACT DE LICENTA PENTRU UTILIZATORUL FINAL (EULA) — LOGMONITOR
 
-Copyright (c) 2026 Liviu Voica
+**IMPORTANT – CITITI CU ATENTIE:** Prezentul Contract de Licenta este o intelegere juridica ferma intre dumneavoastra (persoana fizica sau juridica, denumita in continuare „Beneficiar”) si [Numele Firmei Tale S.R.L. / Nume Complet] (denumit in continuare „Licentiar”), in calitate de autor si proprietar exclusiv al aplicatiei software **LogMonitor**.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+Prin instalarea, copierea, accesarea sau utilizarea in orice mod a programului LogMonitor (inclusiv a scripturilor, imaginilor Docker/Podman sau a interfetei grafice), sunteti de acord sa respectati termenii prezentului contract. Daca nu sunteti de acord cu acesti termeni, nu instalati, nu copiati si nu utilizati software-ul.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+---
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+### 1. Acordarea Licentei
+In schimbul achitarii taxei de licenta aferente (sub forma de abonament SaaS sau licenta unica On-Premise), Licentiarul acorda Beneficiarului un drept neexclusiv, netransmisibil, revocabil si limitat de a utiliza LogMonitor in urmatoarele conditii:
+* **Gazduire Proprie (On-Premise):** Beneficiarul poate instala si rula software-ul exclusiv pe serverele sau infrastructura proprie, in limita numarului de instante sau aplicatii active (`X-API-KEY`) achizitionate.
+* **Serviciu Gazduit (SaaS):** Beneficiarul poate utiliza infrastructura cloud pusa la dispozitie de Licentiar, in limitele de stocare, retentie si volum de date stabilite prin planul tarifar ales.
+* **Scopul Utilizarii:** Utilizarea este permisa exclusiv pentru monitorizarea, colectarea si analizarea logurilor proprii sau ale aplicatiilor pe care Beneficiarul le administreaza direct, fara dreptul de a comercializa serviciul mai departe sub forma de sub-licentiere.
+
+### 2. Drepturile de Autor si Proprietatea Intelectuala
+* Toate drepturile de autor, secretele comerciale, drepturile de proprietate intelectuala si marcile asociate cu LogMonitor — inclusiv, dar fara a se limita la: arhitectura asincronha, logica tabelei `log_queue`, scriptul de ingestie `api/log.php`, daemonul `bin/worker.php`, pipeline-ul de transpilare cu Rector si interfata grafica — apartin in totalitate si exclusiv Licentiarului.
+* Prezentul contract nu reprezinta un act de instrainare sau vanzare a codului sursa, ci acorda doar un **drept limitat de utilizare (licenta)**.
+* Structura de Git, semnaturile criptografice ale commit-urilor si eventualele inregistrari la Oficiul Roman pentru Drepturile de Autor (ORDA) constituie probe de prioritate ale Licentiarului.
+
+### 3. Restrictii si Obligatii
+Beneficiarului ii este strict interzis, direct sau prin intermediul unor terti:
+* Sa vanda, sa revanda, sa inchirieze, sa distribuie, sa imprumute sau sa sublicentieze codul sursa sau pachetele de distributie LogMonitor.
+* Sa modifice, sa decompileze, sa dezasambleze sau sa incerce sa extraga codul sursa in scopul crearii unui produs concurent direct (reverse engineering).
+* Sa foloseasca aplicatia in regim de „White Label” (rebranduire si prezentare ca produs propriu) fara un acord scris, separat si expres din partea Licentiarului.
+* Sa eludeze, modifice sau dezactiveze mecanismele de securitate, autentificare sau verificare a licentei.
+
+### 4. Limitarea Raspunderii (Excluderea Garantiilor)
+* **SOFTWARE-UL ESTE FURNIZAT „CA ATARE” („AS IS”), CU TOATE DEFECTELE SI FARA NICIUN FEL DE GARANTIE EXPRESA SAU IMPLICITA.**
+* Licentiarul nu garanteaza ca functionarea software-ului va fi neintrerupta, complet sigura sau lipsita de erori, ori ca va procesa fiecare payload in timp util in momentele de stres maxim asupra bazei de date.
+* In conformitate cu Legea nr. 8/1996 privind dreptul de autor si drepturile conexe din Romania, Licentiarul nu va fi considerat raspunzator in fata Beneficiarului pentru niciun fel de daune materiale sau morale, directe sau indirecte. Aceasta include, dar nu se limiteaza la: pierderi de profit, intreruperea activitatii comerciale, pierderi sau alterari de date din tabelele `logs` si `log_queue`, brese de securitate sau perioade de nefunctionare (downtime) generate de utilizarea defectuoasa sau de bug-uri ale programului.
+
+### 5. Durata si Rezilierea Contractului
+* Prezentul contract intra in vigoare la data primei utilizari sau instalari si ramane valabil pe toata perioada acoperita de taxa de licenta sau pana la stergerea aplicatiei.
+* Licentiarul poate rezilia unilateral si imediat acest contract, fara interventia instantei de judecata si fara nicio alta formalitate (pact comisoriu de gradul IV), in cazul in care Beneficiarul incalca oricare dintre restrictiile prevazute in Sectiunea 3.
+* La reziliere, dreptul de utilizare inceteaza imediat, iar Beneficiarul are obligatia de a distruge si sterge definitiv toate copiile software-ului, codul transpilat si imaginile de containere asociate din sistemele sale.
+
+### 6. Legea Aplicabila si Jurisdictia
+* Prezentul contract este guvernat, interpretat si supus in totalitate legislatiei din Romania.
+* Orice litigiu decurgand din interpretarea, executarea sau incetarea prezentului acord, care nu va putea fi solutionat pe cale amiabila intre parti, va fi trimis spre solutionare instantelor judecatoresti competente de la sediul Licentiarului [introdu orasul, ex: Bucuresti], Romania.
+
+---
+*Proprietary License. Copyright © 2026 [Numele Tau]. Toate drepturile rezervate.*
