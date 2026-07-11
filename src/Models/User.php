@@ -35,14 +35,9 @@ class User
      * * @param MySQLWrapper $db Injected database wrapper.
      */
     public function __construct(
-        protected MySQLWrapper $db = new MySQLWrapper(
-            host: 'db',
-            db: 'log_monitor',
-            user: 'user',
-            pass: 'password'
-        )
+        protected ?MySQLWrapper $db = null
     ) {
-        $this->db = MySQLWrapper::getInstance();
+        $this->db = $db ?? MySQLWrapper::getInstance();
     }
 
     /**
@@ -70,17 +65,19 @@ class User
 
             return null;
         } catch (\Throwable $e) {
-            LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
-                'location' => __METHOD__,
-                'line' => __LINE__,
-                'exception_message' => $e->getMessage(),
-                'exception_file' => $e->getFile(),
-                'exception_line' => $e->getLine(),
-                'exception_trace' => $e->getTraceAsString(),
-                'sql_statement' => 'SELECT FROM users WHERE username = ?',
-                'sql_parameters' => ['username' => $trimmedUsername],
-                'identifier' => 'MySQLWrapper_Query_Failure',
-            ]);
+            if (class_exists('App\Utilities\LogViaStream')) {
+                LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
+                    'location' => __METHOD__,
+                    'line' => __LINE__,
+                    'exception_message' => $e->getMessage(),
+                    'exception_file' => $e->getFile(),
+                    'exception_line' => $e->getLine(),
+                    'exception_trace' => $e->getTraceAsString(),
+                    'sql_statement' => 'SELECT FROM users WHERE username = ?',
+                    'sql_parameters' => ['username' => $trimmedUsername],
+                    'identifier' => 'MySQLWrapper_Query_Failure',
+                ]);
+            }
 
             return null;
         }
@@ -121,18 +118,77 @@ class User
 
             return (int) $result;
         } catch (\Throwable $e) {
-            LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
-                'location' => __METHOD__,
-                'line' => __LINE__,
-                'exception_message' => $e->getMessage(),
-                'exception_file' => $e->getFile(),
-                'exception_line' => $e->getLine(),
-                'exception_trace' => $e->getTraceAsString(),
-                'sql_statement' => $sql,
-                'sql_parameters' => $params,
-                'identifier' => 'MySQLWrapper_Query_Failure',
-            ]);
+            if (class_exists('App\Utilities\LogViaStream')) {
+                LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
+                    'location' => __METHOD__,
+                    'line' => __LINE__,
+                    'exception_message' => $e->getMessage(),
+                    'exception_file' => $e->getFile(),
+                    'exception_line' => $e->getLine(),
+                    'exception_trace' => $e->getTraceAsString(),
+                    'sql_statement' => $sql,
+                    'sql_parameters' => $params,
+                    'identifier' => 'MySQLWrapper_Query_Failure',
+                ]);
+            }
+
             throw new RuntimeException(__('Database error during administrative user registration'), 0, $e);
+        }
+    }
+
+    /**
+     * Retrieves all administrator users.
+     *
+     * @return array
+     */
+    public function getAll(): array
+    {
+        try {
+            return $this->db->read('users') ?: [];
+        } catch (\Throwable $e) {
+            if (class_exists('App\Utilities\LogViaStream')) {
+                LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
+                    'location' => __METHOD__,
+                    'line' => __LINE__,
+                    'exception_message' => $e->getMessage(),
+                    'exception_file' => $e->getFile(),
+                    'exception_line' => $e->getLine(),
+                    'exception_trace' => $e->getTraceAsString(),
+                    'sql_statement' => 'SELECT ALL FROM users',
+                    'sql_parameters' => [],
+                    'identifier' => 'MySQLWrapper_Query_Failure',
+                ]);
+            }
+            throw new RuntimeException(__('Database error retrieving users list'), 0, $e);
+        }
+    }
+
+    /**
+     * Deletes a user by ID.
+     *
+     * @param int $id User ID to delete.
+     * @return int Number of affected rows.
+     */
+    public function delete(int $id): int
+    {
+        $params = ['id' => $id];
+        try {
+            return (int)$this->db->delete('users', $params);
+        } catch (\Throwable $e) {
+            if (class_exists('App\Utilities\LogViaStream')) {
+                LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
+                    'location' => __METHOD__,
+                    'line' => __LINE__,
+                    'exception_message' => $e->getMessage(),
+                    'exception_file' => $e->getFile(),
+                    'exception_line' => $e->getLine(),
+                    'exception_trace' => $e->getTraceAsString(),
+                    'sql_statement' => 'DELETE FROM users WHERE id = ?',
+                    'sql_parameters' => $params,
+                    'identifier' => 'MySQLWrapper_Query_Failure',
+                ]);
+            }
+            throw new RuntimeException(__('Database error deleting user'), 0, $e);
         }
     }
 }

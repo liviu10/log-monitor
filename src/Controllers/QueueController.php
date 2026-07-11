@@ -124,15 +124,17 @@ class QueueController extends BaseController
                 'sortDir' => $sortDir,
             ]);
         } catch (\Throwable $e) {
-            LogViaStream::send(LogLevel::ERROR->value, 'Queue index processing failure', [
-                'location' => __METHOD__,
-                'line' => __LINE__,
-                'exception_message' => $e->getMessage(),
-                'exception_file' => $e->getFile(),
-                'exception_line' => $e->getLine(),
-                'exception_trace' => $e->getTraceAsString(),
-                'identifier' => 'QueueController_Index_Failure',
-            ]);
+            if (class_exists('App\Utilities\LogViaStream')) {
+                LogViaStream::send(LogLevel::ERROR->value, 'Queue index processing failure', [
+                    'location' => __METHOD__,
+                    'line' => __LINE__,
+                    'exception_message' => $e->getMessage(),
+                    'exception_file' => $e->getFile(),
+                    'exception_line' => $e->getLine(),
+                    'exception_trace' => $e->getTraceAsString(),
+                    'identifier' => 'QueueController_Index_Failure',
+                ]);
+            }
 
             throw new \RuntimeException(__('Critical error loading queue data. Please try again later.'));
         }
@@ -160,13 +162,16 @@ class QueueController extends BaseController
             $db->delete('log_queue', ['id' => $id]);
             setFlash('success', __('Success'), __('Job has been deleted from queue.'));
         } catch (\Throwable $e) {
-            LogViaStream::send(LogLevel::ERROR->value, 'Queue delete job failure', [
-                'location' => __METHOD__,
-                'line' => __LINE__,
-                'exception_message' => $e->getMessage(),
-                'job_id' => $id,
-                'identifier' => 'QueueController_DeleteJob_Failure',
-            ]);
+            if (class_exists('App\Utilities\LogViaStream')) {
+                LogViaStream::send(LogLevel::ERROR->value, 'Queue delete job failure', [
+                    'location' => __METHOD__,
+                    'line' => __LINE__,
+                    'exception_message' => $e->getMessage(),
+                    'job_id' => $id,
+                    'identifier' => 'QueueController_DeleteJob_Failure',
+                ]);
+            }
+
             setFlash('danger', __('Error'), __('Failed to delete job from queue.'));
         }
 
@@ -188,12 +193,15 @@ class QueueController extends BaseController
             $db->getConnection()->exec('TRUNCATE TABLE log_queue');
             setFlash('success', __('Success'), __('The queue has been completely purged.'));
         } catch (\Throwable $e) {
-            LogViaStream::send(LogLevel::ERROR->value, 'Queue purge failure', [
-                'location' => __METHOD__,
-                'line' => __LINE__,
-                'exception_message' => $e->getMessage(),
-                'identifier' => 'QueueController_Purge_Failure',
-            ]);
+            if (class_exists('App\Utilities\LogViaStream')) {
+                LogViaStream::send(LogLevel::ERROR->value, 'Queue purge failure', [
+                    'location' => __METHOD__,
+                    'line' => __LINE__,
+                    'exception_message' => $e->getMessage(),
+                    'identifier' => 'QueueController_Purge_Failure',
+                ]);
+            }
+
             setFlash('danger', __('Error'), __('Failed to purge the queue.'));
         }
 

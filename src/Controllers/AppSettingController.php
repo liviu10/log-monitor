@@ -95,17 +95,20 @@ class AppSettingController extends BaseController
                     $appSettingModel->saveSetting($appId, $key, $value);
                     $saved++;
                 } catch (\Throwable $e) {
-                    LogViaStream::send(LogLevel::ERROR->value, 'Bulk setting storage exception', [
-                        'location' => __METHOD__,
-                        'line' => __LINE__,
-                        'exception_message' => $e->getMessage(),
-                        'exception_file' => $e->getFile(),
-                        'exception_line' => $e->getLine(),
-                        'exception_trace' => $e->getTraceAsString(),
-                        'app_id' => $appId,
-                        'setting_key' => $key,
-                        'identifier' => 'AppSettingController_BulkStore_Exception',
-                    ]);
+                    if (class_exists('App\Utilities\LogViaStream')) {
+                        LogViaStream::send(LogLevel::ERROR->value, 'Bulk setting storage exception', [
+                            'location' => __METHOD__,
+                            'line' => __LINE__,
+                            'exception_message' => $e->getMessage(),
+                            'exception_file' => $e->getFile(),
+                            'exception_line' => $e->getLine(),
+                            'exception_trace' => $e->getTraceAsString(),
+                            'app_id' => $appId,
+                            'setting_key' => $key,
+                            'identifier' => 'AppSettingController_BulkStore_Exception',
+                        ]);
+                    }
+
                     $errors[] = __("Setting ':key': Critical error occurred.", ['key' => $key]);
                 }
             }
@@ -171,17 +174,21 @@ class AppSettingController extends BaseController
             if (str_ends_with(get_class($e), 'HttpResponseException')) {
                 throw $e;
             }
-            LogViaStream::send(LogLevel::ERROR->value, 'Single setting storage exception', [
-                'location' => __METHOD__,
-                'line' => __LINE__,
-                'exception_message' => $e->getMessage(),
-                'exception_file' => $e->getFile(),
-                'exception_line' => $e->getLine(),
-                'exception_trace' => $e->getTraceAsString(),
-                'app_id' => $appId,
-                'setting_key' => $key,
-                'identifier' => 'AppSettingController_Store_Exception',
-            ]);
+
+            if (class_exists('App\Utilities\LogViaStream')) {
+                LogViaStream::send(LogLevel::ERROR->value, 'Single setting storage exception', [
+                    'location' => __METHOD__,
+                    'line' => __LINE__,
+                    'exception_message' => $e->getMessage(),
+                    'exception_file' => $e->getFile(),
+                    'exception_line' => $e->getLine(),
+                    'exception_trace' => $e->getTraceAsString(),
+                    'app_id' => $appId,
+                    'setting_key' => $key,
+                    'identifier' => 'AppSettingController_Store_Exception',
+                ]);
+            }
+
             $this->jsonResponse(['success' => false, 'message' => __('Error saving setting in the database.')], 500);
         }
     }
@@ -237,17 +244,20 @@ class AppSettingController extends BaseController
                     ]);
                     $updated++;
                 } catch (\Throwable $e) {
-                    LogViaStream::send(LogLevel::ERROR->value, 'Bulk setting update exception', [
-                        'location' => __METHOD__,
-                        'line' => __LINE__,
-                        'exception_message' => $e->getMessage(),
-                        'exception_file' => $e->getFile(),
-                        'exception_line' => $e->getLine(),
-                        'exception_trace' => $e->getTraceAsString(),
-                        'app_id' => $appId,
-                        'setting_key' => $key,
-                        'identifier' => 'AppSettingController_BulkUpdate_Exception',
-                    ]);
+                    if (class_exists('App\Utilities\LogViaStream')) {
+                        LogViaStream::send(LogLevel::ERROR->value, 'Bulk setting update exception', [
+                            'location' => __METHOD__,
+                            'line' => __LINE__,
+                            'exception_message' => $e->getMessage(),
+                            'exception_file' => $e->getFile(),
+                            'exception_line' => $e->getLine(),
+                            'exception_trace' => $e->getTraceAsString(),
+                            'app_id' => $appId,
+                            'setting_key' => $key,
+                            'identifier' => 'AppSettingController_BulkUpdate_Exception',
+                        ]);
+                    }
+
                     $errors[] = __("Setting ':key': Critical error occurred during update.", ['key' => $key]);
                 }
             }
@@ -312,17 +322,20 @@ class AppSettingController extends BaseController
                 'message' => __('Setting updated successfully.'),
             ]);
         } catch (\Throwable $e) {
-            LogViaStream::send(LogLevel::ERROR->value, 'Single setting update exception', [
-                'location' => __METHOD__,
-                'line' => __LINE__,
-                'exception_message' => $e->getMessage(),
-                'exception_file' => $e->getFile(),
-                'exception_line' => $e->getLine(),
-                'exception_trace' => $e->getTraceAsString(),
-                'app_id' => $appId,
-                'setting_key' => $key,
-                'identifier' => 'AppSettingController_Update_Exception',
-            ]);
+            if (class_exists('App\Utilities\LogViaStream')) {
+                LogViaStream::send(LogLevel::ERROR->value, 'Single setting update exception', [
+                    'location' => __METHOD__,
+                    'line' => __LINE__,
+                    'exception_message' => $e->getMessage(),
+                    'exception_file' => $e->getFile(),
+                    'exception_line' => $e->getLine(),
+                    'exception_trace' => $e->getTraceAsString(),
+                    'app_id' => $appId,
+                    'setting_key' => $key,
+                    'identifier' => 'AppSettingController_Update_Exception',
+                ]);
+            }
+
             $this->jsonResponse(['success' => false, 'message' => $e->getMessage()], 400);
         }
     }
@@ -357,17 +370,20 @@ class AppSettingController extends BaseController
                 'message' => __('Setting deleted successfully.'),
             ]);
         } catch (\Throwable $e) {
-            LogViaStream::send(LogLevel::ERROR->value, 'Setting deletion exception', [
-                'location' => __METHOD__,
-                'line' => __LINE__,
-                'exception_message' => $e->getMessage(),
-                'exception_file' => $e->getFile(),
-                'exception_line' => $e->getLine(),
-                'exception_trace' => $e->getTraceAsString(),
-                'app_id' => $appId,
-                'setting_key' => $key,
-                'identifier' => 'AppSettingController_Delete_Exception',
-            ]);
+            if (class_exists('App\Utilities\LogViaStream')) {
+                LogViaStream::send(LogLevel::ERROR->value, 'Setting deletion exception', [
+                    'location' => __METHOD__,
+                    'line' => __LINE__,
+                    'exception_message' => $e->getMessage(),
+                    'exception_file' => $e->getFile(),
+                    'exception_line' => $e->getLine(),
+                    'exception_trace' => $e->getTraceAsString(),
+                    'app_id' => $appId,
+                    'setting_key' => $key,
+                    'identifier' => 'AppSettingController_Delete_Exception',
+                ]);
+            }
+
             $this->jsonResponse(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }

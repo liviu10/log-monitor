@@ -7,7 +7,6 @@ namespace App\Controllers;
 use App\Enums\LogLevel;
 use App\Models\User;
 use App\Utilities\LogViaStream;
-use App\Utilities\MySQLWrapper;
 use App\Utilities\Validation;
 
 /**
@@ -36,22 +35,25 @@ class UserController extends BaseController
         $this->checkAuth();
 
         try {
-            $db = MySQLWrapper::getInstance();
-            $users = $db->read('users');
+            $userModel = new User();
+            $users = $userModel->getAll();
 
             $this->render('users/index', [
                 'users' => $users,
             ]);
         } catch (\Throwable $e) {
-            LogViaStream::send(LogLevel::ERROR->value, 'Failed to fetch database users list', [
-                'location' => __METHOD__,
-                'line' => __LINE__,
-                'exception_message' => $e->getMessage(),
-                'exception_file' => $e->getFile(),
-                'exception_line' => $e->getLine(),
-                'exception_trace' => $e->getTraceAsString(),
-                'identifier' => 'UserController_Index_DatabaseFailure',
-            ]);
+            if (class_exists('App\Utilities\LogViaStream')) {
+                LogViaStream::send(LogLevel::ERROR->value, 'Failed to fetch database users list', [
+                    'location' => __METHOD__,
+                    'line' => __LINE__,
+                    'exception_message' => $e->getMessage(),
+                    'exception_file' => $e->getFile(),
+                    'exception_line' => $e->getLine(),
+                    'exception_trace' => $e->getTraceAsString(),
+                    'identifier' => 'UserController_Index_DatabaseFailure',
+                ]);
+            }
+
             throw new \RuntimeException(__('Unable to retrieve administrators list.'));
         }
     }
@@ -73,7 +75,7 @@ class UserController extends BaseController
         ]);
 
         $errors = $validator->validate([
-            'username' => ['required', 'string', 'min:3'],
+            'username' => ['required', 'string', 'min:3', 'max:50'],
             'password' => ['required', 'string', 'min:6'],
         ], $payload);
 
@@ -94,16 +96,19 @@ class UserController extends BaseController
                 setFlash('danger', __('Error'), __('Invalid username or password format.'));
             }
         } catch (\Throwable $e) {
-            LogViaStream::send(LogLevel::ERROR->value, 'Admin user creation process exception', [
-                'location' => __METHOD__,
-                'line' => __LINE__,
-                'exception_message' => $e->getMessage(),
-                'exception_file' => $e->getFile(),
-                'exception_line' => $e->getLine(),
-                'exception_trace' => $e->getTraceAsString(),
-                'username' => $payload['username'] ?? null,
-                'identifier' => 'UserController_Store_Exception',
-            ]);
+            if (class_exists('App\Utilities\LogViaStream')) {
+                LogViaStream::send(LogLevel::ERROR->value, 'Admin user creation process exception', [
+                    'location' => __METHOD__,
+                    'line' => __LINE__,
+                    'exception_message' => $e->getMessage(),
+                    'exception_file' => $e->getFile(),
+                    'exception_line' => $e->getLine(),
+                    'exception_trace' => $e->getTraceAsString(),
+                    'username' => $payload['username'] ?? null,
+                    'identifier' => 'UserController_Store_Exception',
+                ]);
+            }
+
             setFlash('danger', __('Error'), __('Failed to create user. Possible duplicate username.'));
         }
 
@@ -136,21 +141,24 @@ class UserController extends BaseController
             }
 
             try {
-                $db = MySQLWrapper::getInstance();
-                $db->delete('users', ['id' => $userId]);
+                $userModel = new User();
+                $userModel->delete($userId);
                 setFlash('success', __('Success'), __('User deleted successfully.'));
             } catch (\Throwable $e) {
-                LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
-                    'location' => __METHOD__,
-                    'line' => __LINE__,
-                    'exception_message' => $e->getMessage(),
-                    'exception_file' => $e->getFile(),
-                    'exception_line' => $e->getLine(),
-                    'exception_trace' => $e->getTraceAsString(),
-                    'sql_statement' => 'DELETE FROM users WHERE id = :id',
-                    'sql_parameters' => ['id' => $userId],
-                    'identifier' => 'UserController_Delete_Failure',
-                ]);
+                if (class_exists('App\Utilities\LogViaStream')) {
+                    LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
+                        'location' => __METHOD__,
+                        'line' => __LINE__,
+                        'exception_message' => $e->getMessage(),
+                        'exception_file' => $e->getFile(),
+                        'exception_line' => $e->getLine(),
+                        'exception_trace' => $e->getTraceAsString(),
+                        'sql_statement' => 'DELETE FROM users WHERE id = :id',
+                        'sql_parameters' => ['id' => $userId],
+                        'identifier' => 'UserController_Delete_Failure',
+                    ]);
+                }
+
                 setFlash('danger', __('Error'), __('Failed to delete user from database.'));
             }
         }

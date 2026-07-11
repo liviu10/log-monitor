@@ -84,22 +84,26 @@ class AuthController extends BaseController
             }
 
             // Audit log for authentication failure (potential brute force attack)
-            LogViaStream::send(LogLevel::WARNING->value, 'Failed authentication attempt', [
-                'location' => __METHOD__,
-                'line' => __LINE__,
-                'username' => $payload['username'],
-                'identifier' => 'AuthController_Login_FailedAttempt',
-            ]);
+            if (class_exists('App\Utilities\LogViaStream')) {
+                LogViaStream::send(LogLevel::WARNING->value, 'Failed authentication attempt', [
+                    'location' => __METHOD__,
+                    'line' => __LINE__,
+                    'username' => $payload['username'],
+                    'identifier' => 'AuthController_Login_FailedAttempt',
+                ]);
+            }
         } catch (\Throwable $e) {
-            LogViaStream::send(LogLevel::ERROR->value, 'Critical authentication exception process', [
-                'location' => __METHOD__,
-                'line' => __LINE__,
-                'exception_message' => $e->getMessage(),
-                'exception_file' => $e->getFile(),
-                'exception_line' => $e->getLine(),
-                'exception_trace' => $e->getTraceAsString(),
-                'identifier' => 'AuthController_Login_SystemException',
-            ]);
+            if (class_exists('App\Utilities\LogViaStream')) {
+                LogViaStream::send(LogLevel::ERROR->value, 'Critical authentication exception process', [
+                    'location' => __METHOD__,
+                    'line' => __LINE__,
+                    'exception_message' => $e->getMessage(),
+                    'exception_file' => $e->getFile(),
+                    'exception_line' => $e->getLine(),
+                    'exception_trace' => $e->getTraceAsString(),
+                    'identifier' => 'AuthController_Login_SystemException',
+                ]);
+            }
         }
 
         setFlash('danger', __('Authentication error'), __('Incorrect username or password.'));

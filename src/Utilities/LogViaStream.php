@@ -269,6 +269,13 @@ final class LogViaStream
                 ],
             ];
 
+            if (($_ENV['APP_ENV'] ?? '') === 'development') {
+                $options['ssl'] = [
+                    'verify_peer' => false,
+                    'verify_peer_name' => false,
+                ];
+            }
+
             $streamContext = stream_context_create($options);
 
             $oldErrorReporting = error_reporting(0);

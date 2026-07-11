@@ -127,16 +127,18 @@ class NotificationController extends BaseController
                 }
             }
         } catch (\Throwable $e) {
-            LogViaStream::send(LogLevel::ERROR->value, 'Error processing/sending automated notification: '.$e->getMessage(), [
-                'location' => __METHOD__,
-                'line' => __LINE__,
-                'exception_message' => $e->getMessage(),
-                'exception_file' => $e->getFile(),
-                'exception_line' => $e->getLine(),
-                'exception_trace' => $e->getTraceAsString(),
-                'app_id' => $app['id'] ?? null,
-                'log_level' => $logPayload['level'] ?? null,
-            ]);
+            if (class_exists('App\Utilities\LogViaStream')) {
+                LogViaStream::send(LogLevel::ERROR->value, 'Error processing/sending automated notification: '.$e->getMessage(), [
+                    'location' => __METHOD__,
+                    'line' => __LINE__,
+                    'exception_message' => $e->getMessage(),
+                    'exception_file' => $e->getFile(),
+                    'exception_line' => $e->getLine(),
+                    'exception_trace' => $e->getTraceAsString(),
+                    'app_id' => $app['id'] ?? null,
+                    'log_level' => $logPayload['level'] ?? null,
+                ]);
+            }
         }
     }
 }

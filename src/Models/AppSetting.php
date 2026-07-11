@@ -37,14 +37,9 @@ class AppSetting
      * * @param MySQLWrapper $db Database wrapper instance.
      */
     public function __construct(
-        protected MySQLWrapper $db = new MySQLWrapper(
-            host: 'db',
-            db: 'log_monitor',
-            user: 'user',
-            pass: 'password'
-        )
+        protected ?MySQLWrapper $db = null
     ) {
-        $this->db = MySQLWrapper::getInstance();
+        $this->db = $db ?? MySQLWrapper::getInstance();
     }
 
     /**
@@ -77,17 +72,19 @@ class AppSetting
 
             return $data;
         } catch (\Throwable $e) {
-            LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
-                'location' => __METHOD__,
-                'line' => __LINE__,
-                'exception_message' => $e->getMessage(),
-                'exception_file' => $e->getFile(),
-                'exception_line' => $e->getLine(),
-                'exception_trace' => $e->getTraceAsString(),
-                'sql_statement' => 'SELECT FROM app_settings WHERE app_id = ?',
-                'sql_parameters' => ['app_id' => $appId],
-                'identifier' => 'MySQLWrapper_Query_Failure',
-            ]);
+            if (class_exists('App\Utilities\LogViaStream')) {
+                LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
+                    'location' => __METHOD__,
+                    'line' => __LINE__,
+                    'exception_message' => $e->getMessage(),
+                    'exception_file' => $e->getFile(),
+                    'exception_line' => $e->getLine(),
+                    'exception_trace' => $e->getTraceAsString(),
+                    'sql_statement' => 'SELECT FROM app_settings WHERE app_id = ?',
+                    'sql_parameters' => ['app_id' => $appId],
+                    'identifier' => 'MySQLWrapper_Query_Failure',
+                ]);
+            }
 
             return [];
         }
@@ -121,17 +118,19 @@ class AppSetting
 
             return null;
         } catch (\Throwable $e) {
-            LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
-                'location' => __METHOD__,
-                'line' => __LINE__,
-                'exception_message' => $e->getMessage(),
-                'exception_file' => $e->getFile(),
-                'exception_line' => $e->getLine(),
-                'exception_trace' => $e->getTraceAsString(),
-                'sql_statement' => 'SELECT FROM app_settings WHERE app_id = ? AND key = ?',
-                'sql_parameters' => ['app_id' => $appId, 'key' => $trimmedKey],
-                'identifier' => 'MySQLWrapper_Query_Failure',
-            ]);
+            if (class_exists('App\Utilities\LogViaStream')) {
+                LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
+                    'location' => __METHOD__,
+                    'line' => __LINE__,
+                    'exception_message' => $e->getMessage(),
+                    'exception_file' => $e->getFile(),
+                    'exception_line' => $e->getLine(),
+                    'exception_trace' => $e->getTraceAsString(),
+                    'sql_statement' => 'SELECT FROM app_settings WHERE app_id = ? AND key = ?',
+                    'sql_parameters' => ['app_id' => $appId, 'key' => $trimmedKey],
+                    'identifier' => 'MySQLWrapper_Query_Failure',
+                ]);
+            }
 
             return null;
         }
@@ -175,17 +174,20 @@ class AppSetting
                     'key' => $trimmedKey,
                 ]);
             } catch (\Throwable $e) {
-                LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
-                    'location' => __METHOD__,
-                    'line' => __LINE__,
-                    'exception_message' => $e->getMessage(),
-                    'exception_file' => $e->getFile(),
-                    'exception_line' => $e->getLine(),
-                    'exception_trace' => $e->getTraceAsString(),
-                    'sql_statement' => $sql,
-                    'sql_parameters' => $params,
-                    'identifier' => 'MySQLWrapper_Query_Failure',
-                ]);
+                if (class_exists('App\Utilities\LogViaStream')) {
+                    LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
+                        'location' => __METHOD__,
+                        'line' => __LINE__,
+                        'exception_message' => $e->getMessage(),
+                        'exception_file' => $e->getFile(),
+                        'exception_line' => $e->getLine(),
+                        'exception_trace' => $e->getTraceAsString(),
+                        'sql_statement' => $sql,
+                        'sql_parameters' => $params,
+                        'identifier' => 'MySQLWrapper_Query_Failure',
+                    ]);
+                }
+
                 throw new RuntimeException(__('Database error while updating setting'), 0, $e);
             }
         } else {
@@ -203,17 +205,20 @@ class AppSetting
                     throw new RuntimeException(__('Failed to create new setting'));
                 }
             } catch (\Throwable $e) {
-                LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
-                    'location' => __METHOD__,
-                    'line' => __LINE__,
-                    'exception_message' => $e->getMessage(),
-                    'exception_file' => $e->getFile(),
-                    'exception_line' => $e->getLine(),
-                    'exception_trace' => $e->getTraceAsString(),
-                    'sql_statement' => $sql,
-                    'sql_parameters' => $params,
-                    'identifier' => 'MySQLWrapper_Query_Failure',
-                ]);
+                if (class_exists('App\Utilities\LogViaStream')) {
+                    LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
+                        'location' => __METHOD__,
+                        'line' => __LINE__,
+                        'exception_message' => $e->getMessage(),
+                        'exception_file' => $e->getFile(),
+                        'exception_line' => $e->getLine(),
+                        'exception_trace' => $e->getTraceAsString(),
+                        'sql_statement' => $sql,
+                        'sql_parameters' => $params,
+                        'identifier' => 'MySQLWrapper_Query_Failure',
+                    ]);
+                }
+
                 throw new RuntimeException(__('Database error while creating setting'), 0, $e);
             }
         }
@@ -267,17 +272,20 @@ class AppSetting
             ]);
             unset(self::$settingsCache[$appId]);
         } catch (\Throwable $e) {
-            LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
-                'location' => __METHOD__,
-                'line' => __LINE__,
-                'exception_message' => $e->getMessage(),
-                'exception_file' => $e->getFile(),
-                'exception_line' => $e->getLine(),
-                'exception_trace' => $e->getTraceAsString(),
-                'sql_statement' => $sql,
-                'sql_parameters' => $params,
-                'identifier' => 'MySQLWrapper_Query_Failure',
-            ]);
+            if (class_exists('App\Utilities\LogViaStream')) {
+                LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
+                    'location' => __METHOD__,
+                    'line' => __LINE__,
+                    'exception_message' => $e->getMessage(),
+                    'exception_file' => $e->getFile(),
+                    'exception_line' => $e->getLine(),
+                    'exception_trace' => $e->getTraceAsString(),
+                    'sql_statement' => $sql,
+                    'sql_parameters' => $params,
+                    'identifier' => 'MySQLWrapper_Query_Failure',
+                ]);
+            }
+
             throw new RuntimeException(__('Database error during settings update modification'), 0, $e);
         }
     }
@@ -311,17 +319,20 @@ class AppSetting
             }
             unset(self::$settingsCache[$appId]);
         } catch (\Throwable $e) {
-            LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
-                'location' => __METHOD__,
-                'line' => __LINE__,
-                'exception_message' => $e->getMessage(),
-                'exception_file' => $e->getFile(),
-                'exception_line' => $e->getLine(),
-                'exception_trace' => $e->getTraceAsString(),
-                'sql_statement' => $sql,
-                'sql_parameters' => $params,
-                'identifier' => 'MySQLWrapper_Query_Failure',
-            ]);
+            if (class_exists('App\Utilities\LogViaStream')) {
+                LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
+                    'location' => __METHOD__,
+                    'line' => __LINE__,
+                    'exception_message' => $e->getMessage(),
+                    'exception_file' => $e->getFile(),
+                    'exception_line' => $e->getLine(),
+                    'exception_trace' => $e->getTraceAsString(),
+                    'sql_statement' => $sql,
+                    'sql_parameters' => $params,
+                    'identifier' => 'MySQLWrapper_Query_Failure',
+                ]);
+            }
+
             throw new RuntimeException(__('Database error during setting removal'), 0, $e);
         }
     }

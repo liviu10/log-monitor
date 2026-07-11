@@ -145,7 +145,7 @@ services:
     container_name: log-monitor-db
     restart: always
     ports:
-      - "33061:3306"
+      - "${DB_PORT:-33061}:${DB_PORT:-33061}"
     blkio_config:
       device_write_bps:
         - path: /dev/nvme0n1
@@ -161,6 +161,7 @@ services:
       - MYSQL_PASSWORD=${DB_PASSWORD:-password}
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-rootpassword}
       - TZ=${TZ:-Europe/Bucharest}
+      - MYSQL_TCP_PORT=${DB_PORT:-33061}
     volumes:
       - db_data:/var/lib/mysql:Z
       - ./my.cnf:/etc/mysql/conf.d/my.cnf:ro,Z

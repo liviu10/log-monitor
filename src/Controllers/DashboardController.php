@@ -87,16 +87,18 @@ class DashboardController extends BaseController
                 'sortDir' => $sortDir,
             ]);
         } catch (\Throwable $e) {
-            LogViaStream::send(LogLevel::ERROR->value, 'Dashboard index processing failure', [
-                'location' => __METHOD__,
-                'line' => __LINE__,
-                'exception_message' => $e->getMessage(),
-                'exception_file' => $e->getFile(),
-                'exception_line' => $e->getLine(),
-                'exception_trace' => $e->getTraceAsString(),
-                'query_params' => $queryParams,
-                'identifier' => 'DashboardController_Index_Failure',
-            ]);
+            if (class_exists('App\Utilities\LogViaStream')) {
+                LogViaStream::send(LogLevel::ERROR->value, 'Dashboard index processing failure', [
+                    'location' => __METHOD__,
+                    'line' => __LINE__,
+                    'exception_message' => $e->getMessage(),
+                    'exception_file' => $e->getFile(),
+                    'exception_line' => $e->getLine(),
+                    'exception_trace' => $e->getTraceAsString(),
+                    'query_params' => $queryParams,
+                    'identifier' => 'DashboardController_Index_Failure',
+                ]);
+            }
 
             // Defensive Fail Fast: do not allow loading a partial page with incomplete data
             throw new \RuntimeException(__('Critical error loading dashboard data. Please try again later.'));

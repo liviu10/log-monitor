@@ -73,16 +73,19 @@ class AppController extends BaseController
 
             setFlash('success', __('Success'), __('Application created successfully.'));
         } catch (\Throwable $e) {
-            LogViaStream::send(LogLevel::ERROR->value, 'Failed to create application record', [
-                'location' => __METHOD__,
-                'line' => __LINE__,
-                'exception_message' => $e->getMessage(),
-                'exception_file' => $e->getFile(),
-                'exception_line' => $e->getLine(),
-                'exception_trace' => $e->getTraceAsString(),
-                'payload' => $payload,
-                'identifier' => 'AppController_Store_Failure',
-            ]);
+            if (class_exists('App\Utilities\LogViaStream')) {
+                LogViaStream::send(LogLevel::ERROR->value, 'Failed to create application record', [
+                    'location' => __METHOD__,
+                    'line' => __LINE__,
+                    'exception_message' => $e->getMessage(),
+                    'exception_file' => $e->getFile(),
+                    'exception_line' => $e->getLine(),
+                    'exception_trace' => $e->getTraceAsString(),
+                    'payload' => $payload,
+                    'identifier' => 'AppController_Store_Failure',
+                ]);
+            }
+
             setFlash('danger', __('Error'), __('Failed to create application.'));
         }
 
@@ -135,16 +138,19 @@ class AppController extends BaseController
 
             setFlash('success', __('Success'), __('Application updated successfully.'));
         } catch (\Throwable $e) {
-            LogViaStream::send(LogLevel::ERROR->value, 'Failed to update application data', [
-                'location' => __METHOD__,
-                'line' => __LINE__,
-                'exception_message' => $e->getMessage(),
-                'exception_file' => $e->getFile(),
-                'exception_line' => $e->getLine(),
-                'exception_trace' => $e->getTraceAsString(),
-                'app_id' => $appId,
-                'identifier' => 'AppController_Update_Failure',
-            ]);
+            if (class_exists('App\Utilities\LogViaStream')) {
+                LogViaStream::send(LogLevel::ERROR->value, 'Failed to update application data', [
+                    'location' => __METHOD__,
+                    'line' => __LINE__,
+                    'exception_message' => $e->getMessage(),
+                    'exception_file' => $e->getFile(),
+                    'exception_line' => $e->getLine(),
+                    'exception_trace' => $e->getTraceAsString(),
+                    'app_id' => $appId,
+                    'identifier' => 'AppController_Update_Failure',
+                ]);
+            }
+
             setFlash('danger', __('Error'), __('Failed to update application.'));
         }
 
@@ -167,16 +173,19 @@ class AppController extends BaseController
                 $appModel->delete((int) $idVal);
                 setFlash('success', __('Success'), __('Application deleted successfully.'));
             } catch (\Throwable $e) {
-                LogViaStream::send(LogLevel::ERROR->value, 'Failed to delete application', [
-                    'location' => __METHOD__,
-                    'line' => __LINE__,
-                    'exception_message' => $e->getMessage(),
-                    'exception_file' => $e->getFile(),
-                    'exception_line' => $e->getLine(),
-                    'exception_trace' => $e->getTraceAsString(),
-                    'app_id' => $idVal,
-                    'identifier' => 'AppController_Delete_Failure',
-                ]);
+                if (class_exists('App\Utilities\LogViaStream')) {
+                    LogViaStream::send(LogLevel::ERROR->value, 'Failed to delete application', [
+                        'location' => __METHOD__,
+                        'line' => __LINE__,
+                        'exception_message' => $e->getMessage(),
+                        'exception_file' => $e->getFile(),
+                        'exception_line' => $e->getLine(),
+                        'exception_trace' => $e->getTraceAsString(),
+                        'app_id' => $idVal,
+                        'identifier' => 'AppController_Delete_Failure',
+                    ]);
+                }
+
                 setFlash('danger', __('Error'), __('Failed to delete application.'));
             }
         }
