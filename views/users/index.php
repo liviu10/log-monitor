@@ -83,7 +83,7 @@
                                 </div>
                                 <div class="table-responsive">
                                     <table class="table table-hover align-middle mb-0">
-                                        <thead class="bg-black bg-opacity-25 text-secondary small text-uppercase">
+                                        <thead class="bg-dark text-secondary small text-uppercase">
                                             <tr>
                                                 <th class="ps-4 border-0"><?= __('Username') ?></th>
                                                 <th class="border-0"><?= __('Status') ?></th>

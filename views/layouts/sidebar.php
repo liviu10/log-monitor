@@ -11,6 +11,10 @@
             <?php $currentPage = basename($_SERVER['PHP_SELF']); ?>
             
             <a href="index.php" class="nav-link rounded-3 px-3 py-2 <?= $currentPage === 'index.php' ? 'active bg-info bg-opacity-10 text-info' : 'text-secondary hover-bg-light' ?>">
+                <i class="fas fa-chart-pie me-2"></i> <?= __('Dashboard') ?>
+            </a>
+            
+            <a href="logs.php" class="nav-link rounded-3 px-3 py-2 <?= $currentPage === 'logs.php' ? 'active bg-info bg-opacity-10 text-info' : 'text-secondary hover-bg-light' ?>">
                 <i class="fas fa-list-ul me-2"></i> <?= __('Logs') ?>
             </a>
             

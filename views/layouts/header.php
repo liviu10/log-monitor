@@ -6,7 +6,7 @@
     
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'unsafe-eval' 'nonce-<?= APP_NONCE ?>'; style-src 'self' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data:; connect-src 'self' https://cdn.jsdelivr.net;">
 
-    <title><?= APP_NAME ?> - <?= __('Centralized Logs') ?></title>
+    <title><?= APP_NAME ?></title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,9 +22,9 @@
     <script nonce="<?= APP_NONCE ?>">
         <?php
             $lang = getLang();
-$langFile = __DIR__."/../../lang/{$lang}.json";
-$translations = file_exists($langFile) ? json_decode(file_get_contents($langFile), true) : [];
-?>
+            $langFile = __DIR__."/../../lang/{$lang}.json";
+            $translations = file_exists($langFile) ? json_decode(file_get_contents($langFile), true) : [];
+        ?>
         
         window.Translations = <?= json_encode($translations) ?>;
         window.__ = function(key, replacements = {}) {

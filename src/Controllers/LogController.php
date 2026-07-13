@@ -29,6 +29,84 @@ use App\Utilities\Validation;
 class LogController extends BaseController
 {
     /**
+     * Displays the logs timeline page with the list of filtered logs.
+     *
+     * @param  array<array-key, mixed>  $queryParams
+     */
+    public function index(array $queryParams = []): void
+    {
+        $this->checkAuth();
+
+        try {
+            $logModel = new Log;
+            $appModel = new App;
+
+            $filters = [
+                'app_id' => $queryParams['app_id'] ?? null,
+                'level' => $queryParams['level'] ?? null,
+                'search' => $queryParams['search'] ?? null,
+            ];
+
+            $rawPage = $queryParams['page'] ?? 1;
+            $page = (is_int($rawPage) || is_string($rawPage)) ? (int) $rawPage : 1;
+            if ($page < 1) {
+                $page = 1;
+            }
+
+            $allowedLimits = [10, 25, 50, 100];
+            $rawLimit = $queryParams['limit'] ?? 10;
+            $limit = (is_int($rawLimit) || is_string($rawLimit)) ? (int) $rawLimit : 10;
+            if (! in_array($limit, $allowedLimits, true)) {
+                $limit = 10;
+            }
+
+            $offset = ($page - 1) * $limit;
+
+            $rawSortBy = $queryParams['sort_by'] ?? 'id';
+            $sortBy = is_string($rawSortBy) ? $rawSortBy : 'id';
+            $rawSortDir = $queryParams['sort_dir'] ?? 'DESC';
+            $sortDir = is_string($rawSortDir) ? $rawSortDir : 'DESC';
+
+            $logs = $logModel->getPaginated($filters, $limit, $offset, $sortBy, $sortDir);
+            $totalLogs = $logModel->count($filters);
+            $totalPages = (int) ceil($totalLogs / $limit);
+
+            $apps = $appModel->getAll();
+            $levels = LogLevel::all();
+            $stats = $logModel->getStats();
+
+            $this->render('logs/index', [
+                'logs' => $logs,
+                'apps' => $apps,
+                'levels' => $levels,
+                'filters' => $filters,
+                'page' => $page,
+                'totalPages' => $totalPages,
+                'stats' => $stats,
+                'limit' => $limit,
+                'sortBy' => $sortBy,
+                'sortDir' => $sortDir,
+            ]);
+        } catch (\Throwable $e) {
+            if (class_exists('App\Utilities\LogViaStream')) {
+                LogViaStream::send(LogLevel::ERROR->value, 'Logs index processing failure', [
+                    'location' => __METHOD__,
+                    'line' => __LINE__,
+                    'exception_message' => $e->getMessage(),
+                    'exception_file' => $e->getFile(),
+                    'exception_line' => $e->getLine(),
+                    'exception_trace' => $e->getTraceAsString(),
+                    'query_params' => $queryParams,
+                    'identifier' => 'LogController_Index_Failure',
+                ]);
+            }
+
+            // Defensive Fail Fast: do not allow loading a partial page with incomplete data
+            throw new \RuntimeException(__('Critical error loading logs data. Please try again later.'));
+        }
+    }
+
+    /**
      * Processes and stores a new log entry received via POST (JSON API request).
      */
     public function store(): never

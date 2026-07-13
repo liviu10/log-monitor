@@ -113,19 +113,6 @@ class NotificationController extends BaseController
                 }
             }
 
-            // 2. Microsoft Teams communication channel directly to the dedicated channel address
-            if (in_array('teams', $channels, true)) {
-                $teamsEmail = $settings['notification_teams_email'] ?? null;
-                if (is_string($teamsEmail) && $teamsEmail !== '') {
-                    $notifier = new SendNotification;
-                    $notifier->handle([
-                        'to' => $teamsEmail,
-                        'message' => $emailMessage,
-                        'subject' => $subject,
-                        'priority' => $priority,
-                    ]);
-                }
-            }
         } catch (\Throwable $e) {
             if (class_exists('App\Utilities\LogViaStream')) {
                 LogViaStream::send(LogLevel::ERROR->value, 'Error processing/sending automated notification: '.$e->getMessage(), [
