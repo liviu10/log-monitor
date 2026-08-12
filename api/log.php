@@ -94,7 +94,7 @@ $handler = function () {
 
         $appId = (int) $appIdVal;
     } catch (Throwable $e) {
-        if (class_exists('App\\Utilities\\LogViaStream')) {
+        if (class_exists('\App\Utilities\LogViaStream') && class_exists('\App\Enums\LogLevel')) {
             LogViaStream::send(LogLevel::ERROR->value, 'Log API query failure event', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
@@ -135,7 +135,7 @@ $handler = function () {
             'payload_raw' => $rawPayload,
         ]);
     } catch (Throwable $e) {
-        if (class_exists('App\\Utilities\\LogViaStream')) {
+        if (class_exists('\App\Utilities\LogViaStream') && class_exists('\App\Enums\LogLevel')) {
             LogViaStream::send(LogLevel::ERROR->value, 'Failed to queue the log payload', [
                 'location' => __METHOD__,
                 'line' => __LINE__,
@@ -180,7 +180,7 @@ if ($isFrankenPhpWorker) {
             // If not in worker mode (e.g. standard request), execute the handler directly
             $handler();
         } else {
-            if (class_exists('App\\Utilities\\LogViaStream')) {
+            if (class_exists('\App\Utilities\LogViaStream') && class_exists('\App\Enums\LogLevel')) {
                 LogViaStream::send(LogLevel::ERROR->value, 'FrankenPHP worker loop execution failure', [
                     'location' => __FILE__,
                     'line' => __LINE__,

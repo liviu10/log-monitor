@@ -58,7 +58,7 @@ try {
     exit(0);
 
 } catch (Throwable $e) {
-    if (class_exists('App\\Utilities\\LogViaStream')) {
+    if (class_exists('\App\Utilities\LogViaStream') && class_exists('\App\Enums\LogLevel')) {
         LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
             'location' => __FILE__,
             'line' => __LINE__,

@@ -197,7 +197,6 @@ while (true) {
             }
 
             $pdo->commit();
-
         } else {
             // If there are no messages to process, commit the transaction and put the process to sleep
             $pdo->commit();
@@ -205,7 +204,7 @@ while (true) {
         }
 
     } catch (Throwable $e) {
-        if (class_exists('App\\Utilities\\LogViaStream')) {
+        if (class_exists('\App\Utilities\LogViaStream') && class_exists('\App\Enums\LogLevel')) {
             LogViaStream::send(LogLevel::ERROR->value, 'CLI Worker execution failure', [
                 'location' => __FILE__,
                 'line' => __LINE__,

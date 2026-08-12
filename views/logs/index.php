@@ -431,8 +431,8 @@
 
                         <div>
                             <label class="text-secondary small fw-bold text-uppercase d-block mb-1"><?= __('Context (JSON)') ?></label>
-                            <div class="bg-black bg-opacity-50 p-3 rounded border border-secondary border-opacity-25 overflow-auto" style="max-height: 400px;">
-                                <pre class="mb-0 text-info small"><code x-text="JSON.stringify(selectedLog?.context, null, 4)"></code></pre>
+                            <div class="bg-dark bg-opacity-50 p-3 rounded border border-secondary border-opacity-25" style="max-height: 400px; overflow-y: auto;">
+                                <pre class="mb-0 text-info small" style="white-space: pre-wrap; word-wrap: break-word;"><code x-text="JSON.stringify(selectedLog?.context, null, 4)"></code></pre>
                             </div>
                         </div>
                     </div>

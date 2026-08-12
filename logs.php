@@ -16,7 +16,7 @@ try {
         default => throw new RuntimeException(__('Unsupported HTTP method: ').htmlspecialchars(is_string($_SERVER['REQUEST_METHOD'] ?? null) ? $_SERVER['REQUEST_METHOD'] : 'UNKNOWN', ENT_QUOTES, 'UTF-8')),
     };
 } catch (Throwable $e) {
-    if (class_exists('App\\Utilities\\LogViaStream')) {
+    if (class_exists('\App\Utilities\LogViaStream') && class_exists('\App\Enums\LogLevel')) {
         LogViaStream::send(LogLevel::ERROR->value, 'Logs view action execution failure', [
             'location' => __FILE__,
             'line' => __LINE__,
