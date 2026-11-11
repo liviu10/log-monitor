@@ -140,7 +140,24 @@ podman exec -it log-monitor-app vendor/bin/phinx seed:run -c db/phinx.php -e dev
 
 ## 🔧 Maintenance & Admin Commands
 
-### 1. Database Operations
+### 1. Clean Rebuild & Container Lifecycle
+To discard cached container layers, reset database volumes, and rebuild the application cleanly from scratch:
+
+```bash
+# Stop containers and delete all volumes (database, cache):
+podman compose -f docker/docker-compose.yml down -v
+
+# Rebuild images without cached layers:
+podman compose -f docker/docker-compose.yml build --no-cache
+
+# Boot containers:
+podman compose -f docker/docker-compose.yml up -d
+
+# Seed initial admin user (required if APP_ENV=production):
+podman compose -f docker/docker-compose.yml exec app ./vendor/bin/phinx seed:run -c db/phinx.php -e production
+```
+
+### 2. Database Operations
 * **Rollback last migration step**:
   ```bash
   podman exec -it log-monitor-app vendor/bin/phinx rollback -c db/phinx.php -e development
@@ -154,7 +171,7 @@ podman exec -it log-monitor-app vendor/bin/phinx seed:run -c db/phinx.php -e dev
   podman exec -it log-monitor-app vendor/bin/phinx create -c db/phinx.php MyNewMigrationName
   ```
 
-### 2. Log Archiving & Retention
+### 3. Log Archiving & Retention
 * **Purge logs older than X days** (archives logs to `/var/www/html/storage/backups/` and deletes old records from the database):
   ```bash
   # Via the host helper script (recommended for crontab integration):
@@ -164,7 +181,7 @@ podman exec -it log-monitor-app vendor/bin/phinx seed:run -c db/phinx.php -e dev
   podman exec -it log-monitor-app php bin/purge-logs.php 30
   ```
 
-### 3. Asynchronous Worker Control
+### 4. Asynchronous Worker Control
 The queue worker runs automatically as a dedicated service in the compose stack (`log-monitor-worker`).
 * **Check worker status / logs**:
   ```bash
