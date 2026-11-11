@@ -31,5 +31,21 @@
         "allow-plugins": {
             "php-http/discovery": true
         }
+    },
+    "scripts": {
+        "test": "vendor/bin/phpunit",
+        "lint": "vendor/bin/pint --test",
+        "format": "vendor/bin/pint",
+        "stan": "php -d memory_limit=2G vendor/bin/phpstan analyse -c phpstan.neon -l 10",
+        "security:deps": "composer audit --locked --ignore-unreachable",
+        "trivy": "trivy fs --severity HIGH,CRITICAL .",
+        "check": [
+            "@lint",
+            "@stan",
+            "@security:deps",
+            "@test",
+            "@trivy"
+        ],
+        "qa": "./scripts/qa.sh"
     }
 }

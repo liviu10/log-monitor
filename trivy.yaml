@@ -1,0 +1,29 @@
+# trivy.yaml
+# LogMonitor Security Scanner Configuration (Trivy)
+
+scan:
+  scanners:
+    - vuln
+    - misconfig
+    - secret
+
+severity:
+  - HIGH
+  - CRITICAL
+
+format: table
+
+vulnerability:
+  ignore-unfixed: false
+
+misconfiguration:
+  scanners:
+    - dockerfile
+    - yaml
+
+file:
+  exclude:
+    - "storage/framework/cache/**"
+    - "storage/logs/**"
+    - ".phpunit.cache/**"
+    - "tests/**"
