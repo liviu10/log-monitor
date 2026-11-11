@@ -28,7 +28,7 @@
 
     # Protect sensitive files and directories by faking a 404 Not Found
     @forbidden {
-        path /bin /bin/* /config /config/* /db /db/* /dist /dist/* /docker /docker/* /lang /lang/* /Modules /Modules/* /resources /resources/* /src /src/* /tests /tests/* /vendor /vendor/* /storage/logs /storage/logs/* /storage/framework /storage/framework/* /storage/views /storage/views/* /storage/commands /storage/commands/* /storage/backups /storage/backups/* /storage/reports /storage/reports/* /.dockerignore /.env* /.gitignore /composer.json /composer.lock /phpunit.xml /phpstan.neon /phpstan-security.neon /phpstan-report.json /package.json /package-lock.json /node_modules /node_modules/* /manage.py /requirements.txt /db.sqlite3 /venv /venv/* /settings.py /.htaccess /web.config /artisan /symfony.lock
+        path /.* */.* /bin /bin/* /config /config/* /db /db/* /dist /dist/* /docker /docker/* /lang /lang/* /Modules /Modules/* /resources /resources/* /src /src/* /tests /tests/* /vendor /vendor/* /storage/logs /storage/logs/* /storage/framework /storage/framework/* /storage/views /storage/views/* /storage/commands /storage/commands/* /storage/backups /storage/backups/* /storage/reports /storage/reports/* /composer.json /composer.lock /phpunit.xml /phpstan.neon /phpstan-security.neon /phpstan-report.json /web.config
     }
     respond @forbidden "Not Found" 404
 
