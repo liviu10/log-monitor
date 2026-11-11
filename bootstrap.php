@@ -68,9 +68,10 @@ if (! defined('APP_NONCE')) {
 }
 
 // Send Content Security Policy header optimized for utilized CDNs and AlpineJS
+$appNonce = defined('APP_NONCE') && is_string(APP_NONCE) ? APP_NONCE : '';
 header(
     "Content-Security-Policy: default-src 'self'; ".
-    "script-src 'self' https://cdn.jsdelivr.net 'unsafe-eval' 'nonce-".APP_NONCE."'; ".
+    "script-src 'self' https://cdn.jsdelivr.net 'unsafe-eval' 'nonce-".$appNonce."'; ".
     "style-src 'self' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com 'unsafe-inline'; ".
     "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; ".
     "img-src 'self' data:; ".

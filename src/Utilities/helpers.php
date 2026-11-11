@@ -212,13 +212,11 @@ if (! function_exists('can')) {
 if (! function_exists('generateCsrfToken')) {
     function generateCsrfToken(): string
     {
-        if (empty($_SESSION['csrf_token'])) {
+        if (empty($_SESSION['csrf_token']) || ! is_string($_SESSION['csrf_token'])) {
             $_SESSION['csrf_token'] = Token::random(32);
         }
 
-        $token = $_SESSION['csrf_token'] ?? '';
-
-        return is_string($token) ? $token : '';
+        return $_SESSION['csrf_token'];
     }
 }
 
