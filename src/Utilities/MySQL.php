@@ -127,14 +127,14 @@ final class MySQL
             $hostVal = $_ENV['DB_HOST'] ?? null;
             $host = is_string($hostVal) && $hostVal !== '' ? $hostVal : '127.0.0.1';
 
-            $dbVal = $_ENV['DB_NAME'] ?? null;
+            $dbVal = $_ENV['DB_DATABASE'] ?? $_ENV['DB_NAME'] ?? null;
             $database = is_string($dbVal) && $dbVal !== '' ? $dbVal : 'log_monitor';
 
-            $userVal = $_ENV['DB_USER'] ?? null;
-            $username = is_string($userVal) && $userVal !== '' ? $userVal : 'root';
+            $userVal = $_ENV['DB_USERNAME'] ?? $_ENV['DB_USER'] ?? null;
+            $username = is_string($userVal) && $userVal !== '' ? $userVal : 'user';
 
-            $passVal = $_ENV['DB_PASS'] ?? null;
-            $password = is_string($passVal) ? $passVal : '';
+            $passVal = $_ENV['DB_PASSWORD'] ?? $_ENV['DB_PASS'] ?? null;
+            $password = is_string($passVal) ? $passVal : 'password';
 
             $portVal = $_ENV['DB_PORT'] ?? null;
             $port = is_numeric($portVal) ? (int) $portVal : 3306;
