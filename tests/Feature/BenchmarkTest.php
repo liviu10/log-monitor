@@ -6,11 +6,10 @@ namespace Tests\Feature;
 
 use App\Models\App;
 use App\Utilities\MySQL;
+use PHPUnit\Framework\Attributes\Group;
 use Tests\TestCase;
 
-/**
- * @group benchmark
- */
+#[Group('benchmark')]
 class BenchmarkTest extends TestCase
 {
     public function test_performance_benchmark(): void

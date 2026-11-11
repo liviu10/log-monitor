@@ -7,9 +7,12 @@ scan:
     - misconfig
     - secret
 
+# Verificam toate nivelurile de severitate, inclusiv Warning-uri (MEDIUM) si Informationale (LOW)
 severity:
-  - HIGH
   - CRITICAL
+  - HIGH
+  - MEDIUM
+  - LOW
 
 format: table
 

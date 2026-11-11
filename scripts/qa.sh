@@ -82,7 +82,7 @@ if [ "$QUICK_MODE" = true ]; then
 else
     if command -v trivy >/dev/null 2>&1; then
         run_step "3" "Dockerfile Security Audit (Trivy)" \
-            "trivy config --severity MEDIUM,HIGH,CRITICAL --exit-code 1 docker/Dockerfile"
+            "trivy config --severity LOW,MEDIUM,HIGH,CRITICAL --exit-code 1 docker/Dockerfile"
     else
         echo -e "\n${YELLOW}[3/6] Trivy not found on host. Skipping container security audit.${NC}"
     fi
@@ -101,7 +101,7 @@ if [ "$QUICK_MODE" = true ]; then
 else
     if command -v trivy >/dev/null 2>&1; then
         run_step "6" "Repository Security & Secret Audit (Trivy FS)" \
-            "trivy fs --severity HIGH,CRITICAL --exit-code 1 ."
+            "trivy fs --severity LOW,MEDIUM,HIGH,CRITICAL --exit-code 1 ."
     else
         echo -e "\n${YELLOW}[6/6] Trivy not found on host. Skipping filesystem security audit.${NC}"
     fi
