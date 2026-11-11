@@ -191,7 +191,8 @@ final class ErrorHandler
             return;
         }
 
-        // Elibereaza rezerva: tratarea are nevoie de memorie dupa "Allowed memory size exhausted".
+        // Elibereaza rezerva si mareste limita temporar pentru a permite generarea raspunsului
+        @ini_set('memory_limit', '-1');
         if (self::$reserve !== null) {
             self::$reserve = null;
         }
@@ -232,7 +233,7 @@ final class ErrorHandler
                 // golire
             }
 
-            http_response_code(500);
+            @http_response_code(500);
         }
 
         if (self::$renderer instanceof Closure) {
