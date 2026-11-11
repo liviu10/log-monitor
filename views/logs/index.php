@@ -6,21 +6,22 @@
 
         <!-- Main Content -->
         <div class="col h-100 overflow-auto bg-dark bg-opacity-25">
-            <header class="navbar navbar-expand-lg border-bottom border-secondary border-opacity-25 px-4 py-3 sticky-top bg-dark bg-opacity-75 backdrop-blur" style="z-index: 100;">
-                <button class="btn btn-dark btn-sm me-3" @click="sidebarOpen = !sidebarOpen">
+            <header class="navbar navbar-expand-lg border-bottom border-secondary border-opacity-25 px-3 px-lg-4 py-3 sticky-top bg-dark bg-opacity-75 backdrop-blur" style="z-index: 100;">
+                <button class="btn btn-dark btn-sm me-3" @click="sidebarOpen = !sidebarOpen" aria-label="<?= __('Toggle Navigation') ?>">
                     <i class="fas fa-bars"></i>
                 </button>
-                <div class="d-flex align-items-center justify-content-between w-100">
+                <div class="d-flex align-items-center justify-content-between w-100 flex-wrap gap-2">
                     <h2 class="h5 mb-0 fw-bold text-light"><?= __('Logs Timeline') ?></h2>
                     
                     <!-- Live Tailing & User Dropdown -->
-                    <div class="d-flex align-items-center gap-3">
+                    <div class="d-flex align-items-center gap-2 gap-sm-3">
                         <!-- Auto Refresh Pill -->
                         <button @click="toggleAutoRefresh()" 
-                                class="btn btn-sm d-flex align-items-center gap-2 border px-3 rounded-pill transition-all"
+                                class="btn btn-sm d-flex align-items-center gap-2 border px-2.5 px-sm-3 rounded-pill transition-all"
                                 :class="autoRefresh ? 'btn-success border-success bg-success bg-opacity-10 text-success' : 'btn-outline-secondary text-secondary'">
                             <span class="pulse-dot" :class="autoRefresh ? 'bg-success' : 'bg-secondary'"></span>
-                            <span class="small fw-bold" x-text="autoRefresh ? window.__('LIVE (refresh in :seconds s)', { seconds: countdown }) : window.__('LIVE OFF')"></span>
+                            <span class="small fw-bold d-none d-sm-inline" x-text="autoRefresh ? window.__('LIVE (refresh in :seconds s)', { seconds: countdown }) : window.__('LIVE OFF')"></span>
+                            <span class="small fw-bold d-sm-none" x-text="autoRefresh ? countdown + 's' : 'OFF'"></span>
                         </button>
 
                         <!-- Language Switcher -->
@@ -45,11 +46,11 @@
 
                         <div class="dropdown">
                             <button class="btn btn-dark btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                <i class="far fa-user-circle me-2 text-info"></i> <?= htmlspecialchars($_SESSION['auth.user']['username'] ?? 'User') ?>
+                                <i class="far fa-user-circle me-1 me-sm-2 text-info"></i> <span class="d-none d-sm-inline"><?= htmlspecialchars($_SESSION['auth.user']['username'] ?? 'User') ?></span>
                             </button>
                             <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow">
                                 <li>
-                                    <a class="dropdown-item text-danger" href="login.php?action=logout">
+                                    <a class="dropdown-item text-danger" href="logout.php">
                                         <i class="fas fa-sign-out-alt me-2"></i> <?= __('Logout') ?>
                                     </a>
                                 </li>
@@ -59,7 +60,7 @@
                 </div>
             </header>
 
-            <main class="p-4">
+            <main class="p-3 p-lg-4">
                 <!-- Stats Overview Cards -->
                 <div class="row g-3 mb-4">
                     <div class="col-md-3">

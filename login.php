@@ -14,7 +14,7 @@ try {
     match ($_SERVER['REQUEST_METHOD'] ?? '') {
         'POST' => $controller->login($_POST),
         'GET', 'HEAD' => match ($_GET['action'] ?? null) {
-            'logout' => $controller->logout(),
+            'logout' => $controller->logout('login.php?logged_out=1'),
             null => $controller->showLogin(),
             default => throw new InvalidArgumentException(__('Unknown authentication action.')),
         },

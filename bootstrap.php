@@ -40,13 +40,18 @@ LogViaStream::registerHandlers();
 // Session is started ONLY if we are not on the cURL logging endpoint (API)
 if ($currentScript !== 'log.php') {
     if (session_status() === PHP_SESSION_NONE) {
-        ini_set('session.gc_maxlifetime', '86400');
+        $rawTimeout = $_ENV['SESSION_IDLE_TIMEOUT'] ?? $_ENV['APP_SESSION_IDLE_TIMEOUT'] ?? 1800;
+        $idleTimeout = is_numeric($rawTimeout) ? (int) $rawTimeout : 1800;
+        ini_set('session.gc_maxlifetime', (string) max(86400, $idleTimeout));
         session_name('LOGMONITORSESSID');
+        $isHttps = (! empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||
+                   (($_SERVER['SERVER_PORT'] ?? '') === 443) ||
+                   (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
         session_set_cookie_params([
-            'lifetime' => 86400,
+            'lifetime' => 0,
             'path' => '/',
             'domain' => '',
-            'secure' => true,
+            'secure' => $isHttps,
             'httponly' => true,
             'samesite' => 'Lax',
         ]);

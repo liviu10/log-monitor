@@ -279,5 +279,19 @@
     "View": "View",
     "Quick Actions": "Quick Actions",
     "View Active Queue": "View Active Queue",
-    "View Logs History": "View Logs History"
+    "View Logs History": "View Logs History",
+    "Session Expired": "Session Expired",
+    "Your session has expired due to inactivity. Please log in again.": "Your session has expired due to inactivity. Please log in again.",
+    "Logged Out": "Logged Out",
+    "You have been logged out successfully.": "You have been logged out successfully.",
+    "Session Warning": "Session Warning",
+    "Your session is about to expire due to inactivity.": "Your session is about to expire due to inactivity.",
+    "seconds remaining": "seconds remaining",
+    "Stay Logged In": "Stay Logged In",
+    "Session Extended": "Session Extended",
+    "Your session has been successfully renewed.": "Your session has been successfully renewed.",
+    "Administrator": "Administrator",
+    "Online": "Online",
+    "Toggle Navigation": "Toggle Navigation",
+    "Active Session": "Active Session"
 }

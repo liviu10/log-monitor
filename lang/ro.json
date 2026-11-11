@@ -279,5 +279,19 @@
     "View": "Vezi",
     "Quick Actions": "Actiuni rapide",
     "View Active Queue": "Vezi coada activa",
-    "View Logs History": "Vezi istoric loguri"
+    "View Logs History": "Vezi istoric loguri",
+    "Session Expired": "Sesiune expirata",
+    "Your session has expired due to inactivity. Please log in again.": "Sesiunea a expirat din cauza inactivitatii. Va rugam sa va autentificati din nou.",
+    "Logged Out": "Deconectat",
+    "You have been logged out successfully.": "V-ati deconectat cu succes.",
+    "Session Warning": "Avertisment sesiune",
+    "Your session is about to expire due to inactivity.": "Sesiunea este pe cale sa expire din cauza inactivitatii.",
+    "seconds remaining": "secunde ramase",
+    "Stay Logged In": "Ramai conectat",
+    "Session Extended": "Sesiune prelungita",
+    "Your session has been successfully renewed.": "Sesiunea dumneavoastra a fost reinnoita cu succes.",
+    "Administrator": "Administrator",
+    "Online": "Online",
+    "Toggle Navigation": "Comuta navigarea",
+    "Active Session": "Sesiune activa"
 }

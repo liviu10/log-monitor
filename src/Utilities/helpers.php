@@ -155,26 +155,51 @@ if (! function_exists('checkAuthUser')) {
     {
         // Handle logout action
         if (isset($_GET['action']) && $_GET['action'] === 'logout') {
-            unset($_SESSION['auth.user']);
-            session_destroy();
+            unset($_SESSION['auth.user'], $_SESSION['auth.last_activity'], $_SESSION['auth.login_time']);
+            if (session_status() === PHP_SESSION_ACTIVE) {
+                session_destroy();
+            }
 
             if (session_status() === PHP_SESSION_NONE) {
                 session_start();
             }
             session_regenerate_id(true);
 
-            header('Location: login.php');
+            setFlash('info', __('Logged Out'), __('You have been logged out successfully.'));
+            header('Location: login.php?logged_out=1');
             exit;
         }
 
         $rawPhpSelf = $_SERVER['PHP_SELF'] ?? '';
         $currentPage = basename(is_string($rawPhpSelf) ? $rawPhpSelf : '');
 
-        if ($currentPage === 'login.php') {
+        if ($currentPage === 'login.php' || $currentPage === 'logout.php') {
             return true;
         }
 
         if (isset($_SESSION['auth.user']) && is_array($_SESSION['auth.user'])) {
+            $rawTimeout = $_ENV['SESSION_IDLE_TIMEOUT'] ?? $_ENV['APP_SESSION_IDLE_TIMEOUT'] ?? 1800;
+            $idleTimeout = is_numeric($rawTimeout) ? (int) $rawTimeout : 1800;
+            $lastActivity = $_SESSION['auth.last_activity'] ?? null;
+
+            if (is_int($lastActivity) && (time() - $lastActivity > $idleTimeout)) {
+                unset($_SESSION['auth.user'], $_SESSION['auth.last_activity'], $_SESSION['auth.login_time']);
+                if (session_status() === PHP_SESSION_ACTIVE) {
+                    session_destroy();
+                }
+
+                if (session_status() === PHP_SESSION_NONE) {
+                    session_start();
+                }
+                session_regenerate_id(true);
+
+                setFlash('warning', __('Session Expired'), __('Your session has expired due to inactivity. Please log in again.'));
+                header('Location: login.php?expired=1');
+                exit;
+            }
+
+            $_SESSION['auth.last_activity'] = time();
+
             return true;
         }
 

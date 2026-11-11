@@ -8,7 +8,7 @@ echo "Filtering and normalizing variables for the .env file..."
 > /var/www/html/.env
 
 # Filter strictly using a white-list based on the application prefixes.
-env | grep -E '^(APP_|DB_|MYSQL_|SMTP_|LOG_|NIST_|TZ=)' | while read -r line; do
+env | grep -E '^(APP_|DB_|MYSQL_|SMTP_|LOG_|NIST_|SESSION_|TZ=)' | while read -r line; do
     key="${line%%=*}"
     value="${line#*=}"
     

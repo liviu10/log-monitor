@@ -107,7 +107,7 @@ const App = {
      */
     dashboardPageData() {
         return {
-            sidebarOpen: true,
+            sidebarOpen: window.innerWidth >= 992,
             selectedLog: null,
             showModal: false,
             autoRefresh: localStorage.getItem('auto_refresh') === 'true',
@@ -163,7 +163,7 @@ const App = {
      */
     appsPageData() {
         return {
-            sidebarOpen: true,
+            sidebarOpen: window.innerWidth >= 992,
             showSettingsModal: false,
             currentAppId: null,
             currentAppName: '',
@@ -456,7 +456,7 @@ const App = {
      */
     queuePageData() {
         return {
-            sidebarOpen: true,
+            sidebarOpen: window.innerWidth >= 992,
             selectedJob: null,
             showModal: false,
             payloadCopied: false,
@@ -480,5 +480,94 @@ const App = {
                 App.copyPayload(this, this.selectedJob, 'payloadCopied');
             }
         };
+    },
+
+    /**
+     * Session Idle Timeout and Expiration Manager
+     */
+    initSessionManager() {
+        const timeoutMeta = document.querySelector('meta[name="session-idle-timeout"]');
+        const authMeta = document.querySelector('meta[name="user-authenticated"]');
+        if (!timeoutMeta || !authMeta || authMeta.getAttribute('content') !== '1') {
+            return;
+        }
+
+        const totalTimeout = parseInt(timeoutMeta.getAttribute('content'), 10) || 1800;
+        const warningThreshold = Math.min(120, Math.max(30, Math.floor(totalTimeout * 0.15)));
+        let remainingSeconds = totalTimeout;
+        let warningModal = null;
+
+        const modalEl = document.getElementById('sessionTimeoutModal');
+        if (modalEl && typeof bootstrap !== 'undefined') {
+            warningModal = new bootstrap.Modal(modalEl);
+        }
+
+        const timerDisplay = document.getElementById('sessionCountdownTimer');
+        const stayBtn = document.getElementById('sessionStayLoggedInBtn');
+
+        const resetTimer = () => {
+            remainingSeconds = totalTimeout;
+            if (modalEl && modalEl.classList.contains('show') && warningModal) {
+                warningModal.hide();
+            }
+        };
+
+        const pingServer = () => {
+            fetch('ping.php', { method: 'GET', credentials: 'same-origin' })
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.success) {
+                        resetTimer();
+                        App.handleToast({
+                            type: 'success',
+                            title: window.__('Session Extended') || 'Session Extended',
+                            message: window.__('Your session has been successfully renewed.') || 'Session renewed.',
+                            toastDelay: 2500
+                        });
+                    } else {
+                        window.location.href = 'login.php?expired=1';
+                    }
+                })
+                .catch(() => {
+                    resetTimer();
+                });
+        };
+
+        if (stayBtn) {
+            stayBtn.addEventListener('click', pingServer);
+        }
+
+        // Throttle user interaction activity
+        let lastPing = Date.now();
+        const onUserActivity = () => {
+            if (modalEl && modalEl.classList.contains('show')) return;
+
+            remainingSeconds = totalTimeout;
+            if (Date.now() - lastPing > 180000) {
+                lastPing = Date.now();
+                fetch('ping.php', { method: 'GET', credentials: 'same-origin' }).catch(() => {});
+            }
+        };
+
+        ['mousedown', 'keydown', 'scroll', 'touchstart'].forEach(evt => {
+            window.addEventListener(evt, onUserActivity, { passive: true });
+        });
+
+        setInterval(() => {
+            remainingSeconds--;
+
+            if (remainingSeconds <= warningThreshold && remainingSeconds > 0) {
+                if (modalEl && !modalEl.classList.contains('show') && warningModal) {
+                    warningModal.show();
+                }
+                if (timerDisplay) {
+                    timerDisplay.textContent = remainingSeconds;
+                }
+            }
+
+            if (remainingSeconds <= 0) {
+                window.location.href = 'login.php?expired=1';
+            }
+        }, 1000);
     }
 };

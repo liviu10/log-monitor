@@ -96,6 +96,8 @@ class AuthController extends BaseController
                     'id' => $user['id'],
                     'username' => $user['username'],
                 ];
+                $_SESSION['auth.last_activity'] = time();
+                $_SESSION['auth.login_time'] = time();
                 $this->redirect('index.php');
             }
 
@@ -129,7 +131,7 @@ class AuthController extends BaseController
     /**
      * Logs the user out and completely destroys any trace of the active session.
      */
-    public function logout(): never
+    public function logout(string $redirect = 'login.php'): never
     {
         // 1. Completely clear the global $_SESSION array to erase data from runtime memory
         $_SESSION = [];
@@ -157,6 +159,6 @@ class AuthController extends BaseController
         }
 
         // 4. Defensive redirection to the login page
-        $this->redirect('login.php');
+        $this->redirect($redirect);
     }
 }

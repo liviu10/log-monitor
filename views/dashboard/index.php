@@ -1,19 +1,19 @@
 <?php include __DIR__.'/../layouts/header.php'; ?>
 
-<div class="container-fluid p-0 overflow-hidden" x-data="{ sidebarOpen: true }">
+<div class="container-fluid p-0 overflow-hidden" x-data="{ sidebarOpen: window.innerWidth >= 992 }">
     <div class="row g-0 vh-100">
         <?php include __DIR__.'/../layouts/sidebar.php'; ?>
 
         <!-- Main Content -->
         <div class="col h-100 overflow-auto bg-dark bg-opacity-25">
-            <header class="navbar navbar-expand-lg border-bottom border-secondary border-opacity-25 px-4 py-3 sticky-top bg-dark bg-opacity-75 backdrop-blur" style="z-index: 100;">
-                <button class="btn btn-dark btn-sm me-3" @click="sidebarOpen = !sidebarOpen">
+            <header class="navbar navbar-expand-lg border-bottom border-secondary border-opacity-25 px-3 px-lg-4 py-3 sticky-top bg-dark bg-opacity-75 backdrop-blur" style="z-index: 100;">
+                <button class="btn btn-dark btn-sm me-3" @click="sidebarOpen = !sidebarOpen" aria-label="<?= __('Toggle Navigation') ?>">
                     <i class="fas fa-bars"></i>
                 </button>
                 <div class="d-flex align-items-center justify-content-between w-100">
                     <h2 class="h5 mb-0 fw-bold text-light"><?= __('Dashboard') ?></h2>
                     
-                    <div class="d-flex align-items-center gap-3">
+                    <div class="d-flex align-items-center gap-2 gap-sm-3">
                         <!-- Language Switcher -->
                         <div class="dropdown">
                             <button class="btn btn-dark btn-sm dropdown-toggle d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown">
@@ -36,11 +36,11 @@
 
                         <div class="dropdown">
                             <button class="btn btn-dark btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                <i class="far fa-user-circle me-2 text-info"></i> <?= htmlspecialchars($_SESSION['auth.user']['username'] ?? 'User') ?>
+                                <i class="far fa-user-circle me-1 me-sm-2 text-info"></i> <span class="d-none d-sm-inline"><?= htmlspecialchars($_SESSION['auth.user']['username'] ?? 'User') ?></span>
                             </button>
                             <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow">
                                 <li>
-                                    <a class="dropdown-item text-danger" href="login.php?action=logout">
+                                    <a class="dropdown-item text-danger" href="logout.php">
                                         <i class="fas fa-sign-out-alt me-2"></i> <?= __('Logout') ?>
                                     </a>
                                 </li>
@@ -50,11 +50,11 @@
                 </div>
             </header>
 
-            <main class="p-4">
+            <main class="p-3 p-lg-4">
                 <!-- Stats Overview Cards -->
                 <div class="row g-3 mb-4">
-                    <div class="col-md-3">
-                        <div class="card border-0 shadow-sm metric-card p-3 position-relative overflow-hidden">
+                    <div class="col-12 col-sm-6 col-xl-3">
+                        <div class="card border-0 shadow-sm metric-card p-3 position-relative overflow-hidden h-100">
                             <div class="d-flex align-items-center justify-content-between">
                                 <div>
                                     <span class="text-secondary small fw-bold text-uppercase d-block mb-1"><?= __('Success Rate') ?></span>
@@ -67,8 +67,8 @@
                             <div class="card-glow bg-success"></div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card border-0 shadow-sm metric-card p-3 position-relative overflow-hidden">
+                    <div class="col-12 col-sm-6 col-xl-3">
+                        <div class="card border-0 shadow-sm metric-card p-3 position-relative overflow-hidden h-100">
                             <div class="d-flex align-items-center justify-content-between">
                                 <div>
                                     <span class="text-secondary small fw-bold text-uppercase d-block mb-1"><?= __('Total Logs') ?></span>
@@ -81,8 +81,8 @@
                             <div class="card-glow bg-info"></div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card border-0 shadow-sm metric-card p-3 position-relative overflow-hidden">
+                    <div class="col-12 col-sm-6 col-xl-3">
+                        <div class="card border-0 shadow-sm metric-card p-3 position-relative overflow-hidden h-100">
                             <div class="d-flex align-items-center justify-content-between">
                                 <div>
                                     <span class="text-secondary small fw-bold text-uppercase d-block mb-1"><?= __('Queue Size') ?></span>
@@ -95,8 +95,8 @@
                             <div class="card-glow bg-warning"></div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card border-0 shadow-sm metric-card p-3 position-relative overflow-hidden">
+                    <div class="col-12 col-sm-6 col-xl-3">
+                        <div class="card border-0 shadow-sm metric-card p-3 position-relative overflow-hidden h-100">
                             <div class="d-flex align-items-center justify-content-between">
                                 <div>
                                     <span class="text-secondary small fw-bold text-uppercase d-block mb-1"><?= __('Active Apps') ?></span>
