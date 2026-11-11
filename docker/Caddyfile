@@ -6,37 +6,33 @@
 
 :80 {
     # Set the root directory
-    root * /var/www/html 
+    root * /var/www/html
 
     # Global security mitigation against massive payload attacks (DoS/OOM)
     request_body {
-        max_size 2MB
+        max_size 16MB
     }
 
     # Enable compression
-    encode zstd gzip 
+    encode zstd gzip
+
+    # Defensive Security Headers (OWASP recommendations)
+    header {
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "camera=(), microphone=(), geolocation=()"
+        -Server
+    }
 
     # Protect sensitive files and directories by faking a 404 Not Found
     @forbidden {
-        path /bin /bin/*
-        path /db /db/*
-        path /dist /dist/*
-        path /docker /docker/*
-		path /lang /lang/*
-		path /src /src/*
-        path /tests /tests/*
-        path /vendor /vendor/*
-        path .dockerignore
-        path .env*
-        path .gitignore
-        path /composer.json
-        path /composer.lock
-        path /phpunit.xml
+        path /bin /bin/* /config /config/* /db /db/* /dist /dist/* /docker /docker/* /lang /lang/* /Modules /Modules/* /resources /resources/* /src /src/* /tests /tests/* /vendor /vendor/* /storage/logs /storage/logs/* /storage/framework /storage/framework/* /storage/views /storage/views/* /storage/commands /storage/commands/* /storage/backups /storage/backups/* /storage/reports /storage/reports/* /.dockerignore /.env* /.gitignore /composer.json /composer.lock /phpunit.xml /phpstan.neon /phpstan-security.neon /phpstan-report.json /package.json /package-lock.json /node_modules /node_modules/* /manage.py /requirements.txt /db.sqlite3 /venv /venv/* /settings.py /.htaccess /web.config /artisan /symfony.lock
     }
     respond @forbidden "Not Found" 404
 
-    # Execute PHP files
+    # Execute PHP files with FrankenPHP worker for high-speed log ingestion
     php_server {
-        worker api/log.php 2
+        worker api/log.php {$FRANKENPHP_WORKERS:2}
     }
 }

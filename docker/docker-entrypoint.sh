@@ -1,64 +1,66 @@
 #!/bin/bash
 set -e
 
-echo "=== RECEPTIE BOOT: Incepe faza de initializare din entrypoint ==="
+echo "=== BOOT RECEPTION: Initialisation phase begins from entrypoint ==="
 
-# Solutia Arhitecturala Finisata:
-# Initializam un fisier .env curat la radacina aplicatiei
-echo "Filtram si normalizam variabilele destinate fisierului .env..."
+# Initialize a clean .env file at the root of the application
+echo "Filtering and normalizing variables for the .env file..."
 > /var/www/html/.env
 
-# Filtram strict folosind o lista alba (white-list) bazata pe prefixele aplicatiei LogMonitor.
-# Astfel eliminam 100% din cheile parazite de SSH/GPG transmise de Podman rootless.
+# Filter strictly using a white-list based on the application prefixes.
 env | grep -E '^(APP_|DB_|MYSQL_|SMTP_|LOG_|NIST_|TZ=)' | while read -r line; do
-    # Extragem cheia si valoarea in mod securizat la nivel de shell
     key="${line%%=*}"
     value="${line#*=}"
     
-    # Programare defensiva: Eliminam eventualele ghilimele exterioare 
-    # daca ele au fost deja interpretate sau pastrate in bufferul de memorie
     value="${value#\"}"
     value="${value%\"}"
-    
-    # Scriem variabila impachetata uniform si sigur pentru parserul de PHP 8.4
+
     echo "${key}=\"${value}\"" >> /var/www/html/.env
 done
 
-# Aplicam permisiunile de securitate pentru utilizatorul de FrankenPHP
-chown www-data:www-data /var/www/html/.env
+# Apply strict security permissions for the environment file
+chmod 600 /var/www/html/.env
 
-# Verificare stricta de siguranta (Fail Fast)
+# Strict security verification (Fail Fast)
 if [ -z "$DB_HOST" ] || [ -z "$DB_PORT" ]; then
-    echo "EROARE CRITICA: DB_HOST sau DB_PORT nu sunt definite in configuratie."
+    echo "CRITICAL ERROR: DB_HOST or DB_PORT are not defined in the configuration."
     exit 1
 fi
 
-echo "Se asteapta conexiunea cu serviciul de baza de date ($DB_HOST:$DB_PORT)..."
+echo "Waiting for connection to the database service ($DB_HOST:$DB_PORT)..."
 until nc -z "$DB_HOST" "$DB_PORT"; do
   sleep 1
 done
-echo "Baza de date MariaDB este accesibila si stabila!"
+echo "The MariaDB database is accessible and stable!"
 
-# Executam migratiile si seederul EXCLUSIV pe containerul web principal (app)
+# Execute migrations and seeder EXCLUSIVELY on the main web container (app)
 if [ "$1" = "frankenphp" ]; then
-    echo "Container principal (app) detectat. Pornim alinierea structurii SQL..."
+    echo "Main container (app) detected. Starting SQL structure alignment..."
+
+    # Purge stale compiled Blade views if present
+    rm -f /var/www/html/storage/views/*.bladec
     
     if [ ! -f "./vendor/bin/phinx" ]; then
-        echo "EROARE CRITICA: Executabilul Phinx nu a fost gasit in vendor."
+        echo "CRITICAL ERROR: Phinx executable not found in vendor."
         exit 1
     fi
 
-    ENV_TARGET=${APP_ENV:-development}
-    echo "Rulam migratiile active pentru mediul: $ENV_TARGET"
-    
-    # Solutia: Adaugam flag-ul -c db/phinx.php pentru a forta utilizarea lui si a scoate la suprafata erorile ascunse
+    # Normalize environment: prod/production -> production, dev/development -> development
+    CURRENT_ENV=${APP_ENV:-development}
+    if [ "$CURRENT_ENV" = "production" ] || [ "$CURRENT_ENV" = "prod" ]; then
+        ENV_TARGET="production"
+    else
+        ENV_TARGET="development"
+    fi
+
+    echo "Running active migrations for environment: $ENV_TARGET"
     ./vendor/bin/phinx migrate -c db/phinx.php -e "$ENV_TARGET"
     
-    if [ "$APP_ENV" = "development" ]; then
-        echo "Mediu de dezvoltare activ. Rulam pachetele de seed..."
+    if [ "$ENV_TARGET" = "development" ]; then
+        echo "Development environment active. Running seed packages..."
         ./vendor/bin/phinx seed:run -c db/phinx.php -e "$ENV_TARGET"
     fi
 fi
 
-echo "Pornim procesul principal solicitat de serviciu: $@"
+echo "Starting the main process requested by the service: $@"
 exec "$@"

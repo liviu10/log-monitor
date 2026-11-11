@@ -118,10 +118,11 @@ Spin up the stack in the background:
 cd docker
 podman-compose up -d
 ```
-The application will be accessible locally at **`http://localhost:8080`** (or securely at **`https://log-monitor.local:8443`** if `log-monitor.local` is mapped to `127.0.0.1` in your `/etc/hosts` file).
+The application will be accessible locally at **`http://localhost:8080`**.
 
 ### 3. Database Migrations & Seeds
-Initialize database schemas and seed default credentials:
+Database migrations and default data seeding are executed automatically during container boot by `docker-entrypoint.sh` when `APP_ENV="development"`.
+If you need to run them manually:
 ```bash
 # Run migrations using the config file path
 podman exec -it log-monitor-app vendor/bin/phinx migrate -c db/phinx.php -e development
@@ -131,7 +132,7 @@ podman exec -it log-monitor-app vendor/bin/phinx seed:run -c db/phinx.php -e dev
 ```
 
 ### 4. Admin Credentials (Seeded Defaults)
-* **URL**: `http://localhost:8080/login.php` (or `https://log-monitor.local:8443/login.php`)
+* **URL**: `http://localhost:8080/login.php`
 * **Username**: `admin`
 * **Password**: `admin123`
 
@@ -154,19 +155,20 @@ podman exec -it log-monitor-app vendor/bin/phinx seed:run -c db/phinx.php -e dev
   ```
 
 ### 2. Log Archiving & Retention
-* **Purge logs older than X days**: Archives logs to `/var/www/html/storage/backups/` and deletes old records from the database:
+* **Purge logs older than X days** (archives logs to `/var/www/html/storage/backups/` and deletes old records from the database):
   ```bash
+  # Via the host helper script (recommended for crontab integration):
+  ./docker/run-cron.sh
+
+  # Or directly via container exec:
   podman exec -it log-monitor-app php bin/purge-logs.php 30
   ```
 
 ### 3. Asynchronous Worker Control
-* **Start the queue worker daemon (detached)**:
+The queue worker runs automatically as a dedicated service in the compose stack (`log-monitor-worker`).
+* **Check worker status / logs**:
   ```bash
-  podman exec -d log-monitor-app php bin/worker.php
-  ```
-* **Check running worker processes inside the app container**:
-  ```bash
-  podman exec log-monitor-app ps aux | grep worker.php
+  podman logs -f log-monitor-worker
   ```
 
 ---

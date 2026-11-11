@@ -7,6 +7,12 @@ require_once dirname(__DIR__).'/vendor/autoload.php';
 $dotenv = Dotenv\Dotenv::createImmutable(dirname(__DIR__));
 $dotenv->safeLoad();
 
+$dbHost = $_ENV['DB_HOST'] ?? 'db';
+$dbPort = $_ENV['DB_PORT'] ?? '3306';
+$dbName = $_ENV['DB_DATABASE'] ?? $_ENV['DB_NAME'] ?? 'log_monitor';
+$dbUser = $_ENV['DB_USERNAME'] ?? $_ENV['DB_USER'] ?? 'user';
+$dbPass = $_ENV['DB_PASSWORD'] ?? $_ENV['DB_PASS'] ?? 'password';
+
 return [
     'paths' => [
         'migrations' => '%%PHINX_CONFIG_DIR%%/migrations',
@@ -17,20 +23,20 @@ return [
         'default_environment' => 'development',
         'production' => [
             'adapter' => 'mysql',
-            'host' => $_ENV['DB_HOST'] ?? 'localhost',
-            'name' => $_ENV['DB_NAME'] ?? 'log_monitor',
-            'user' => $_ENV['DB_USER'] ?? 'root',
-            'pass' => $_ENV['DB_PASS'] ?? '',
-            'port' => $_ENV['DB_PORT'] ?? '3306',
+            'host' => $dbHost,
+            'name' => $dbName,
+            'user' => $dbUser,
+            'pass' => $dbPass,
+            'port' => $dbPort,
             'charset' => 'utf8mb4',
         ],
         'development' => [
             'adapter' => 'mysql',
-            'host' => $_ENV['DB_HOST'] ?? 'db',
-            'name' => $_ENV['DB_NAME'] ?? 'log_monitor',
-            'user' => $_ENV['DB_USER'] ?? 'user',
-            'pass' => $_ENV['DB_PASS'] ?? 'password',
-            'port' => $_ENV['DB_PORT'] ?? '3306',
+            'host' => $dbHost,
+            'name' => $dbName,
+            'user' => $dbUser,
+            'pass' => $dbPass,
+            'port' => $dbPort,
             'charset' => 'utf8mb4',
         ],
     ],

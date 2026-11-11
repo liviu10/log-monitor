@@ -1,56 +1,43 @@
-# Etapa 1: Constructor de dependinte
+# Stage 1: Dependency Builder
 FROM docker.io/library/composer:2 AS builder
+RUN apk add --no-cache git
 WORKDIR /app
+COPY . .
+RUN composer install --optimize-autoloader --no-interaction --no-scripts
 
-# Copiem configuratiile de dependinte
-COPY composer.json composer.lock* ./
-
-# Rulam update pentru a asigura actualizarea si generarea automata a lock-ului din mers
-RUN composer update --no-interaction --no-scripts --optimize-autoloader
-
-# Etapa 2: Imaginea Finala de Productie
-FROM docker.io/dunglas/frankenphp:php8.4-alpine
-
-# Instalam pachetele de sistem stricte si curatam cache-ul apk in aceeasi rulare
-RUN apk add --no-cache \
+# Stage 2: Final Production Image
+FROM docker.io/dunglas/frankenphp:1-php8.5-alpine
+RUN apk upgrade --no-cache \
+    && apk add --no-cache \
     curl \
     netcat-openbsd \
     tzdata \
     bash \
+    libcap \
     && rm -rf /var/cache/apk/*
-
-# Instalam extensiile PHP necesare
 RUN install-php-extensions gd pdo_mysql mysqli zip mbstring intl bcmath opcache
 
-# Copiem configurarile optimizate pe un singur rand (Corectat)
-COPY docker/php.ini /usr/local/etc/php/conf.d/app-optimizations.ini
 COPY docker/Caddyfile /etc/caddy/Caddyfile
-
 WORKDIR /var/www/html
-
-# Copiem codul sursa al aplicatiei
 COPY . .
-
-# Copiem folderul vendor direct din builder
 COPY --from=builder /app/vendor ./vendor
-
-# Copiem executabilul Composer din builder
-COPY --from=builder /usr/bin/composer /usr/bin/composer
-
-# Pregatirea si inregistrarea fisierului Crontab (Corectat)
-COPY docker/crontab /etc/crontabs/root
-
-# Pregatirea si mutarea lina a scriptului de Entrypoint in PATH (Corectat)
+COPY docker/php.ini /usr/local/etc/php/conf.d/app-optimizations.ini
 COPY docker/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# Setam permisiunile in mod defensiv (www-data este utilizatorul standard non-root)
-RUN chown -R www-data:www-data /var/www/html \
+# Enable low-port binding for unprivileged user and set defensive permissions
+RUN setcap cap_net_bind_service=+ep /usr/local/bin/frankenphp \
+    && mkdir -p /data/caddy /config/caddy /var/www/html/storage/logs /var/www/html/storage/reports /var/www/html/storage/backups \
+    && chown -R www-data:www-data /data/caddy /config/caddy /var/www/html \
     && chmod -R 755 /var/www/html \
-    && mkdir -p storage/logs storage/backups \
-    && chown -R www-data:www-data storage
+    && chmod -R 775 /var/www/html/storage
+
+USER www-data
 
 EXPOSE 80
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
+    CMD curl -f http://localhost:80/login.php || exit 1
 
 ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["frankenphp", "run", "--config", "/etc/caddy/Caddyfile"]

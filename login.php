@@ -13,7 +13,7 @@ $controller = new AuthController;
 try {
     match ($_SERVER['REQUEST_METHOD'] ?? '') {
         'POST' => $controller->login($_POST),
-        'GET' => match ($_GET['action'] ?? null) {
+        'GET', 'HEAD' => match ($_GET['action'] ?? null) {
             'logout' => $controller->logout(),
             null => $controller->showLogin(),
             default => throw new InvalidArgumentException(__('Unknown authentication action.')),
