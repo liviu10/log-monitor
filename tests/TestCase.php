@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests;
 
-use App\Utilities\MySQLWrapper;
+use App\Utilities\MySQL;
 use Phinx\Console\PhinxApplication;
 use PHPUnit\Framework\TestCase as BaseTestCase;
 use Symfony\Component\Console\Input\StringInput;
@@ -51,8 +51,8 @@ abstract class TestCase extends BaseTestCase
     /**
      * Helper to retrieve database connection instance.
      */
-    protected function db(): MySQLWrapper
+    protected function db(): MySQL
     {
-        return MySQLWrapper::getInstance();
+        return MySQL::getInstance();
     }
 }

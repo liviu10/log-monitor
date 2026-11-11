@@ -6,7 +6,7 @@ namespace App\Models;
 
 use App\Enums\LogLevel;
 use App\Utilities\LogViaStream;
-use App\Utilities\MySQLWrapper;
+use App\Utilities\MySQL;
 use InvalidArgumentException;
 use RuntimeException;
 
@@ -28,16 +28,17 @@ use RuntimeException;
  */
 class App
 {
+    protected MySQL $db;
+
     /**
      * Constructor for the App class.
-     * Uses Constructor Property Promotion for database dependency injection.
      *
-     * * @param MySQLWrapper $db Database wrapper instance.
+     * @param  MySQL|null  $db  Database wrapper instance.
      */
     public function __construct(
-        protected ?MySQLWrapper $db = null
+        ?MySQL $db = null
     ) {
-        $this->db = $db ?? MySQLWrapper::getInstance();
+        $this->db = $db ?? MySQL::getInstance();
     }
 
     /**
@@ -76,7 +77,7 @@ class App
                     'exception_trace' => $e->getTraceAsString(),
                     'sql_statement' => 'SELECT FROM apps WHERE api_key = ?',
                     'sql_parameters' => [$trimmedKey],
-                    'identifier' => 'MySQLWrapper_Query_Failure',
+                    'identifier' => 'MySQL_Query_Failure',
                 ]);
             }
 
@@ -107,7 +108,7 @@ class App
                     'exception_trace' => $e->getTraceAsString(),
                     'sql_statement' => 'SELECT ALL FROM apps',
                     'sql_parameters' => [],
-                    'identifier' => 'MySQLWrapper_Query_Failure',
+                    'identifier' => 'MySQL_Query_Failure',
                 ]);
             }
 
@@ -155,7 +156,7 @@ class App
                     'exception_trace' => $e->getTraceAsString(),
                     'sql_statement' => $sql,
                     'sql_parameters' => $params,
-                    'identifier' => 'MySQLWrapper_Query_Failure',
+                    'identifier' => 'MySQL_Query_Failure',
                 ]);
             }
 
@@ -195,7 +196,7 @@ class App
                     'exception_trace' => $e->getTraceAsString(),
                     'sql_statement' => $sql,
                     'sql_parameters' => array_merge($data, ['id' => $id]),
-                    'identifier' => 'MySQLWrapper_Query_Failure',
+                    'identifier' => 'MySQL_Query_Failure',
                 ]);
             }
 
@@ -236,7 +237,7 @@ class App
                     'exception_trace' => $e->getTraceAsString(),
                     'sql_statement' => $sql,
                     'sql_parameters' => $params,
-                    'identifier' => 'MySQLWrapper_Query_Failure',
+                    'identifier' => 'MySQL_Query_Failure',
                 ]);
             }
 

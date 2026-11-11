@@ -6,7 +6,7 @@ namespace App\Controllers;
 
 use App\Enums\LogLevel;
 use App\Utilities\LogViaStream;
-use App\Utilities\MySQLWrapper;
+use App\Utilities\MySQL;
 use PDO;
 
 /**
@@ -37,7 +37,7 @@ class QueueController extends BaseController
         $this->checkAuth();
 
         try {
-            $db = MySQLWrapper::getInstance();
+            $db = MySQL::getInstance();
 
             // Pagination configuration
             $rawPage = $queryParams['page'] ?? 1;
@@ -158,7 +158,7 @@ class QueueController extends BaseController
         }
 
         try {
-            $db = MySQLWrapper::getInstance();
+            $db = MySQL::getInstance();
             $db->delete('log_queue', ['id' => $id]);
             setFlash('success', __('Success'), __('Job has been deleted from queue.'));
         } catch (\Throwable $e) {
@@ -188,7 +188,7 @@ class QueueController extends BaseController
         $this->checkAuth();
 
         try {
-            $db = MySQLWrapper::getInstance();
+            $db = MySQL::getInstance();
             // Clear log_queue table transactionally via TRUNCATE
             $db->getConnection()->exec('TRUNCATE TABLE log_queue');
             setFlash('success', __('Success'), __('The queue has been completely purged.'));

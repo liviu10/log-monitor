@@ -6,7 +6,7 @@ namespace App\Models;
 
 use App\Enums\LogLevel;
 use App\Utilities\LogViaStream;
-use App\Utilities\MySQLWrapper;
+use App\Utilities\MySQL;
 use InvalidArgumentException;
 use PDO;
 use RuntimeException;
@@ -29,16 +29,17 @@ use RuntimeException;
  */
 class Log
 {
+    protected MySQL $db;
+
     /**
      * Constructor for the Log class.
-     * Property promotion for database dependency injection.
      *
-     * * @param MySQLWrapper $db Database wrapper instance.
+     * @param  MySQL|null  $db  Database wrapper instance.
      */
     public function __construct(
-        protected ?MySQLWrapper $db = null
+        ?MySQL $db = null
     ) {
-        $this->db = $db ?? MySQLWrapper::getInstance();
+        $this->db = $db ?? MySQL::getInstance();
     }
 
     /**
@@ -90,7 +91,7 @@ class Log
                     'exception_trace' => $e->getTraceAsString(),
                     'sql_statement' => $sql,
                     'sql_parameters' => $params,
-                    'identifier' => 'MySQLWrapper_Query_Failure',
+                    'identifier' => 'MySQL_Query_Failure',
                 ]);
             }
 
@@ -180,7 +181,7 @@ class Log
                     'exception_trace' => $e->getTraceAsString(),
                     'sql_statement' => $sql,
                     'sql_parameters' => $params,
-                    'identifier' => 'MySQLWrapper_Query_Failure',
+                    'identifier' => 'MySQL_Query_Failure',
                 ]);
             }
 
@@ -232,7 +233,7 @@ class Log
                     'exception_trace' => $e->getTraceAsString(),
                     'sql_statement' => $sql,
                     'sql_parameters' => $params,
-                    'identifier' => 'MySQLWrapper_Query_Failure',
+                    'identifier' => 'MySQL_Query_Failure',
                 ]);
             }
 
@@ -266,7 +267,7 @@ class Log
                     'exception_trace' => $e->getTraceAsString(),
                     'sql_statement' => $sql,
                     'sql_parameters' => $params,
-                    'identifier' => 'MySQLWrapper_Query_Failure',
+                    'identifier' => 'MySQL_Query_Failure',
                 ]);
             }
 
@@ -316,7 +317,7 @@ class Log
                     'exception_trace' => $e->getTraceAsString(),
                     'sql_statement' => $sql,
                     'sql_parameters' => $params,
-                    'identifier' => 'MySQLWrapper_Query_Failure',
+                    'identifier' => 'MySQL_Query_Failure',
                 ]);
             }
 
@@ -352,7 +353,7 @@ class Log
                     'exception_trace' => $e->getTraceAsString(),
                     'sql_statement' => $sql,
                     'sql_parameters' => $params,
-                    'identifier' => 'MySQLWrapper_Query_Failure',
+                    'identifier' => 'MySQL_Query_Failure',
                 ]);
             }
 
@@ -383,7 +384,7 @@ class Log
                     'exception_trace' => $e->getTraceAsString(),
                     'sql_statement' => $sql,
                     'sql_parameters' => [],
-                    'identifier' => 'MySQLWrapper_Query_Failure',
+                    'identifier' => 'MySQL_Query_Failure',
                 ]);
             }
 
@@ -424,7 +425,7 @@ class Log
                     'exception_trace' => $e->getTraceAsString(),
                     'sql_statement' => 'Dashboard Statistics Aggregation',
                     'sql_parameters' => [],
-                    'identifier' => 'MySQLWrapper_Query_Failure',
+                    'identifier' => 'MySQL_Query_Failure',
                 ]);
             }
 

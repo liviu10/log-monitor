@@ -8,7 +8,7 @@ use App\Enums\LogLevel;
 use App\Models\App;
 use App\Models\Log;
 use App\Utilities\LogViaStream;
-use App\Utilities\Validation;
+use App\Utilities\Validator;
 
 /**
  * LogController Class
@@ -157,26 +157,18 @@ class LogController extends BaseController
             $this->jsonResponse(['error' => 'Invalid JSON structure format'], 400);
         }
 
-        $validator = new Validation([
+        $validator = new Validator($payload, [
+            'level' => 'required|string|in:'.implode(',', LogLevel::all()),
+            'message' => 'required|string',
+            'context' => 'array',
+        ], labels: [
             'level' => __('Log level'),
             'message' => __('Message'),
             'context' => __('Context'),
         ]);
 
-        $errors = $validator->validate([
-            'level' => ['required', 'string', 'in:'.implode(',', LogLevel::all())],
-            'message' => ['required', 'string'],
-            'context' => ['array'],
-        ], $payload);
-
-        if (! empty($errors)) {
-            $errorMessages = [];
-            foreach ($errors as $field => $rules) {
-                foreach ($rules as $rule) {
-                    $errorMessages[] = $validator->messages((string) $field, $rule);
-                }
-            }
-            $this->jsonResponse(['errors' => $errorMessages], 422);
+        if ($validator->fails()) {
+            $this->jsonResponse(['errors' => array_values($validator->errors())], 422);
         }
 
         // 5. Record log in database and send automatic alerts

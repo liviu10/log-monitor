@@ -7,7 +7,7 @@ namespace App\Controllers;
 use App\Enums\LogLevel;
 use App\Models\App;
 use App\Utilities\LogViaStream;
-use App\Utilities\Validation;
+use App\Utilities\Validator;
 
 /**
  * AppController Class
@@ -53,14 +53,12 @@ class AppController extends BaseController
         $this->checkAuth();
 
         $payload = $postData;
-        $validator = new Validation(['name' => __('Application name')]);
+        $validator = new Validator($payload, [
+            'name' => 'required|string|min:3',
+        ], labels: ['name' => __('Application name')]);
 
-        $errors = $validator->validate([
-            'name' => ['required', 'string', 'min:3'],
-        ], $payload);
-
-        if (! empty($errors)) {
-            $_SESSION['errors'] = $errors;
+        if ($validator->fails()) {
+            $_SESSION['errors'] = $validator->errors();
             $this->redirect('apps.php');
         }
 
@@ -120,14 +118,12 @@ class AppController extends BaseController
             }
 
             $payload = $postData;
-            $validator = new Validation(['name' => __('Application name')]);
+            $validator = new Validator($payload, [
+                'name' => 'required|string|min:3',
+            ], labels: ['name' => __('Application name')]);
 
-            $errors = $validator->validate([
-                'name' => ['required', 'string', 'min:3'],
-            ], $payload);
-
-            if (! empty($errors)) {
-                $_SESSION['errors'] = $errors;
+            if ($validator->fails()) {
+                $_SESSION['errors'] = $validator->errors();
                 $this->redirect('apps.php');
             }
 

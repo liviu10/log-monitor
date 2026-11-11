@@ -6,7 +6,7 @@ namespace App\Models;
 
 use App\Enums\LogLevel;
 use App\Utilities\LogViaStream;
-use App\Utilities\MySQLWrapper;
+use App\Utilities\MySQL;
 use InvalidArgumentException;
 use RuntimeException;
 
@@ -30,16 +30,17 @@ class AppSetting
     /** @var array<int, array{data: array<int, array<string, mixed>>, cached_at: int}> Static in-memory settings cache, useful for the daemon worker */
     protected static array $settingsCache = [];
 
+    protected MySQL $db;
+
     /**
      * Constructor for the AppSetting class.
-     * Dependency injection via Constructor Property Promotion.
      *
-     * * @param MySQLWrapper $db Database wrapper instance.
+     * @param  MySQL|null  $db  Database wrapper instance.
      */
     public function __construct(
-        protected ?MySQLWrapper $db = null
+        ?MySQL $db = null
     ) {
-        $this->db = $db ?? MySQLWrapper::getInstance();
+        $this->db = $db ?? MySQL::getInstance();
     }
 
     /**
@@ -82,7 +83,7 @@ class AppSetting
                     'exception_trace' => $e->getTraceAsString(),
                     'sql_statement' => 'SELECT FROM app_settings WHERE app_id = ?',
                     'sql_parameters' => ['app_id' => $appId],
-                    'identifier' => 'MySQLWrapper_Query_Failure',
+                    'identifier' => 'MySQL_Query_Failure',
                 ]);
             }
 
@@ -128,7 +129,7 @@ class AppSetting
                     'exception_trace' => $e->getTraceAsString(),
                     'sql_statement' => 'SELECT FROM app_settings WHERE app_id = ? AND key = ?',
                     'sql_parameters' => ['app_id' => $appId, 'key' => $trimmedKey],
-                    'identifier' => 'MySQLWrapper_Query_Failure',
+                    'identifier' => 'MySQL_Query_Failure',
                 ]);
             }
 
@@ -184,7 +185,7 @@ class AppSetting
                         'exception_trace' => $e->getTraceAsString(),
                         'sql_statement' => $sql,
                         'sql_parameters' => $params,
-                        'identifier' => 'MySQLWrapper_Query_Failure',
+                        'identifier' => 'MySQL_Query_Failure',
                     ]);
                 }
 
@@ -215,7 +216,7 @@ class AppSetting
                         'exception_trace' => $e->getTraceAsString(),
                         'sql_statement' => $sql,
                         'sql_parameters' => $params,
-                        'identifier' => 'MySQLWrapper_Query_Failure',
+                        'identifier' => 'MySQL_Query_Failure',
                     ]);
                 }
 
@@ -282,7 +283,7 @@ class AppSetting
                     'exception_trace' => $e->getTraceAsString(),
                     'sql_statement' => $sql,
                     'sql_parameters' => $params,
-                    'identifier' => 'MySQLWrapper_Query_Failure',
+                    'identifier' => 'MySQL_Query_Failure',
                 ]);
             }
 
@@ -329,7 +330,7 @@ class AppSetting
                     'exception_trace' => $e->getTraceAsString(),
                     'sql_statement' => $sql,
                     'sql_parameters' => $params,
-                    'identifier' => 'MySQLWrapper_Query_Failure',
+                    'identifier' => 'MySQL_Query_Failure',
                 ]);
             }
 

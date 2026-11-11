@@ -8,7 +8,7 @@ use App\Enums\LogLevel;
 use App\Models\User;
 use App\Utilities\LogViaStream;
 use App\Utilities\RateLimiter;
-use App\Utilities\Validation;
+use App\Utilities\Validator;
 
 /**
  * AuthController Class
@@ -65,18 +65,16 @@ class AuthController extends BaseController
 
         $payload = $data;
 
-        $validator = new Validation([
+        $validator = new Validator($payload, [
+            'username' => 'required|string',
+            'password' => 'required|string',
+        ], labels: [
             'username' => __('Username'),
             'password' => __('Password'),
         ]);
 
-        $errors = $validator->validate([
-            'username' => ['required', 'string'],
-            'password' => ['required', 'string'],
-        ], $payload);
-
-        if (! empty($errors)) {
-            $_SESSION['errors'] = $errors;
+        if ($validator->fails()) {
+            $_SESSION['errors'] = $validator->errors();
             $this->redirect('login.php');
         }
 

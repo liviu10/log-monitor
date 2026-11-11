@@ -281,15 +281,15 @@
                 <!-- Pagination & Page Size controls -->
                 <?php
                     $currentPage = (int) ($page ?? 1);
-                    $range = 2; // Range of pages to show around the current page
-                    $startPage = max(1, $currentPage - $range);
-                    $endPage = min($totalPages ?? 1, $currentPage + $range);
-                    $limitOptions = [10, 25, 50, 100];
-                    $paginationParams = array_merge(array_filter($filters ?? []), [
-                        'sort_by' => $sortBy ?? 'id',
-                        'sort_dir' => $sortDir ?? 'DESC',
-                    ]);
-                ?>
+$range = 2; // Range of pages to show around the current page
+$startPage = max(1, $currentPage - $range);
+$endPage = min($totalPages ?? 1, $currentPage + $range);
+$limitOptions = [10, 25, 50, 100];
+$paginationParams = array_merge(array_filter($filters ?? []), [
+    'sort_by' => $sortBy ?? 'id',
+    'sort_dir' => $sortDir ?? 'DESC',
+]);
+?>
                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mt-4">
                     <!-- Page Size Selector -->
                     <div class="d-flex align-items-center gap-2">
@@ -297,10 +297,10 @@
                         <select class="form-select form-select-sm bg-dark border-secondary border-opacity-25 text-light" style="width: auto; cursor: pointer;" @change="window.location.href = $event.target.value">
                             <?php foreach ($limitOptions as $l) { ?>
                                 <?php
-                    $urlParams = array_merge($paginationParams, [
-                        'page' => 1,
-                        'limit' => $l,
-                    ]);
+    $urlParams = array_merge($paginationParams, [
+        'page' => 1,
+        'limit' => $l,
+    ]);
                                 $url = '?'.http_build_query($urlParams);
                                 ?>
                                 <option value="<?= htmlspecialchars($url) ?>" <?= ($limit === $l) ? 'selected' : '' ?>>

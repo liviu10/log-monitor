@@ -7,7 +7,7 @@ namespace App\Controllers;
 use App\Enums\LogLevel;
 use App\Models\User;
 use App\Utilities\LogViaStream;
-use App\Utilities\Validation;
+use App\Utilities\Validator;
 
 /**
  * UserController Class
@@ -35,7 +35,7 @@ class UserController extends BaseController
         $this->checkAuth();
 
         try {
-            $userModel = new User();
+            $userModel = new User;
             $users = $userModel->getAll();
 
             $this->render('users/index', [
@@ -69,18 +69,17 @@ class UserController extends BaseController
         $this->checkAuth();
 
         $payload = $data;
-        $validator = new Validation([
+
+        $validator = new Validator($payload, [
+            'username' => 'required|string|min:3|max:50',
+            'password' => 'required|string|min:6',
+        ], labels: [
             'username' => __('Username'),
             'password' => __('Password'),
         ]);
 
-        $errors = $validator->validate([
-            'username' => ['required', 'string', 'min:3', 'max:50'],
-            'password' => ['required', 'string', 'min:6'],
-        ], $payload);
-
-        if (! empty($errors)) {
-            $_SESSION['errors'] = $errors;
+        if ($validator->fails()) {
+            $_SESSION['errors'] = $validator->errors();
             $this->redirect('users.php');
         }
 
@@ -141,7 +140,7 @@ class UserController extends BaseController
             }
 
             try {
-                $userModel = new User();
+                $userModel = new User;
                 $userModel->delete($userId);
                 setFlash('success', __('Success'), __('User deleted successfully.'));
             } catch (\Throwable $e) {

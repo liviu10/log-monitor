@@ -72,7 +72,7 @@ try {
                 'cutoff_date' => $cutoffDate,
                 'backup_file_path' => $backupPath,
             ],
-            'identifier' => 'MySQLWrapper_Query_Failure',
+            'identifier' => 'MySQL_Query_Failure',
         ]);
     }
 

@@ -6,7 +6,7 @@ namespace App\Models;
 
 use App\Enums\LogLevel;
 use App\Utilities\LogViaStream;
-use App\Utilities\MySQLWrapper;
+use App\Utilities\MySQL;
 use InvalidArgumentException;
 use RuntimeException;
 
@@ -28,16 +28,17 @@ use RuntimeException;
  */
 class User
 {
+    protected MySQL $db;
+
     /**
      * Constructor for the User class.
-     * Uses Constructor Property Promotion for database dependency injection.
      *
-     * * @param MySQLWrapper $db Injected database wrapper.
+     * @param  MySQL|null  $db  Injected database wrapper.
      */
     public function __construct(
-        protected ?MySQLWrapper $db = null
+        ?MySQL $db = null
     ) {
-        $this->db = $db ?? MySQLWrapper::getInstance();
+        $this->db = $db ?? MySQL::getInstance();
     }
 
     /**
@@ -75,7 +76,7 @@ class User
                     'exception_trace' => $e->getTraceAsString(),
                     'sql_statement' => 'SELECT FROM users WHERE username = ?',
                     'sql_parameters' => ['username' => $trimmedUsername],
-                    'identifier' => 'MySQLWrapper_Query_Failure',
+                    'identifier' => 'MySQL_Query_Failure',
                 ]);
             }
 
@@ -128,7 +129,7 @@ class User
                     'exception_trace' => $e->getTraceAsString(),
                     'sql_statement' => $sql,
                     'sql_parameters' => $params,
-                    'identifier' => 'MySQLWrapper_Query_Failure',
+                    'identifier' => 'MySQL_Query_Failure',
                 ]);
             }
 
@@ -139,7 +140,7 @@ class User
     /**
      * Retrieves all administrator users.
      *
-     * @return array
+     * @return array<int, array<string, mixed>>
      */
     public function getAll(): array
     {
@@ -156,7 +157,7 @@ class User
                     'exception_trace' => $e->getTraceAsString(),
                     'sql_statement' => 'SELECT ALL FROM users',
                     'sql_parameters' => [],
-                    'identifier' => 'MySQLWrapper_Query_Failure',
+                    'identifier' => 'MySQL_Query_Failure',
                 ]);
             }
             throw new RuntimeException(__('Database error retrieving users list'), 0, $e);
@@ -166,14 +167,14 @@ class User
     /**
      * Deletes a user by ID.
      *
-     * @param int $id User ID to delete.
+     * @param  int  $id  User ID to delete.
      * @return int Number of affected rows.
      */
     public function delete(int $id): int
     {
         $params = ['id' => $id];
         try {
-            return (int)$this->db->delete('users', $params);
+            return (int) $this->db->delete('users', $params);
         } catch (\Throwable $e) {
             if (class_exists('App\Utilities\LogViaStream')) {
                 LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
@@ -185,7 +186,7 @@ class User
                     'exception_trace' => $e->getTraceAsString(),
                     'sql_statement' => 'DELETE FROM users WHERE id = ?',
                     'sql_parameters' => $params,
-                    'identifier' => 'MySQLWrapper_Query_Failure',
+                    'identifier' => 'MySQL_Query_Failure',
                 ]);
             }
             throw new RuntimeException(__('Database error deleting user'), 0, $e);

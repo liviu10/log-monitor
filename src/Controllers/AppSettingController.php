@@ -7,7 +7,7 @@ namespace App\Controllers;
 use App\Enums\LogLevel;
 use App\Models\AppSetting;
 use App\Utilities\LogViaStream;
-use App\Utilities\Validation;
+use App\Utilities\Validator;
 
 /**
  * AppSettingController Class
@@ -127,28 +127,20 @@ class AppSettingController extends BaseController
             ]);
         }
 
-        $validator = new Validation([
+        $validator = new Validator($postData, [
+            'app_id' => 'required|int',
+            'key' => 'required|string|min:1|max:255|regex:/^[a-zA-Z0-9_\-\.]+$/',
+            'value' => 'required|string',
+        ], labels: [
             'app_id' => __('Application ID'),
             'key' => __('Setting key'),
             'value' => __('Setting value'),
         ]);
 
-        $errors = $validator->validate([
-            'app_id' => ['required', 'int'],
-            'key' => ['required', 'string', 'min:1', 'max:255', 'regex:/^[a-zA-Z0-9_\-\.]+$/'],
-            'value' => ['required', 'string'],
-        ], $postData);
-
-        if (! empty($errors)) {
-            $messages = [];
-            foreach ($errors as $field => $errs) {
-                foreach ($errs as $err) {
-                    $messages[] = $validator->messages((string) $field, $err);
-                }
-            }
+        if ($validator->fails()) {
             $this->jsonResponse([
                 'success' => false,
-                'message' => implode(' ', $messages),
+                'message' => implode(' ', array_values($validator->errors())),
             ], 422);
         }
 
@@ -276,30 +268,22 @@ class AppSettingController extends BaseController
             ]);
         }
 
-        $validator = new Validation([
+        $validator = new Validator($postData, [
+            'app_id' => 'required|int',
+            'key' => 'required|string|min:1|max:255|regex:/^[a-zA-Z0-9_\-\.]+$/',
+            'value' => 'required|string',
+            'old_key' => 'required|string',
+        ], labels: [
             'app_id' => __('Application ID'),
             'key' => __('Setting key'),
             'value' => __('Setting value'),
             'old_key' => __('Original setting key'),
         ]);
 
-        $errors = $validator->validate([
-            'app_id' => ['required', 'int'],
-            'key' => ['required', 'string', 'min:1', 'max:255', 'regex:/^[a-zA-Z0-9_\-\.]+$/'],
-            'value' => ['required', 'string'],
-            'old_key' => ['required', 'string'],
-        ], $postData);
-
-        if (! empty($errors)) {
-            $messages = [];
-            foreach ($errors as $field => $errs) {
-                foreach ($errs as $err) {
-                    $messages[] = $validator->messages((string) $field, $err);
-                }
-            }
+        if ($validator->fails()) {
             $this->jsonResponse([
                 'success' => false,
-                'message' => implode(' ', $messages),
+                'message' => implode(' ', array_values($validator->errors())),
             ], 422);
         }
 

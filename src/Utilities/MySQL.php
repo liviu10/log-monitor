@@ -77,6 +77,9 @@ final class MySQL
     /** @var int Maximum SQL length included in error messages. */
     private const int MAX_SQL_IN_MESSAGE = 500;
 
+    /** @var self|null Singleton instance of the class. */
+    private static ?self $instance = null;
+
     private ?PDO $pdo = null;
 
     /** @var (Closure(string, array<array-key, mixed>, float): void)|null */
@@ -113,6 +116,119 @@ final class MySQL
         if ($port < 1 || $port > 65535 || $timeout < 1) {
             throw new InvalidArgumentException("MySQL::__construct(): invalid port ({$port}) or timeout ({$timeout}).");
         }
+    }
+
+    /**
+     * Returns a singleton instance built from application environment variables.
+     */
+    public static function getInstance(): self
+    {
+        if (self::$instance === null) {
+            $hostVal = $_ENV['DB_HOST'] ?? null;
+            $host = is_string($hostVal) && $hostVal !== '' ? $hostVal : '127.0.0.1';
+
+            $dbVal = $_ENV['DB_NAME'] ?? null;
+            $database = is_string($dbVal) && $dbVal !== '' ? $dbVal : 'log_monitor';
+
+            $userVal = $_ENV['DB_USER'] ?? null;
+            $username = is_string($userVal) && $userVal !== '' ? $userVal : 'root';
+
+            $passVal = $_ENV['DB_PASS'] ?? null;
+            $password = is_string($passVal) ? $passVal : '';
+
+            $portVal = $_ENV['DB_PORT'] ?? null;
+            $port = is_numeric($portVal) ? (int) $portVal : 3306;
+
+            $charsetVal = $_ENV['DB_CHARSET'] ?? null;
+            $charset = is_string($charsetVal) && $charsetVal !== '' ? $charsetVal : 'utf8mb4';
+
+            self::$instance = new self(
+                host: $host,
+                database: $database,
+                username: $username,
+                password: $password,
+                port: $port,
+                charset: $charset,
+            );
+        }
+
+        return self::$instance;
+    }
+
+    /**
+     * Overrides or clears the singleton instance (useful in tests or reconfiguration).
+     */
+    public static function setInstance(?self $instance): void
+    {
+        self::$instance = $instance;
+    }
+
+    /**
+     * Returns the underlying active PDO connection object.
+     */
+    public function getConnection(): PDO
+    {
+        return $this->pdo('getConnection');
+    }
+
+    /**
+     * Executes a raw parameterized query and returns the PDOStatement.
+     *
+     * @param  array<array-key, mixed>  $params
+     *
+     * @throws InvalidArgumentException If parameters are invalid.
+     * @throws RuntimeException If the query fails.
+     */
+    public function query(string $sql, array $params = []): PDOStatement
+    {
+        return $this->run('query', $sql, $params);
+    }
+
+    /**
+     * Inserts a record into the table and returns the generated primary key.
+     *
+     * @param  array<string, mixed>  $data
+     *
+     * @throws InvalidArgumentException If table name, columns, or values are invalid.
+     * @throws RuntimeException If the insert fails.
+     */
+    public function create(string $table, array $data): int|string
+    {
+        return $this->insertGetId($table, $data);
+    }
+
+    /**
+     * Reads records matching conditions.
+     *
+     * @param  string  $table  Table name.
+     * @param  array<string, mixed>  $conditions  Filtering conditions.
+     * @param  array<int, string>  $columns  Selected column names.
+     * @param  string  $logic  Logical operator between conditions (AND/OR).
+     * @return array<int, array<string, mixed>>
+     *
+     * @throws InvalidArgumentException If table or conditions are invalid.
+     * @throws RuntimeException If query fails.
+     */
+    public function read(string $table, array $conditions = [], array $columns = ['*'], string $logic = 'AND'): array
+    {
+        $escapedSelectColumns = array_map(fn (string $col) => $col === '*' ? '*' : $this->quoteIdentifier($col), $columns);
+        $sql = 'SELECT '.implode(', ', $escapedSelectColumns).' FROM '.$this->quoteIdentifier($table);
+        $params = [];
+
+        if (! empty($conditions)) {
+            $clauses = [];
+            foreach ($conditions as $key => $value) {
+                $clauses[] = $this->quoteIdentifier((string) $key).' = ?';
+                $params[] = $value;
+            }
+            $operator = strtoupper(trim($logic)) === 'OR' ? ' OR ' : ' AND ';
+            $sql .= ' WHERE '.implode($operator, $clauses);
+        }
+
+        /** @var array<int, array<string, mixed>> $results */
+        $results = $this->fetchAll($sql, $params);
+
+        return $results;
     }
 
     /**
@@ -368,11 +484,12 @@ final class MySQL
      *
      * @param  array<string, mixed>  $data  ['column' => new value]
      * @param  array<string, mixed>  $where  ['column' => value]; null -> IS NULL; list -> IN (...).
+     * @param  string  $logic  Logical operator between conditions (AND/OR).
      *
      * @throws InvalidArgumentException If table name, columns, or values are invalid, or if $where is empty.
      * @throws RuntimeException If the update fails.
      */
-    public function update(string $table, array $data, array $where): int
+    public function update(string $table, array $data, array $where, string $logic = 'AND'): int
     {
         if ($data === []) {
             throw new InvalidArgumentException('MySQL::update(): data must not be empty.');
@@ -385,7 +502,7 @@ final class MySQL
             $params[] = self::scalar('update', $value, "column '{$column}'");
         }
 
-        [$condition, $whereParams] = $this->whereSql('update', $where);
+        [$condition, $whereParams] = $this->whereSql('update', $where, $logic);
         $sql = 'UPDATE '.$this->quote('update', $table).' SET '.implode(', ', $set).' WHERE '.$condition;
 
         return $this->run('update', $sql, [...$params, ...$whereParams])->rowCount();
@@ -395,13 +512,14 @@ final class MySQL
      * Deletes rows matching required conditions (refuses unqualified deletes). Returns the number of deleted rows.
      *
      * @param  array<string, mixed>  $where  ['column' => value]; null -> IS NULL; list -> IN (...).
+     * @param  string  $logic  Logical operator between conditions (AND/OR).
      *
      * @throws InvalidArgumentException If table name or conditions are invalid, or if $where is empty.
      * @throws RuntimeException If the delete fails.
      */
-    public function delete(string $table, array $where): int
+    public function delete(string $table, array $where, string $logic = 'AND'): int
     {
-        [$condition, $params] = $this->whereSql('delete', $where);
+        [$condition, $params] = $this->whereSql('delete', $where, $logic);
 
         return $this->run('delete', 'DELETE FROM '.$this->quote('delete', $table).' WHERE '.$condition, $params)->rowCount();
     }
@@ -735,14 +853,15 @@ final class MySQL
     }
 
     /**
-     * Builds WHERE conditions from an associative array joined by AND.
+     * Builds WHERE conditions from an associative array joined by logic operator (AND/OR).
      *
      * @param  array<string, mixed>  $where
+     * @param  string  $logic  Logical operator (AND/OR).
      * @return array{0: string, 1: list<int|float|string|null>}
      *
      * @throws InvalidArgumentException If $where is empty or contains invalid columns/values.
      */
-    private function whereSql(string $method, array $where): array
+    private function whereSql(string $method, array $where, string $logic = 'AND'): array
     {
         if ($where === []) {
             throw new InvalidArgumentException("MySQL::{$method}(): conditions must not be empty (refusing to affect the whole table).");
@@ -765,7 +884,9 @@ final class MySQL
             }
         }
 
-        return [implode(' AND ', $conditions), $params];
+        $operator = strtoupper(trim($logic)) === 'OR' ? ' OR ' : ' AND ';
+
+        return [implode($operator, $conditions), $params];
     }
 
     /**

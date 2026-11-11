@@ -7,7 +7,7 @@ namespace App\Controllers;
 use App\Enums\LogLevel;
 use App\Utilities\Cache;
 use App\Utilities\LogViaStream;
-use App\Utilities\MySQLWrapper;
+use App\Utilities\MySQL;
 use PDO;
 
 /**
@@ -36,7 +36,7 @@ class DashboardController extends BaseController
         $this->checkAuth();
 
         try {
-            $db = MySQLWrapper::getInstance();
+            $db = MySQL::getInstance();
 
             $cacheDir = dirname(__DIR__, 2).'/storage/framework/cache';
             if (! is_dir($cacheDir)) {

@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use App\Utilities\MySQLWrapper;
+use App\Models\App;
+use App\Utilities\MySQL;
 use Tests\TestCase;
 
 /**
@@ -14,7 +15,7 @@ class BenchmarkTest extends TestCase
 {
     public function test_performance_benchmark(): void
     {
-        $appModel = new \App\Models\App;
+        $appModel = new App;
         $appId = $appModel->create('Benchmark App', 'benchmark-key-xyz');
 
         // 1. Queue Ingestion Benchmark (insert 50,000 items into log_queue)
@@ -25,7 +26,7 @@ class BenchmarkTest extends TestCase
             'context' => ['user_id' => rand(1, 1000), 'status' => 'active', 'gateway' => 'podman-rootless'],
         ]);
 
-        $db = MySQLWrapper::getInstance();
+        $db = MySQL::getInstance();
         $pdo = $db->getConnection();
 
         // Clear existing logs & queue
@@ -54,7 +55,7 @@ class BenchmarkTest extends TestCase
 
         $ingestDuration = microtime(true) - $startTime;
         $ingestRate = $numLogs / $ingestDuration;
-        echo "[Benchmark] Ingestie finalizata in " . round($ingestDuration, 2) . " secunde (Rata: " . round($ingestRate, 1) . " loguri/s).\n";
+        echo '[Benchmark] Ingestie finalizata in '.round($ingestDuration, 2).' secunde (Rata: '.round($ingestRate, 1)." loguri/s).\n";
 
         // 2. Queue Processing Benchmark (Worker simulation)
         echo "[Benchmark] Procesare: se proceseaza coada de {$numLogs} loguri...\n";
@@ -70,7 +71,7 @@ class BenchmarkTest extends TestCase
             $stmt = $db->query("SELECT id, app_id, payload_raw FROM log_queue ORDER BY id ASC LIMIT {$workerChunkSize} FOR UPDATE SKIP LOCKED");
             $jobs = $stmt->fetchAll();
 
-            if (!$jobs) {
+            if (! $jobs) {
                 $pdo->commit();
                 break;
             }
@@ -95,7 +96,7 @@ class BenchmarkTest extends TestCase
             }
 
             // Bulk insert into logs
-            $sql = 'INSERT INTO logs (app_id, level, message, context) VALUES ' . implode(', ', $placeholders);
+            $sql = 'INSERT INTO logs (app_id, level, message, context) VALUES '.implode(', ', $placeholders);
             $stmt = $pdo->prepare($sql);
             $stmt->execute($insertValues);
 
@@ -110,7 +111,7 @@ class BenchmarkTest extends TestCase
 
         $processDuration = microtime(true) - $startTime;
         $processRate = $numLogs / $processDuration;
-        echo "[Benchmark] Procesare finalizata in " . round($processDuration, 2) . " secunde (Rata: " . round($processRate, 1) . " loguri/s).\n";
+        echo '[Benchmark] Procesare finalizata in '.round($processDuration, 2).' secunde (Rata: '.round($processRate, 1)." loguri/s).\n";
 
         $this->assertEquals($numLogs, $processed);
     }

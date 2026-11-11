@@ -10,7 +10,7 @@ require_once dirname(__DIR__).'/bootstrap.php';
 
 use App\Enums\LogLevel;
 use App\Utilities\LogViaStream;
-use App\Utilities\MySQLWrapper;
+use App\Utilities\MySQL;
 
 // Determine if we are running in the context of a FrankenPHP worker
 $isFrankenPhpWorker = function_exists('frankenphp_handle_request');
@@ -71,7 +71,7 @@ $handler = function () {
 
     // Internal validation: find application ID directly from the database
     try {
-        $db = MySQLWrapper::getInstance();
+        $db = MySQL::getInstance();
         $stmt = $db->query('SELECT id FROM apps WHERE api_key = ? LIMIT 1', [$apiKeyStr]);
         $app = $stmt->fetch();
 

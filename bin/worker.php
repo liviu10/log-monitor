@@ -13,7 +13,7 @@ use App\Enums\LogLevel;
 use App\Models\Log;
 use App\Utilities\Json;
 use App\Utilities\LogViaStream;
-use App\Utilities\MySQLWrapper;
+use App\Utilities\MySQL;
 
 /**
  * Recursively sanitizes the context array to mask confidential/sensitive data.
@@ -79,7 +79,7 @@ while (true) {
     }
 
     try {
-        $db = MySQLWrapper::getInstance();
+        $db = MySQL::getInstance();
         $pdo = $db->getConnection();
 
         // Initiate a local transaction to guarantee atomic deletion and row locking
