@@ -114,36 +114,37 @@
                 <!-- Charts & Analytics Section -->
                 <div class="card border-0 shadow-sm mb-4" x-data="dashboardAnalytics(<?= htmlspecialchars(json_encode($chartData), ENT_QUOTES, 'UTF-8') ?>)" x-init="initCharts()">
                     <div class="card-header bg-transparent border-secondary border-opacity-10 p-3 p-lg-4">
-                        <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3">
-                            <div>
+                        <div class="d-flex flex-column flex-xl-row align-items-start align-items-xl-center justify-content-between gap-3 w-100">
+                            <!-- Left: Title, Badge and Subtitle -->
+                            <div class="d-flex flex-column flex-sm-row align-items-start align-items-sm-center gap-2 gap-sm-3 flex-wrap">
                                 <div class="d-flex align-items-center gap-2">
                                     <i class="fas fa-chart-line text-info fs-5"></i>
-                                    <h3 class="h6 mb-0 text-light fw-bold text-uppercase tracking-wider"><?= __('Charts & Analytics') ?></h3>
-                                    <span class="badge bg-dark border border-secondary border-opacity-25 text-secondary font-monospace small px-2 py-1" x-text="rangeLabel"></span>
+                                    <h3 class="h6 mb-0 text-light fw-bold text-uppercase tracking-wider text-nowrap"><?= __('Charts & Analytics') ?></h3>
                                 </div>
-                                <p class="text-secondary small mb-0 mt-1"><?= __('Analytics Overview') ?></p>
+                                <span class="badge bg-dark border border-secondary border-opacity-25 text-secondary font-monospace small px-2.5 py-1 text-nowrap" x-text="rangeLabel"></span>
+                                <span class="text-secondary small d-none d-md-inline opacity-75">• <?= __('Analytics Overview') ?></span>
                             </div>
 
-                            <!-- Filter Controls -->
-                            <div class="d-flex flex-wrap align-items-center gap-2 w-100 w-md-auto">
+                            <!-- Right: Filter Controls -->
+                            <div class="d-flex align-items-center gap-2 ms-xl-auto flex-wrap">
                                 <div class="btn-group btn-group-sm bg-dark p-1 rounded-3 border border-secondary border-opacity-25 shadow-sm">
-                                    <button type="button" class="btn px-3 rounded-2 fw-medium transition-all"
-                                            :class="period === 'day' ? 'btn-info text-white shadow-sm' : 'text-secondary'"
+                                    <button type="button" class="btn px-3 rounded-2 fw-medium text-nowrap transition-all"
+                                            :class="period === 'day' ? 'btn-info text-white shadow-sm' : 'text-secondary hover-text-light'"
                                             @click="selectPeriod('day')" :disabled="loading">
                                         <i class="far fa-clock me-1"></i> <?= __('Day (24h)') ?>
                                     </button>
-                                    <button type="button" class="btn px-3 rounded-2 fw-medium transition-all"
-                                            :class="period === 'month' ? 'btn-info text-white shadow-sm' : 'text-secondary'"
+                                    <button type="button" class="btn px-3 rounded-2 fw-medium text-nowrap transition-all"
+                                            :class="period === 'month' ? 'btn-info text-white shadow-sm' : 'text-secondary hover-text-light'"
                                             @click="selectPeriod('month')" :disabled="loading">
                                         <i class="far fa-calendar-alt me-1"></i> <?= __('Month (30d)') ?>
                                     </button>
-                                    <button type="button" class="btn px-3 rounded-2 fw-medium transition-all"
-                                            :class="period === 'year' ? 'btn-info text-white shadow-sm' : 'text-secondary'"
+                                    <button type="button" class="btn px-3 rounded-2 fw-medium text-nowrap transition-all"
+                                            :class="period === 'year' ? 'btn-info text-white shadow-sm' : 'text-secondary hover-text-light'"
                                             @click="selectPeriod('year')" :disabled="loading">
                                         <i class="fas fa-calendar me-1"></i> <?= __('Year (12m)') ?>
                                     </button>
-                                    <button type="button" class="btn px-3 rounded-2 fw-medium transition-all"
-                                            :class="period === 'custom' ? 'btn-info text-white shadow-sm' : 'text-secondary'"
+                                    <button type="button" class="btn px-3 rounded-2 fw-medium text-nowrap transition-all"
+                                            :class="period === 'custom' ? 'btn-info text-white shadow-sm' : 'text-secondary hover-text-light'"
                                             @click="selectPeriod('custom')" :disabled="loading">
                                         <i class="fas fa-sliders-h me-1"></i> <?= __('Custom') ?>
                                     </button>
@@ -157,8 +158,8 @@
                         </div>
 
                         <!-- Custom Date Range Form -->
-                        <div x-show="period === 'custom'" x-transition class="mt-3 pt-3 border-top border-secondary border-opacity-10">
-                            <form @submit.prevent="applyCustomRange()" class="row g-2 align-items-center">
+                        <div x-show="period === 'custom'" x-transition class="mt-3 pt-3 border-top border-secondary border-opacity-10 w-100">
+                            <form @submit.prevent="applyCustomRange()" class="row g-2 align-items-center justify-content-end">
                                 <div class="col-12 col-sm-auto d-flex align-items-center gap-2">
                                     <label class="text-secondary small fw-medium text-nowrap"><?= __('From') ?>:</label>
                                     <input type="date" x-model="customStart" class="form-control form-control-sm bg-dark border-secondary border-opacity-25 text-light" required>
@@ -168,7 +169,7 @@
                                     <input type="date" x-model="customEnd" class="form-control form-control-sm bg-dark border-secondary border-opacity-25 text-light" required>
                                 </div>
                                 <div class="col-12 col-sm-auto">
-                                    <button type="submit" class="btn btn-sm btn-info text-white px-3 fw-bold" :disabled="loading">
+                                    <button type="submit" class="btn btn-sm btn-info text-white px-3 fw-bold text-nowrap" :disabled="loading">
                                         <i class="fas fa-filter me-1"></i> <?= __('Apply') ?>
                                     </button>
                                 </div>
@@ -206,7 +207,7 @@
                                     </div>
                                     <div class="flex-grow-1 position-relative d-flex align-items-center justify-content-center" style="min-height: 260px;">
                                         <canvas id="chartSeverityBreakdown"></canvas>
-                                        <div x-show="severityEmpty" class="position-absolute text-center text-secondary small">
+                                        <div x-show="severityEmpty" class="position-absolute text-center text-secondary small px-3">
                                             <i class="fas fa-info-circle mb-1 opacity-50 fs-5 d-block"></i>
                                             <?= __('No log data available for this timeframe.') ?>
                                         </div>
@@ -222,11 +223,13 @@
                                             <i class="fas fa-chart-bar text-primary"></i> <?= __('Logs by Application') ?>
                                         </span>
                                     </div>
-                                    <div class="position-relative" style="min-height: 220px; max-height: 320px;">
-                                        <canvas id="chartAppsDistribution"></canvas>
-                                        <div x-show="appsEmpty" class="text-center text-secondary small py-5">
-                                            <i class="fas fa-inbox mb-2 opacity-50 fs-4 d-block"></i>
-                                            <?= __('No log data available for this timeframe.') ?>
+                                    <div class="position-relative d-flex align-items-center justify-content-center" style="min-height: 220px; max-height: 320px;">
+                                        <div x-show="!appsEmpty" class="w-100 h-100">
+                                            <canvas id="chartAppsDistribution"></canvas>
+                                        </div>
+                                        <div x-show="appsEmpty" class="position-absolute text-center text-secondary small p-4">
+                                            <i class="fas fa-inbox mb-2 opacity-50 fs-2 d-block"></i>
+                                            <span><?= __('No log data available for this timeframe.') ?></span>
                                         </div>
                                     </div>
                                 </div>
@@ -745,6 +748,9 @@ function dashboardAnalytics(initialData) {
             this.appsChart.data.labels = data.labels;
             this.appsChart.data.datasets[0].data = data.data;
             this.appsChart.update();
+            this.$nextTick(() => {
+                if (this.appsChart) this.appsChart.resize();
+            });
         }
     };
 }
