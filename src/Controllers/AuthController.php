@@ -7,6 +7,7 @@ namespace App\Controllers;
 use App\Enums\LogLevel;
 use App\Models\User;
 use App\Utilities\LogViaStream;
+use App\Utilities\RateLimiter;
 use App\Utilities\Validation;
 
 /**
@@ -47,6 +48,21 @@ class AuthController extends BaseController
      */
     public function login(array $data): never
     {
+        $rateLimitsDir = dirname(__DIR__, 2).'/storage/framework/rate-limits';
+        if (! is_dir($rateLimitsDir)) {
+            mkdir($rateLimitsDir, 0775, true);
+        }
+
+        $limiter = new RateLimiter($rateLimitsDir);
+        $ip = is_string($_SERVER['REMOTE_ADDR'] ?? null) ? $_SERVER['REMOTE_ADDR'] : '127.0.0.1';
+        $key = 'login:'.$ip;
+
+        if (! $limiter->attempt($key, maxAttempts: 5, decaySeconds: 60)) {
+            $wait = $limiter->availableIn($key);
+            setFlash('danger', __('Authentication error'), sprintf(__('Too many failed login attempts. Please try again in %d seconds.'), $wait));
+            $this->redirect('login.php');
+        }
+
         $payload = $data;
 
         $validator = new Validation([
@@ -73,6 +89,8 @@ class AuthController extends BaseController
             $passwordHashVal = $user['password_hash'] ?? null;
 
             if ($user && is_string($passwordVal) && is_string($passwordHashVal) && password_verify($passwordVal, $passwordHashVal)) {
+                $limiter->clear($key);
+
                 // Prevent Session Fixation attacks by regenerating the session ID
                 session_regenerate_id(true);
 

@@ -7,6 +7,7 @@ namespace Tests\Feature;
 use App\Controllers\DashboardController;
 use App\Models\App;
 use App\Models\Log;
+use App\Utilities\Cache;
 use Tests\TestCase;
 
 /**
@@ -54,6 +55,11 @@ class DashboardControllerTest extends TestCase
 
         $_SESSION['auth.user'] = ['id' => 1, 'username' => 'admin'];
         $this->appId = $this->appModel->create('Dashboard App', 'dash-key');
+
+        $cacheDir = dirname(__DIR__, 2).'/storage/framework/cache';
+        if (is_dir($cacheDir)) {
+            (new Cache($cacheDir))->clear();
+        }
     }
 
     public function test_index_renders_dashboard_with_correct_data(): void
@@ -64,20 +70,25 @@ class DashboardControllerTest extends TestCase
         $this->controller->index();
 
         $this->assertEquals('dashboard/index', $this->controller->renderedView);
-        $this->assertCount(2, $this->controller->renderedData['logs']);
-        $this->assertCount(1, $this->controller->renderedData['apps']);
-        $this->assertEquals(1, $this->controller->renderedData['page']);
-        $this->assertEquals(1, $this->controller->renderedData['totalPages']);
+        $this->assertEquals(2, $this->controller->renderedData['totalLogs']);
+        $this->assertEquals(1, $this->controller->renderedData['errorLogs']);
+        $this->assertEquals(0, $this->controller->renderedData['warningLogs']);
+        $this->assertEquals(1, $this->controller->renderedData['infoLogs']);
+        $this->assertEquals(50.0, $this->controller->renderedData['successRate']);
+        $this->assertEquals(1, $this->controller->renderedData['activeApps']);
+        $this->assertCount(2, $this->controller->renderedData['latestLogs']);
+        $this->assertCount(1, $this->controller->renderedData['topApps']);
     }
 
-    public function test_index_applies_filters_correctly(): void
+    public function test_index_calculates_percentages_correctly(): void
     {
         $this->logModel->create($this->appId, 'ERROR', 'Error on dashboard');
         $this->logModel->create($this->appId, 'INFO', 'Info on dashboard');
 
-        // Filter by Level
-        $this->controller->index(['level' => 'ERROR']);
-        $this->assertCount(1, $this->controller->renderedData['logs']);
-        $this->assertEquals('ERROR', $this->controller->renderedData['logs'][0]['level']);
+        $this->controller->index();
+
+        $this->assertEquals(50.0, $this->controller->renderedData['errorPct']);
+        $this->assertEquals(0.0, $this->controller->renderedData['warningPct']);
+        $this->assertEquals(50.0, $this->controller->renderedData['infoPct']);
     }
 }

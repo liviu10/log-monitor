@@ -11,6 +11,7 @@ require_once dirname(__DIR__).'/bootstrap.php';
 use App\Controllers\NotificationController;
 use App\Enums\LogLevel;
 use App\Models\Log;
+use App\Utilities\Json;
 use App\Utilities\LogViaStream;
 use App\Utilities\MySQLWrapper;
 
@@ -33,12 +34,10 @@ function sanitizeSensitivePayload(array $data): array
                 $data[$key] = '******';
             } else {
                 // If the value is a valid JSON string, decode and sanitize it recursively
-                if (json_validate($value)) {
+                if (Json::isValid($value)) {
                     try {
-                        $decoded = json_decode($value, true, 512, JSON_THROW_ON_ERROR);
-                        if (is_array($decoded)) {
-                            $data[$key] = json_encode(sanitizeSensitivePayload($decoded), JSON_UNESCAPED_SLASHES);
-                        }
+                        $decoded = Json::decodeArray($value);
+                        $data[$key] = Json::encode(sanitizeSensitivePayload($decoded));
                     } catch (Throwable) {
                         // Ignore errors if decoding fails for any reason
                     }
@@ -116,9 +115,13 @@ while (true) {
 
                 $idsToDelete[] = $jobId;
 
-                // Validate payload using the json_validate function from PHP 8.4
-                if (json_validate($payloadRaw)) {
-                    $payload = json_decode($payloadRaw, true);
+                // Validate payload using App\Utilities\Json
+                if (Json::isValid($payloadRaw)) {
+                    try {
+                        $payload = Json::decodeArray($payloadRaw);
+                    } catch (Throwable) {
+                        $payload = null;
+                    }
 
                     if (is_array($payload)) {
                         $levelVal = $payload['level'] ?? 'INFO';
@@ -138,7 +141,7 @@ while (true) {
 
                         $jsonContext = null;
                         if (! empty($context)) {
-                            $jsonContext = json_encode($context, JSON_THROW_ON_ERROR);
+                            $jsonContext = Json::encode($context);
                         }
 
                         // Prepare parameters for bulk insert

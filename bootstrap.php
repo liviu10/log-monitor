@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 use App\Utilities\LogViaStream;
+use App\Utilities\Token;
 
 require_once __DIR__.'/vendor/autoload.php';
 
@@ -63,7 +64,7 @@ define('APP_URL', constructUrl());
 
 // Generate a secure cryptographic nonce for inline scripts and styles (CSP protection)
 if (! defined('APP_NONCE')) {
-    define('APP_NONCE', bin2hex(random_bytes(16)));
+    define('APP_NONCE', Token::random(16));
 }
 
 // Send Content Security Policy header optimized for utilized CDNs and AlpineJS

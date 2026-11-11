@@ -18,6 +18,8 @@ declare(strict_types=1);
  * @license  Proprietary
  */
 
+use App\Utilities\Date;
+use App\Utilities\Token;
 use Symfony\Component\VarDumper\VarDumper;
 
 /**
@@ -179,9 +181,13 @@ if (! function_exists('getCurrentAuthUser')) {
 if (! function_exists('formatDate')) {
     function formatDate(string $dateString): string
     {
-        $timestamp = strtotime($dateString);
+        try {
+            return Date::dbToRo($dateString);
+        } catch (Throwable) {
+            $timestamp = strtotime($dateString);
 
-        return date('d.m.Y', $timestamp ?: time());
+            return date('d.m.Y', $timestamp ?: time());
+        }
     }
 }
 
@@ -207,7 +213,7 @@ if (! function_exists('generateCsrfToken')) {
     function generateCsrfToken(): string
     {
         if (empty($_SESSION['csrf_token'])) {
-            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+            $_SESSION['csrf_token'] = Token::random(32);
         }
 
         $token = $_SESSION['csrf_token'] ?? '';

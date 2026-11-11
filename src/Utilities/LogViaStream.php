@@ -249,52 +249,32 @@ final class LogViaStream
                 'peak_memory' => self::formatBytes(memory_get_peak_usage(true)),
             ], $context);
 
-            $payload = json_encode([
-                'level' => strtoupper($level),
-                'message' => self::sanitizeMessage($message),
-                'context' => $extendedContext,
-            ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
-
-            $options = [
-                'http' => [
-                    'method' => 'POST',
-                    'header' => [
-                        'Content-Type: application/json',
-                        'X-API-KEY: '.self::$apiKey,
-                        'User-Agent: LogMonitor-Internal/1.0',
-                    ],
-                    'content' => $payload,
-                    'ignore_errors' => true,
-                    'timeout' => $networkTimeout,
+            $response = HttpClient::post(self::$url, [
+                'json' => [
+                    'level' => strtoupper($level),
+                    'message' => self::sanitizeMessage($message),
+                    'context' => $extendedContext,
                 ],
-            ];
+                'headers' => [
+                    'X-API-KEY' => self::$apiKey,
+                    'User-Agent' => 'LogMonitor-Internal/1.0',
+                ],
+                'timeout' => $networkTimeout,
+                'connectTimeout' => min(1.0, (float) $networkTimeout),
+                'verifySsl' => ($_ENV['APP_ENV'] ?? '') !== 'development',
+                'throwOnError' => false,
+            ]);
 
-            if (($_ENV['APP_ENV'] ?? '') === 'development') {
-                $options['ssl'] = [
-                    'verify_peer' => false,
-                    'verify_peer_name' => false,
-                ];
-            }
-
-            $streamContext = stream_context_create($options);
-
-            $oldErrorReporting = error_reporting(0);
-            try {
-                $result = file_get_contents(self::$url, false, $streamContext);
-                $headers = $http_response_header; // Capturam variabila nativa imediat local
-            } finally {
-                error_reporting($oldErrorReporting);
-            }
-
-            if ($result === false || empty($headers)) {
+            if ($response['status'] < 200 || $response['status'] >= 300) {
                 error_log('LogMonitor Alert: Serverul de loguri la '.self::$url.' este indisponibil.');
 
                 return false;
             }
 
-            return str_contains($headers[0], '200');
+            return true;
 
         } catch (Throwable $e) {
+            error_log('LogMonitor Alert: Serverul de loguri la '.self::$url.' este indisponibil.');
             $logMsg = json_encode([
                 'error' => 'Critical error in log transmission via Stream',
                 'exception_message' => $e->getMessage(),

@@ -27,7 +27,7 @@ RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Enable low-port binding for unprivileged user and set defensive permissions
 RUN setcap cap_net_bind_service=+ep /usr/local/bin/frankenphp \
-    && mkdir -p /data/caddy /config/caddy /var/www/html/storage/logs /var/www/html/storage/reports /var/www/html/storage/backups \
+    && mkdir -p /data/caddy /config/caddy /var/www/html/storage/logs /var/www/html/storage/reports /var/www/html/storage/backups /var/www/html/storage/framework/rate-limits /var/www/html/storage/framework/cache \
     && chown -R www-data:www-data /data/caddy /config/caddy /var/www/html \
     && chmod -R 755 /var/www/html \
     && chmod -R 775 /var/www/html/storage
