@@ -112,7 +112,7 @@
                 </div>
 
                 <!-- Charts & Analytics Section -->
-                <div class="card border-0 shadow-sm mb-4" x-data="dashboardAnalytics(<?= htmlspecialchars(json_encode($chartData), ENT_QUOTES, 'UTF-8') ?>)" x-init="initCharts()">
+                <div class="card border-0 shadow-sm mb-4 overflow-hidden" x-data="dashboardAnalytics(<?= htmlspecialchars(json_encode($chartData), ENT_QUOTES, 'UTF-8') ?>)" x-init="initCharts()">
                     <div class="card-header bg-transparent border-secondary border-opacity-10 p-3 p-lg-4">
                         <div class="d-flex flex-column flex-xl-row align-items-start align-items-xl-center justify-content-between gap-3 w-100">
                             <!-- Left: Title, Badge and Subtitle -->
@@ -126,24 +126,24 @@
                             </div>
 
                             <!-- Right: Filter Controls -->
-                            <div class="d-flex align-items-center gap-2 ms-xl-auto flex-wrap">
-                                <div class="btn-group btn-group-sm bg-dark p-1 rounded-3 border border-secondary border-opacity-25 shadow-sm">
-                                    <button type="button" class="btn px-3 rounded-2 fw-medium text-nowrap transition-all"
+                            <div class="w-100 w-xl-auto overflow-x-auto no-scrollbar pb-1 pb-xl-0 d-flex align-items-center gap-2 ms-xl-auto">
+                                <div class="btn-group btn-group-sm bg-dark p-1 rounded-3 border border-secondary border-opacity-25 shadow-sm flex-nowrap">
+                                    <button type="button" class="btn px-2.5 px-sm-3 py-1.5 rounded-2 fw-medium text-nowrap transition-all"
                                             :class="period === 'day' ? 'btn-info text-white shadow-sm' : 'text-secondary hover-text-light'"
                                             @click="selectPeriod('day')" :disabled="loading">
                                         <i class="far fa-clock me-1"></i> <?= __('Day (24h)') ?>
                                     </button>
-                                    <button type="button" class="btn px-3 rounded-2 fw-medium text-nowrap transition-all"
+                                    <button type="button" class="btn px-2.5 px-sm-3 py-1.5 rounded-2 fw-medium text-nowrap transition-all"
                                             :class="period === 'month' ? 'btn-info text-white shadow-sm' : 'text-secondary hover-text-light'"
                                             @click="selectPeriod('month')" :disabled="loading">
                                         <i class="far fa-calendar-alt me-1"></i> <?= __('Month (30d)') ?>
                                     </button>
-                                    <button type="button" class="btn px-3 rounded-2 fw-medium text-nowrap transition-all"
+                                    <button type="button" class="btn px-2.5 px-sm-3 py-1.5 rounded-2 fw-medium text-nowrap transition-all"
                                             :class="period === 'year' ? 'btn-info text-white shadow-sm' : 'text-secondary hover-text-light'"
                                             @click="selectPeriod('year')" :disabled="loading">
                                         <i class="fas fa-calendar me-1"></i> <?= __('Year (12m)') ?>
                                     </button>
-                                    <button type="button" class="btn px-3 rounded-2 fw-medium text-nowrap transition-all"
+                                    <button type="button" class="btn px-2.5 px-sm-3 py-1.5 rounded-2 fw-medium text-nowrap transition-all"
                                             :class="period === 'custom' ? 'btn-info text-white shadow-sm' : 'text-secondary hover-text-light'"
                                             @click="selectPeriod('custom')" :disabled="loading">
                                         <i class="fas fa-sliders-h me-1"></i> <?= __('Custom') ?>
@@ -151,7 +151,7 @@
                                 </div>
 
                                 <!-- Loading Spinner -->
-                                <div x-show="loading" class="spinner-border spinner-border-sm text-info ms-2" role="status">
+                                <div x-show="loading" class="spinner-border spinner-border-sm text-info ms-2 flex-shrink-0" role="status">
                                     <span class="visually-hidden"><?= __('Loading analytics...') ?></span>
                                 </div>
                             </div>
@@ -162,14 +162,14 @@
                             <form @submit.prevent="applyCustomRange()" class="row g-2 align-items-center justify-content-end">
                                 <div class="col-12 col-sm-auto d-flex align-items-center gap-2">
                                     <label class="text-secondary small fw-medium text-nowrap"><?= __('From') ?>:</label>
-                                    <input type="date" x-model="customStart" class="form-control form-control-sm bg-dark border-secondary border-opacity-25 text-light" required>
+                                    <input type="date" x-model="customStart" class="form-control form-control-sm bg-dark border-secondary border-opacity-25 text-light w-100" required>
                                 </div>
                                 <div class="col-12 col-sm-auto d-flex align-items-center gap-2">
                                     <label class="text-secondary small fw-medium text-nowrap"><?= __('To') ?>:</label>
-                                    <input type="date" x-model="customEnd" class="form-control form-control-sm bg-dark border-secondary border-opacity-25 text-light" required>
+                                    <input type="date" x-model="customEnd" class="form-control form-control-sm bg-dark border-secondary border-opacity-25 text-light w-100" required>
                                 </div>
                                 <div class="col-12 col-sm-auto">
-                                    <button type="submit" class="btn btn-sm btn-info text-white px-3 fw-bold text-nowrap" :disabled="loading">
+                                    <button type="submit" class="btn btn-sm btn-info text-white px-3 fw-bold text-nowrap w-100 w-sm-auto" :disabled="loading">
                                         <i class="fas fa-filter me-1"></i> <?= __('Apply') ?>
                                     </button>
                                 </div>
@@ -182,13 +182,13 @@
                             <!-- Line Chart: Log Volume Over Time -->
                             <div class="col-12 col-xl-8">
                                 <div class="p-3 rounded-3 bg-dark bg-opacity-50 border border-secondary border-opacity-10 h-100 d-flex flex-column">
-                                    <div class="d-flex align-items-center justify-content-between mb-3">
-                                        <span class="text-secondary small fw-bold text-uppercase d-flex align-items-center gap-2">
+                                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                                        <span class="text-secondary small fw-bold text-uppercase d-flex align-items-center gap-2 text-nowrap">
                                             <i class="fas fa-wave-square text-info"></i> <?= __('Log Volume Over Time') ?>
                                         </span>
-                                        <div class="d-flex align-items-center gap-3 small font-monospace">
-                                            <span class="text-info"><i class="fas fa-circle me-1" style="font-size: 8px;"></i> <?= __('Total') ?>: <strong x-text="summary.total"></strong></span>
-                                            <span class="text-danger"><i class="fas fa-circle me-1" style="font-size: 8px;"></i> <?= __('Errors') ?>: <strong x-text="summary.errors"></strong></span>
+                                        <div class="d-flex align-items-center gap-2 gap-sm-3 small font-monospace text-nowrap">
+                                            <span class="text-info text-nowrap"><i class="fas fa-circle me-1" style="font-size: 8px;"></i> <?= __('Total') ?>: <strong x-text="summary.total"></strong></span>
+                                            <span class="text-danger text-nowrap"><i class="fas fa-circle me-1" style="font-size: 8px;"></i> <?= __('Errors') ?>: <strong x-text="summary.errors"></strong></span>
                                         </div>
                                     </div>
                                     <div class="flex-grow-1 position-relative" style="min-height: 260px;">
@@ -201,7 +201,7 @@
                             <div class="col-12 col-xl-4">
                                 <div class="p-3 rounded-3 bg-dark bg-opacity-50 border border-secondary border-opacity-10 h-100 d-flex flex-column">
                                     <div class="d-flex align-items-center justify-content-between mb-3">
-                                        <span class="text-secondary small fw-bold text-uppercase d-flex align-items-center gap-2">
+                                        <span class="text-secondary small fw-bold text-uppercase d-flex align-items-center gap-2 text-nowrap">
                                             <i class="fas fa-chart-pie text-warning"></i> <?= __('Severity Breakdown') ?>
                                         </span>
                                     </div>
@@ -219,7 +219,7 @@
                             <div class="col-12">
                                 <div class="p-3 rounded-3 bg-dark bg-opacity-50 border border-secondary border-opacity-10">
                                     <div class="d-flex align-items-center justify-content-between mb-3">
-                                        <span class="text-secondary small fw-bold text-uppercase d-flex align-items-center gap-2">
+                                        <span class="text-secondary small fw-bold text-uppercase d-flex align-items-center gap-2 text-nowrap">
                                             <i class="fas fa-chart-bar text-primary"></i> <?= __('Logs by Application') ?>
                                         </span>
                                     </div>

@@ -31,6 +31,14 @@
     background: rgba(6, 182, 212, 0.5);
 }
 
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
 /* Core Layout & Theme overrides */
 body {
     font-family: 'Inter', sans-serif;
