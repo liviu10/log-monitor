@@ -41,6 +41,9 @@ if (! function_exists('injectRuntimeSecurityHeaders')) {
         // Sets the Referrer-Policy header policy
         header('Referrer-Policy: strict-origin-when-cross-origin', true);
 
+        // Blocks all search engines, web crawlers, archivers, and AI scrapers/bots
+        header('X-Robots-Tag: noindex, nofollow, noarchive, nosnippet, noimageindex, notranslate, noai, noimageai', true);
+
         // Strict policy for executing Vanilla JS scripts and resources
         header("Content-Security-Policy: default-src 'self'; script-src 'self'; object-src 'none'; style-src 'self' 'unsafe-inline'; base-uri 'self'; form-action 'self';", true);
 

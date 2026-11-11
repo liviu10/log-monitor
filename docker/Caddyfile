@@ -16,12 +16,13 @@
     # Enable compression
     encode zstd gzip
 
-    # Defensive Security Headers (OWASP recommendations)
+    # Defensive Security Headers (OWASP recommendations & Anti-Bot/Anti-AI)
     header {
         X-Content-Type-Options "nosniff"
         X-Frame-Options "DENY"
         Referrer-Policy "strict-origin-when-cross-origin"
         Permissions-Policy "camera=(), microphone=(), geolocation=()"
+        X-Robots-Tag "noindex, nofollow, noarchive, nosnippet, noimageindex, notranslate, noai, noimageai"
         -Server
     }
 

@@ -1,0 +1,103 @@
+# ==============================================================================
+# ROBOTS.TXT - LOGMONITOR
+# Full disallow policy for search engines, web crawlers, and AI scrapers.
+# ==============================================================================
+
+# Global disallow for all user-agents
+User-agent: *
+Disallow: /
+
+# Explicit disallow for OpenAI (ChatGPT, SearchGPT, GPTBot)
+User-agent: GPTBot
+Disallow: /
+
+User-agent: ChatGPT-User
+Disallow: /
+
+User-agent: OAI-SearchBot
+Disallow: /
+
+# Explicit disallow for Anthropic (Claude)
+User-agent: ClaudeBot
+Disallow: /
+
+User-agent: Claude-Web
+Disallow: /
+
+User-agent: anthropic-ai
+Disallow: /
+
+# Explicit disallow for Google Crawlers and AI Training
+User-agent: Googlebot
+Disallow: /
+
+User-agent: Google-Extended
+Disallow: /
+
+User-agent: GoogleOther
+Disallow: /
+
+User-agent: GoogleOther-Image
+Disallow: /
+
+User-agent: GoogleOther-Video
+Disallow: /
+
+# Explicit disallow for Common Crawl
+User-agent: CCBot
+Disallow: /
+
+# Explicit disallow for Perplexity AI
+User-agent: PerplexityBot
+Disallow: /
+
+# Explicit disallow for ByteDance (TikTok / Doubao)
+User-agent: Bytespider
+Disallow: /
+
+# Explicit disallow for Meta (Facebook, LLaMA scrapers)
+User-agent: FacebookBot
+Disallow: /
+
+User-agent: Meta-ExternalAgent
+Disallow: /
+
+User-agent: Meta-ExternalFetcher
+Disallow: /
+
+# Explicit disallow for Applebot & Apple AI
+User-agent: Applebot
+Disallow: /
+
+User-agent: Applebot-Extended
+Disallow: /
+
+# Explicit disallow for Amazon
+User-agent: Amazonbot
+Disallow: /
+
+# Explicit disallow for Microsoft Bing & Copilot
+User-agent: bingbot
+Disallow: /
+
+User-agent: BingPreview
+Disallow: /
+
+# Explicit disallow for other prominent AI crawlers
+User-agent: cohere-ai
+Disallow: /
+
+User-agent: MistralBot
+Disallow: /
+
+User-agent: Diffbot
+Disallow: /
+
+User-agent: Omgilibot
+Disallow: /
+
+User-agent: YouBot
+Disallow: /
+
+User-agent: Scrapy
+Disallow: /

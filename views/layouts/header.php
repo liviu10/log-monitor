@@ -6,6 +6,11 @@
     <meta name="session-idle-timeout" content="<?= (int) ($_ENV['SESSION_IDLE_TIMEOUT'] ?? $_ENV['APP_SESSION_IDLE_TIMEOUT'] ?? 1800) ?>">
     <meta name="user-authenticated" content="<?= isset($_SESSION['auth.user']) ? '1' : '0' ?>">
     
+    <!-- Anti-Bot, Anti-Crawler & Anti-AI Scraping Directives -->
+    <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex, notranslate, noai, noimageai">
+    <meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet, noimageindex, notranslate">
+    <meta name="bingbot" content="noindex, nofollow, noarchive, nosnippet, noimageindex, notranslate">
+    
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'unsafe-eval' 'nonce-<?= APP_NONCE ?>'; style-src 'self' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data:; connect-src 'self' https://cdn.jsdelivr.net;">
 
     <title><?= APP_NAME ?></title>
