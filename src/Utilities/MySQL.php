@@ -683,6 +683,14 @@ final class MySQL
     {
         $dsn = "mysql:host={$this->host};port={$this->port};dbname={$this->database};charset={$this->charset}";
 
+        $multiStatementsAttr = defined('Pdo\Mysql::ATTR_MULTI_STATEMENTS')
+            ? \Pdo\Mysql::ATTR_MULTI_STATEMENTS
+            : (defined('PDO::MYSQL_ATTR_MULTI_STATEMENTS') ? constant('PDO::MYSQL_ATTR_MULTI_STATEMENTS') : 1003);
+
+        $useBufferedAttr = defined('Pdo\Mysql::ATTR_USE_BUFFERED_QUERY')
+            ? \Pdo\Mysql::ATTR_USE_BUFFERED_QUERY
+            : (defined('PDO::MYSQL_ATTR_USE_BUFFERED_QUERY') ? constant('PDO::MYSQL_ATTR_USE_BUFFERED_QUERY') : 1000);
+
         try {
             $pdo = new PDO($dsn, $this->username, $this->password, [
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
@@ -690,8 +698,8 @@ final class MySQL
                 PDO::ATTR_EMULATE_PREPARES => false,
                 PDO::ATTR_STRINGIFY_FETCHES => false,
                 PDO::ATTR_TIMEOUT => $this->timeout,
-                PDO::MYSQL_ATTR_MULTI_STATEMENTS => false,
-                PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => ! $unbuffered,
+                $multiStatementsAttr => false,
+                $useBufferedAttr => ! $unbuffered,
             ]);
         } catch (PDOException $e) {
             throw new RuntimeException("MySQL::{$method}(): cannot connect to '{$this->host}:{$this->port}/{$this->database}': ".$e->getMessage(), 0, $e);

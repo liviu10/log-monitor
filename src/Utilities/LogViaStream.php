@@ -77,9 +77,9 @@ final class LogViaStream
         self::$apiKey = $envApiKey;
         self::$url = $envUrl;
 
-        // 1. Intercept native PHP errors by converting them to ErrorException
+        // 1. Intercept native PHP errors by converting them to ErrorException (ignoring deprecations)
         set_error_handler(static function (int $severity, string $message, string $file, int $line): bool {
-            if (! (error_reporting() & $severity)) {
+            if (! (error_reporting() & $severity) || in_array($severity, [E_DEPRECATED, E_USER_DEPRECATED], true)) {
                 return false;
             }
             throw new ErrorException($message, 0, $severity, $file, $line);
