@@ -192,4 +192,68 @@ class User
             throw new RuntimeException(__('Database error deleting user'), 0, $e);
         }
     }
+
+    /**
+     * Finds a user by primary key ID.
+     *
+     * @param  int  $id  User ID.
+     * @return array<string, mixed>|null User data or null.
+     */
+    public function findById(int $id): ?array
+    {
+        if ($id <= 0) {
+            return null;
+        }
+
+        try {
+            $results = $this->db->read('users', ['id' => $id]);
+            $first = $results[0] ?? null;
+
+            return is_array($first) ? $first : null;
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * Updates an administrator's password.
+     * Hashes the new password with PASSWORD_ARGON2ID.
+     *
+     * @param  int  $id  User ID.
+     * @param  string  $newPassword  Plaintext password.
+     * @return bool True on success.
+     *
+     * @throws InvalidArgumentException If inputs are invalid.
+     * @throws RuntimeException If update fails.
+     */
+    public function updatePassword(int $id, string $newPassword): bool
+    {
+        if ($id <= 0 || trim($newPassword) === '') {
+            throw new InvalidArgumentException(__('User ID and new password cannot be empty.'));
+        }
+
+        $hash = password_hash($newPassword, PASSWORD_ARGON2ID);
+
+        try {
+            $affected = $this->db->update('users', ['password_hash' => $hash], ['id' => $id]);
+
+            return $affected > 0;
+        } catch (\Throwable $e) {
+            if (class_exists('App\Utilities\LogViaStream')) {
+                LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
+                    'location' => __METHOD__,
+                    'line' => __LINE__,
+                    'exception_message' => $e->getMessage(),
+                    'exception_file' => $e->getFile(),
+                    'exception_line' => $e->getLine(),
+                    'exception_trace' => $e->getTraceAsString(),
+                    'sql_statement' => 'UPDATE users SET password_hash = ? WHERE id = ?',
+                    'sql_parameters' => ['id' => $id],
+                    'identifier' => 'MySQL_Query_Failure',
+                ]);
+            }
+
+            throw new RuntimeException(__('Database error updating user password'), 0, $e);
+        }
+    }
 }

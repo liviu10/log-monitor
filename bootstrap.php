@@ -34,6 +34,12 @@ if (! file_exists(__DIR__.'/.env')) {
 $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
 $dotenv->load();
 
+// Set application default timezone
+$appTimezone = $_ENV['TZ'] ?? 'Europe/Bucharest';
+if (is_string($appTimezone) && $appTimezone !== '') {
+    date_default_timezone_set($appTimezone);
+}
+
 // Register global error handler for stream logging
 LogViaStream::registerHandlers();
 

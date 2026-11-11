@@ -10,6 +10,26 @@ use App\Models\Log;
 use App\Utilities\Cache;
 use Tests\TestCase;
 
+if (! class_exists('Tests\Feature\HttpRedirectException')) {
+    class HttpRedirectException extends \Exception {}
+}
+
+if (! class_exists('Tests\Feature\HttpResponseException')) {
+    class HttpResponseException extends \Exception
+    {
+        public array $data;
+
+        public int $statusCode;
+
+        public function __construct(array $data = [], int $statusCode = 200)
+        {
+            parent::__construct('HTTP Response sent', $statusCode);
+            $this->data = $data;
+            $this->statusCode = $statusCode;
+        }
+    }
+}
+
 /**
  * Subclassed dashboard controller for capturing render calls.
  */
@@ -18,6 +38,8 @@ class TestableDashboardController extends DashboardController
     public string $renderedView = '';
 
     public array $renderedData = [];
+
+    public ?array $jsonOutput = null;
 
     protected function redirect(string $url): never
     {
@@ -28,6 +50,12 @@ class TestableDashboardController extends DashboardController
     {
         $this->renderedView = $view;
         $this->renderedData = $data;
+    }
+
+    protected function jsonResponse(array $data, int $status = 200): never
+    {
+        $this->jsonOutput = $data;
+        throw new HttpResponseException($data, $status);
     }
 }
 
@@ -90,5 +118,66 @@ class DashboardControllerTest extends TestCase
         $this->assertEquals(50.0, $this->controller->renderedData['errorPct']);
         $this->assertEquals(0.0, $this->controller->renderedData['warningPct']);
         $this->assertEquals(50.0, $this->controller->renderedData['infoPct']);
+    }
+
+    public function test_get_analytics_data_structure_and_timeframes(): void
+    {
+        $this->logModel->create($this->appId, 'ERROR', 'Error log for charts');
+        $this->logModel->create($this->appId, 'WARNING', 'Warning log for charts');
+        $this->logModel->create($this->appId, 'INFO', 'Info log for charts');
+
+        // Test day period
+        $dayData = $this->controller->getAnalyticsData('day');
+        $this->assertEquals('day', $dayData['period']);
+        $this->assertArrayHasKey('lineChart', $dayData);
+        $this->assertArrayHasKey('severityPie', $dayData);
+        $this->assertArrayHasKey('appsBar', $dayData);
+        $this->assertCount(24, $dayData['lineChart']['labels']);
+        $this->assertEquals(3, $dayData['summary']['total']);
+        $this->assertEquals(1, $dayData['summary']['errors']);
+
+        // Test month period
+        $monthData = $this->controller->getAnalyticsData('month');
+        $this->assertEquals('month', $monthData['period']);
+        $this->assertCount(30, $monthData['lineChart']['labels']);
+        $this->assertEquals(3, $monthData['summary']['total']);
+
+        // Test year period
+        $yearData = $this->controller->getAnalyticsData('year');
+        $this->assertEquals('year', $yearData['period']);
+        $this->assertCount(12, $yearData['lineChart']['labels']);
+        $this->assertEquals(3, $yearData['summary']['total']);
+    }
+
+    public function test_get_analytics_data_custom_range(): void
+    {
+        $this->logModel->create($this->appId, 'ERROR', 'Custom error');
+        $this->logModel->create($this->appId, 'INFO', 'Custom info');
+
+        $startDate = date('Y-m-d', strtotime('-2 days'));
+        $endDate = date('Y-m-d');
+
+        $customData = $this->controller->getAnalyticsData('custom', $startDate, $endDate);
+        $this->assertEquals('custom', $customData['period']);
+        $this->assertNotEmpty($customData['lineChart']['labels']);
+        $this->assertEquals(2, $customData['summary']['total']);
+        $this->assertEquals(1, $customData['summary']['errors']);
+        $this->assertContains('ERROR', $customData['severityPie']['labels']);
+        $this->assertContains('INFO', $customData['severityPie']['labels']);
+    }
+
+    public function test_chart_data_endpoint_returns_json(): void
+    {
+        $this->logModel->create($this->appId, 'INFO', 'Endpoint test info');
+
+        try {
+            $this->controller->chartData(['period' => 'day']);
+            $this->fail('Expected HttpResponseException to be thrown');
+        } catch (HttpResponseException $e) {
+            $this->assertEquals(200, $e->getCode());
+            $this->assertIsArray($this->controller->jsonOutput);
+            $this->assertEquals('day', $this->controller->jsonOutput['period']);
+            $this->assertArrayHasKey('lineChart', $this->controller->jsonOutput);
+        }
     }
 }

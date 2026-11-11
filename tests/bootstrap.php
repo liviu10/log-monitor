@@ -31,6 +31,12 @@ foreach ($phpunitEnvBackup as $key => $value) {
     putenv("{$key}={$value}");
 }
 
+// Set application default timezone
+$appTimezone = $_ENV['TZ'] ?? 'Europe/Bucharest';
+if (is_string($appTimezone) && $appTimezone !== '') {
+    date_default_timezone_set($appTimezone);
+}
+
 // Automatically create the test database and grant permissions if possible
 try {
     $host = $_ENV['DB_HOST'] ?? 'db';

@@ -164,4 +164,74 @@ class UserController extends BaseController
 
         $this->redirect('users.php');
     }
+
+    /**
+     * Changes the password of the currently authenticated administrator.
+     *
+     * @param  array<array-key, mixed>  $data
+     */
+    public function changePassword(array $data): never
+    {
+        $this->checkAuth();
+
+        $authUser = $_SESSION['auth.user'] ?? null;
+        $currentAuthId = 0;
+        if (is_array($authUser)) {
+            $rawAuthId = $authUser['id'] ?? null;
+            $currentAuthId = (is_int($rawAuthId) || is_string($rawAuthId)) ? (int) $rawAuthId : 0;
+        }
+
+        if ($currentAuthId <= 0) {
+            setFlash('danger', __('Error'), __('User session not found.'));
+            $this->redirect('login.php');
+        }
+
+        $payload = $data;
+        $validator = new Validator($payload, [
+            'current_password' => 'required|string',
+            'new_password' => 'required|string|min:6',
+            'confirm_password' => 'required|string',
+        ], labels: [
+            'current_password' => __('Current Password'),
+            'new_password' => __('New Password'),
+            'confirm_password' => __('Confirm Password'),
+        ]);
+
+        if ($validator->fails()) {
+            $_SESSION['errors'] = $validator->errors();
+            $this->redirect('users.php');
+        }
+
+        $currentPassVal = $payload['current_password'] ?? null;
+        $newPassVal = $payload['new_password'] ?? null;
+        $confirmPassVal = $payload['confirm_password'] ?? null;
+
+        $currentPass = is_string($currentPassVal) ? $currentPassVal : '';
+        $newPass = is_string($newPassVal) ? $newPassVal : '';
+        $confirmPass = is_string($confirmPassVal) ? $confirmPassVal : '';
+
+        if ($newPass !== $confirmPass) {
+            setFlash('danger', __('Error'), __('New passwords do not match.'));
+            $this->redirect('users.php');
+        }
+
+        try {
+            $userModel = new User;
+            $currentUser = $userModel->findById($currentAuthId);
+            $hashVal = $currentUser['password_hash'] ?? null;
+            $currentHash = is_string($hashVal) ? $hashVal : '';
+
+            if (! $currentUser || ! password_verify($currentPass, $currentHash)) {
+                setFlash('danger', __('Error'), __('Current password is incorrect.'));
+                $this->redirect('users.php');
+            }
+
+            $userModel->updatePassword($currentAuthId, $newPass);
+            setFlash('success', __('Success'), __('Password changed successfully.'));
+        } catch (\Throwable $e) {
+            setFlash('danger', __('Error'), __('Failed to update password.'));
+        }
+
+        $this->redirect('users.php');
+    }
 }

@@ -7,4 +7,10 @@ require_once __DIR__.'/bootstrap.php';
 use App\Controllers\DashboardController;
 
 $controller = new DashboardController;
-$controller->index($_GET);
+
+$action = isset($_GET['action']) && is_string($_GET['action']) ? $_GET['action'] : '';
+if ($action === 'chart-data') {
+    $controller->chartData($_GET);
+} else {
+    $controller->index($_GET);
+}

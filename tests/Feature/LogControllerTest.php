@@ -9,20 +9,22 @@ use App\Models\App;
 use App\Models\Log;
 use Tests\TestCase;
 
-/**
- * Custom exception to intercept exit calls in jsonResponse.
- */
-class HttpResponseException extends \Exception
-{
-    public array $data;
-
-    public int $statusCode;
-
-    public function __construct(array $data, int $statusCode)
+if (! class_exists('Tests\Feature\HttpResponseException')) {
+    /**
+     * Custom exception to intercept exit calls in jsonResponse.
+     */
+    class HttpResponseException extends \Exception
     {
-        parent::__construct('HTTP Response sent', $statusCode);
-        $this->data = $data;
-        $this->statusCode = $statusCode;
+        public array $data;
+
+        public int $statusCode;
+
+        public function __construct(array $data, int $statusCode)
+        {
+            parent::__construct('HTTP Response sent', $statusCode);
+            $this->data = $data;
+            $this->statusCode = $statusCode;
+        }
     }
 }
 

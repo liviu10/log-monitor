@@ -36,5 +36,6 @@
         <env name="DB_PASSWORD" value="password"/>
         <env name="DB_PASS" value="password"/>
         <env name="DB_PORT" value="33061"/>
+        <env name="TZ" value="Europe/Bucharest"/>
     </php>
 </phpunit>

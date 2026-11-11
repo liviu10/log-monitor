@@ -8,6 +8,19 @@ use App\Controllers\UserController;
 use App\Models\User;
 use Tests\TestCase;
 
+if (! class_exists('Tests\Feature\HttpRedirectException')) {
+    class HttpRedirectException extends \Exception
+    {
+        public string $url;
+
+        public function __construct(string $url)
+        {
+            parent::__construct('HTTP Redirect to: '.$url);
+            $this->url = $url;
+        }
+    }
+}
+
 /**
  * Subclassed user controller to intercept redirect/render calls.
  */
@@ -139,6 +152,63 @@ class UserControllerTest extends TestCase
     {
         try {
             $this->userController->delete([]);
+            $this->fail('Expected HttpRedirectException to be thrown');
+        } catch (HttpRedirectException $e) {
+            $this->assertEquals('users.php', $e->url);
+        }
+    }
+
+    public function test_change_password_succeeds_with_correct_credentials(): void
+    {
+        $userId = $this->userModel->create('admin_pwd', 'old_password123');
+        $_SESSION['auth.user'] = ['id' => $userId, 'username' => 'admin_pwd'];
+
+        try {
+            $this->userController->changePassword([
+                'current_password' => 'old_password123',
+                'new_password' => 'new_password456',
+                'confirm_password' => 'new_password456',
+            ]);
+            $this->fail('Expected HttpRedirectException to be thrown');
+        } catch (HttpRedirectException $e) {
+            $this->assertEquals('users.php', $e->url);
+            $user = $this->userModel->findById($userId);
+            $this->assertNotNull($user);
+            $this->assertTrue(password_verify('new_password456', (string) $user['password_hash']));
+        }
+    }
+
+    public function test_change_password_fails_when_current_password_is_incorrect(): void
+    {
+        $userId = $this->userModel->create('admin_pwd2', 'actual_password123');
+        $_SESSION['auth.user'] = ['id' => $userId, 'username' => 'admin_pwd2'];
+
+        try {
+            $this->userController->changePassword([
+                'current_password' => 'wrong_password',
+                'new_password' => 'new_password456',
+                'confirm_password' => 'new_password456',
+            ]);
+            $this->fail('Expected HttpRedirectException to be thrown');
+        } catch (HttpRedirectException $e) {
+            $this->assertEquals('users.php', $e->url);
+            $user = $this->userModel->findById($userId);
+            $this->assertNotNull($user);
+            $this->assertFalse(password_verify('new_password456', (string) $user['password_hash']));
+        }
+    }
+
+    public function test_change_password_fails_when_confirm_password_does_not_match(): void
+    {
+        $userId = $this->userModel->create('admin_pwd3', 'actual_password123');
+        $_SESSION['auth.user'] = ['id' => $userId, 'username' => 'admin_pwd3'];
+
+        try {
+            $this->userController->changePassword([
+                'current_password' => 'actual_password123',
+                'new_password' => 'new_password456',
+                'confirm_password' => 'different_password789',
+            ]);
             $this->fail('Expected HttpRedirectException to be thrown');
         } catch (HttpRedirectException $e) {
             $this->assertEquals('users.php', $e->url);

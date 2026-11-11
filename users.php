@@ -14,6 +14,7 @@ try {
     match ($_SERVER['REQUEST_METHOD'] ?? '') {
         'POST' => match ($_GET['action'] ?? null) {
             'delete' => $controller->delete($_POST),
+            'change-password' => $controller->changePassword($_POST),
             null => $controller->store($_POST),
             default => throw new InvalidArgumentException(__('Invalid user action.')),
         },
