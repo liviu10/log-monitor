@@ -54,7 +54,7 @@ class AuthController extends BaseController
         }
 
         $limiter = new RateLimiter($rateLimitsDir);
-        $ip = is_string($_SERVER['REMOTE_ADDR'] ?? null) ? $_SERVER['REMOTE_ADDR'] : '127.0.0.1';
+        $ip = getClientIp();
         $key = 'login:'.$ip;
 
         if (! $limiter->attempt($key, maxAttempts: 5, decaySeconds: 60)) {

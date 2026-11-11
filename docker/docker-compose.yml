@@ -11,7 +11,7 @@ services:
     container_name: log-monitor-app
     restart: always
     ports:
-      - "${APP_PORT:-8080}:80"
+      - "${APP_BIND_IP:-127.0.0.1}:${APP_PORT:-8082}:80"
     security_opt:
       - "no-new-privileges:true"
     cap_drop:
@@ -21,8 +21,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '${APP_CPU_LIMIT:-0.5}'
-          memory: '${APP_MEMORY_LIMIT:-256M}'
+          cpus: '${APP_CPU_LIMIT:-2.0}'
+          memory: '${APP_MEMORY_LIMIT:-1G}'
     volumes:
       - storage_data:/var/www/html/storage:z
     env_file:
@@ -58,8 +58,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '${WORKER_CPU_LIMIT:-0.3}'
-          memory: '${WORKER_MEMORY_LIMIT:-128M}'
+          cpus: '${WORKER_CPU_LIMIT:-1.0}'
+          memory: '${WORKER_MEMORY_LIMIT:-512M}'
     blkio_config:
       device_write_bps:
         - path: /dev/nvme0n1
@@ -85,14 +85,14 @@ services:
     image: docker.io/library/mariadb:12.3.2
     container_name: log-monitor-db
     restart: always
-    command: ["--innodb-buffer-pool-size=${DB_BUFFER_POOL_SIZE:-64M}", "--max-connections=${DB_MAX_CONNECTIONS:-50}"]
+    command: ["--innodb-buffer-pool-size=${DB_BUFFER_POOL_SIZE:-2G}", "--max-connections=${DB_MAX_CONNECTIONS:-100}"]
     ports:
       - "${DB_BIND_IP:-127.0.0.1}:${DB_PORT:-33061}:${DB_PORT:-33061}"
     deploy:
       resources:
         limits:
-          cpus: '${DB_CPU_LIMIT:-1.0}'
-          memory: '${DB_MEMORY_LIMIT:-512M}'
+          cpus: '${DB_CPU_LIMIT:-2.0}'
+          memory: '${DB_MEMORY_LIMIT:-3G}'
     blkio_config:
       device_write_bps:
         - path: /dev/nvme0n1

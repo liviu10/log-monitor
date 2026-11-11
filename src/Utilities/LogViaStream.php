@@ -241,7 +241,7 @@ final class LogViaStream
                 'request_id' => self::$requestId,
                 'http_method' => $_SERVER['REQUEST_METHOD'] ?? 'CLI',
                 'uri' => $_SERVER['REQUEST_URI'] ?? 'N/A',
-                'ip' => $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1',
+                'ip' => function_exists('getClientIp') ? getClientIp() : ($_SERVER['REMOTE_ADDR'] ?? '127.0.0.1'),
                 'referrer' => $_SERVER['HTTP_REFERER'] ?? 'DIRECT',
                 'query_params' => ! empty($_GET) ? self::sanitizeData($_GET) : null,
                 'post_data' => ! empty($_POST) ? self::sanitizeData($_POST) : null,

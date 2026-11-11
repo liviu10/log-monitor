@@ -108,6 +108,43 @@ if (! function_exists('constructUrl')) {
 }
 
 /**
+ * Detects the real client IP address, safely parsing Cloudflare Tunnel and reverse proxy headers.
+ *
+ * @return string Client IP address.
+ */
+if (! function_exists('getClientIp')) {
+    function getClientIp(): string
+    {
+        $remoteAddr = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+        $remote = is_string($remoteAddr) ? trim($remoteAddr) : '127.0.0.1';
+
+        // When request originates from a local proxy / container network / Cloudflare Tunnel
+        $isLocalProxy = in_array($remote, ['127.0.0.1', '::1', 'localhost'], true)
+            || str_starts_with($remote, '10.')
+            || str_starts_with($remote, '172.')
+            || str_starts_with($remote, '192.168.');
+
+        if ($isLocalProxy) {
+            $cfIp = $_SERVER['HTTP_CF_CONNECTING_IP'] ?? null;
+            if (is_string($cfIp) && filter_var(trim($cfIp), FILTER_VALIDATE_IP) !== false) {
+                return trim($cfIp);
+            }
+
+            $forwarded = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? null;
+            if (is_string($forwarded) && trim($forwarded) !== '') {
+                $ips = explode(',', $forwarded);
+                $firstIp = trim($ips[0]);
+                if (filter_var($firstIp, FILTER_VALIDATE_IP) !== false) {
+                    return $firstIp;
+                }
+            }
+        }
+
+        return $remote !== '' ? $remote : '127.0.0.1';
+    }
+}
+
+/**
  * Verifies authentication state and handles the logout process.
  * Applies the Fail Fast principle and regenerates the session to prevent Session Fixation.
  *
