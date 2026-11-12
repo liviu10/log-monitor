@@ -5,7 +5,7 @@
         <?php include __DIR__.'/../layouts/sidebar.php'; ?>
 
         <!-- Main Content -->
-        <div class="col h-100 overflow-auto bg-dark bg-opacity-25">
+        <div class="col h-100 overflow-y-auto overflow-x-hidden bg-dark bg-opacity-25">
             <header class="navbar navbar-expand-lg border-bottom border-secondary border-opacity-25 px-3 px-lg-4 py-3 sticky-top bg-dark bg-opacity-75 backdrop-blur" style="z-index: 100;">
                 <button class="btn btn-dark btn-sm me-3" @click="sidebarOpen = !sidebarOpen" aria-label="<?= __('Toggle Navigation') ?>">
                     <i class="fas fa-bars"></i>
@@ -121,38 +121,39 @@
                                     <i class="fas fa-chart-line text-info fs-5"></i>
                                     <h3 class="h6 mb-0 text-light fw-bold text-uppercase tracking-wider text-nowrap"><?= __('Charts & Analytics') ?></h3>
                                 </div>
-                                <span class="badge bg-dark border border-secondary border-opacity-25 text-secondary font-monospace small px-2.5 py-1 text-nowrap" x-text="rangeLabel"></span>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-dark border border-secondary border-opacity-25 text-secondary font-monospace small px-2.5 py-1 text-nowrap" x-text="rangeLabel"></span>
+                                    <!-- Loading Spinner -->
+                                    <div x-show="loading" class="spinner-border spinner-border-sm text-info flex-shrink-0" role="status">
+                                        <span class="visually-hidden"><?= __('Loading analytics...') ?></span>
+                                    </div>
+                                </div>
                                 <span class="text-secondary small d-none d-md-inline opacity-75">• <?= __('Analytics Overview') ?></span>
                             </div>
 
                             <!-- Right: Filter Controls -->
-                            <div class="w-100 w-xl-auto overflow-x-auto no-scrollbar pb-1 pb-xl-0 d-flex align-items-center gap-2 ms-xl-auto">
-                                <div class="btn-group btn-group-sm bg-dark p-1 rounded-3 border border-secondary border-opacity-25 shadow-sm flex-nowrap">
-                                    <button type="button" class="btn px-2.5 px-sm-3 py-1.5 rounded-2 fw-medium text-nowrap transition-all"
+                            <div class="w-100 w-xl-auto ms-xl-auto">
+                                <div class="btn-group-responsive bg-dark p-1 rounded-3 border border-secondary border-opacity-25 shadow-sm">
+                                    <button type="button" class="btn btn-sm px-2.5 px-sm-3 py-1.5 rounded-2 fw-medium text-nowrap transition-all"
                                             :class="period === 'day' ? 'btn-info text-white shadow-sm' : 'text-secondary hover-text-light'"
                                             @click="selectPeriod('day')" :disabled="loading">
                                         <i class="far fa-clock me-1"></i> <?= __('Day (24h)') ?>
                                     </button>
-                                    <button type="button" class="btn px-2.5 px-sm-3 py-1.5 rounded-2 fw-medium text-nowrap transition-all"
+                                    <button type="button" class="btn btn-sm px-2.5 px-sm-3 py-1.5 rounded-2 fw-medium text-nowrap transition-all"
                                             :class="period === 'month' ? 'btn-info text-white shadow-sm' : 'text-secondary hover-text-light'"
                                             @click="selectPeriod('month')" :disabled="loading">
                                         <i class="far fa-calendar-alt me-1"></i> <?= __('Month (30d)') ?>
                                     </button>
-                                    <button type="button" class="btn px-2.5 px-sm-3 py-1.5 rounded-2 fw-medium text-nowrap transition-all"
+                                    <button type="button" class="btn btn-sm px-2.5 px-sm-3 py-1.5 rounded-2 fw-medium text-nowrap transition-all"
                                             :class="period === 'year' ? 'btn-info text-white shadow-sm' : 'text-secondary hover-text-light'"
                                             @click="selectPeriod('year')" :disabled="loading">
                                         <i class="fas fa-calendar me-1"></i> <?= __('Year (12m)') ?>
                                     </button>
-                                    <button type="button" class="btn px-2.5 px-sm-3 py-1.5 rounded-2 fw-medium text-nowrap transition-all"
+                                    <button type="button" class="btn btn-sm px-2.5 px-sm-3 py-1.5 rounded-2 fw-medium text-nowrap transition-all"
                                             :class="period === 'custom' ? 'btn-info text-white shadow-sm' : 'text-secondary hover-text-light'"
                                             @click="selectPeriod('custom')" :disabled="loading">
                                         <i class="fas fa-sliders-h me-1"></i> <?= __('Custom') ?>
                                     </button>
-                                </div>
-
-                                <!-- Loading Spinner -->
-                                <div x-show="loading" class="spinner-border spinner-border-sm text-info ms-2 flex-shrink-0" role="status">
-                                    <span class="visually-hidden"><?= __('Loading analytics...') ?></span>
                                 </div>
                             </div>
                         </div>

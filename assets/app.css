@@ -39,6 +39,35 @@
     scrollbar-width: none;
 }
 
+/* Responsive Filter Button Group (2x2 grid on mobile, inline-flex on sm+) */
+.btn-group-responsive {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 4px;
+    width: 100%;
+}
+
+.btn-group-responsive .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    width: 100%;
+    font-size: 0.8125rem;
+}
+
+@media (min-width: 576px) {
+    .btn-group-responsive {
+        display: inline-flex;
+        width: auto;
+        gap: 2px;
+    }
+
+    .btn-group-responsive .btn {
+        width: auto;
+    }
+}
+
 /* Core Layout & Theme overrides */
 body {
     font-family: 'Inter', sans-serif;

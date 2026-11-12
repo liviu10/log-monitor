@@ -5,7 +5,7 @@
         <?php include __DIR__.'/../layouts/sidebar.php'; ?>
 
         <!-- Main Content -->
-        <div class="col h-100 overflow-auto bg-dark bg-opacity-25">
+        <div class="col h-100 overflow-y-auto overflow-x-hidden bg-dark bg-opacity-25">
             <header class="navbar navbar-expand-lg border-bottom border-secondary border-opacity-25 px-3 px-lg-4 py-3 sticky-top bg-dark bg-opacity-75 backdrop-blur">
                 <button class="btn btn-dark btn-sm me-3" @click="sidebarOpen = !sidebarOpen" aria-label="<?= __('Toggle Navigation') ?>">
                     <i class="fas fa-bars"></i>
