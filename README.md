@@ -77,7 +77,7 @@ To connect your external application and send logs:
 
 1. **Register the Client**: Go to the admin panel, create a new application, and copy its unique `api_key`.
 2. **Submit Logs**: Send an HTTP POST request to the API endpoint:
-   * **Endpoint**: `POST http://log-monitor.local:8080/api/log.php` (or `https://log-monitor.local:8443/api/log.php`)
+   * **Endpoint**: `POST http://localhost:8082/api/log.php`
    * **Headers**:
      * `X-API-KEY`: `<your_application_api_key>`
      * `Content-Type`: `application/json`
@@ -116,9 +116,9 @@ Spin up the stack in the background:
 ```bash
 # Navigate to the docker dir and launch compose
 cd docker
-podman-compose up -d
+podman compose up -d
 ```
-The application will be accessible locally at **`http://localhost:8080`**.
+The application will be accessible locally at **`http://localhost:8082`**.
 
 ### 3. Database Migrations & Seeds
 Database migrations and default data seeding are executed automatically during container boot by `docker-entrypoint.sh` when `APP_ENV="development"`.
@@ -132,7 +132,7 @@ podman exec -it log-monitor-app vendor/bin/phinx seed:run -c db/phinx.php -e dev
 ```
 
 ### 4. Admin Credentials (Seeded Defaults)
-* **URL**: `http://localhost:8080/login.php`
+* **URL**: `http://localhost:8082/login.php`
 * **Username**: `admin`
 * **Password**: `admin123`
 
