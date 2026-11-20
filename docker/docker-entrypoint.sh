@@ -16,6 +16,21 @@ write_env() {
     printf '%s="%s"\n' "$1" "$escaped" >> "$ENV_FILE"
 }
 
+sanitize_env_default() {
+    case "$1" in
+        \$\{*:-*\})
+            val=${1#*:-}
+            printf '%s' "${val%\}}"
+            ;;
+        \$\{*\})
+            printf ''
+            ;;
+        *)
+            printf '%s' "$1"
+            ;;
+    esac
+}
+
 umask 077
 : > "$ENV_FILE"
 
@@ -23,9 +38,21 @@ env | grep -E '^(APP_|DB_|SMTP_|LOG_|QUEUE_|PROXY_|TZ=|FRANKENPHP_)' | while IFS
     key=${line%%=*}
     value=${line#*=}
     value=${value#\"}; value=${value%\"}
+    value=$(sanitize_env_default "$value")
     [ -n "$value" ] || continue
     write_env "$key" "$value"
 done
+
+FRANKENPHP_WORKERS=$(sanitize_env_default "${FRANKENPHP_WORKERS:-}")
+case "$FRANKENPHP_WORKERS" in
+    ''|*[!0-9]*) FRANKENPHP_WORKERS=4 ;;
+esac
+export FRANKENPHP_WORKERS
+
+AUTO_MIGRATE=$(sanitize_env_default "${AUTO_MIGRATE:-true}")
+AUTO_SEED=$(sanitize_env_default "${AUTO_SEED:-true}")
+ADMIN_EMAIL=$(sanitize_env_default "${ADMIN_EMAIL:-}")
+export ADMIN_EMAIL
 
 for pair in app_key:APP_KEY db_password:DB_PASSWORD log_api_key:LOG_API_KEY smtp_password:SMTP_PASSWORD; do
     file="$SECRETS_DIR/${pair%%:*}"
