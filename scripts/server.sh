@@ -93,7 +93,7 @@ usage() {
       REPO                  Optional Git repository URL.
 
     egress <ACTION>         Requires root (sudo). Manage outbound iptables rules
-                            on the container bridge (${APP_SLUG}-front).
+                            on the container bridge (default from docker-compose.yml).
       apply                 Apply outbound rules (DNS 53, HTTPS 443, SMTP 587/465).
       remove                Remove the ${APP_SLUG_UPPER}-EGRESS iptables chain.
       status                Display active FORWARD and ${APP_SLUG_UPPER}-EGRESS rules.
@@ -433,7 +433,12 @@ cmd_egress() {
     require_root "egress $action"
     command -v iptables >/dev/null || die "iptables not found."
 
-    local bridge="${EGRESS_BRIDGE:-${APP_SLUG}-front}"
+    local bridge="${EGRESS_BRIDGE:-}"
+    if [ -z "$bridge" ] && [ -f "$APP_DIR/docker-compose.yml" ]; then
+        bridge="$(awk '/com\.docker\.network\.bridge\.name:/ {gsub(/["'\''[:space:]]/, "", $2); print $2; exit}' "$APP_DIR/docker-compose.yml" || true)"
+    fi
+    bridge="${bridge:-${APP_SLUG}-front}"
+    bridge="${bridge:0:15}"
     local chain="${APP_SLUG_UPPER}-EGRESS"
     local ipt="iptables"
 
