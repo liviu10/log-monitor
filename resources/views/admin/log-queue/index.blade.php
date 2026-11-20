@@ -50,7 +50,7 @@
         @if(($totalJobs ?? 0) > 0 && hasPermission('admin.logqueue.purge'))
             <form action="/admin/log-queue/purge"
                   method="POST"
-                  @submit.prevent="if (confirm(@json(__('Are you sure you want to completely purge the log queue?')))) $el.submit()"
+                  @submit.prevent="if (confirm({{ json_encode(__('Are you sure you want to completely purge the log queue?'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) }})) $el.submit()"
                   class="m-0">
                 {!! csrf_field() !!}
                 <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill px-3 fw-semibold">
@@ -134,13 +134,13 @@
                                 <td class="text-secondary small font-monospace">{{ $job['created_at'] }}</td>
                                 <td class="text-end pe-4">
                                     <div class="d-inline-flex gap-3 align-items-center">
-                                        <button type="button" class="btn btn-link text-info p-0" title="{{ __('View Details') }}" @click="viewJob(@json($job))">
+                                        <button type="button" class="btn btn-link text-info p-0" title="{{ __('View Details') }}" @click="viewJob({{ json_encode($job, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) }})">
                                             <i class="fa-regular fa-eye"></i>
                                         </button>
                                         @if(hasPermission('admin.logqueue.delete'))
                                         <form action="/admin/log-queue/{{ (int) $job['id'] }}/delete"
                                               method="POST"
-                                              @submit.prevent="if (confirm(@json(__('Are you sure you want to delete this job from the queue?')))) $el.submit()"
+                                              @submit.prevent="if (confirm({{ json_encode(__('Are you sure you want to delete this job from the queue?'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) }})) $el.submit()"
                                               class="m-0">
                                             {!! csrf_field() !!}
                                             <button type="submit" class="btn btn-link text-danger p-0" title="{{ __('Delete') }}">
@@ -228,7 +228,7 @@
                 <div class="card-body p-4 overflow-auto" style="max-height: 70vh;">
                     <div class="mb-3">
                         <span class="text-secondary small fw-bold text-uppercase d-block mb-1">{{ __('Application') }}</span>
-                        <span class="fw-medium" x-text="selectedJob?.app_name || @json(__('Unknown App'))"></span>
+                        <span class="fw-medium" x-text="selectedJob?.app_name || {{ json_encode(__('Unknown App'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) }}"></span>
                     </div>
                     <div class="mb-3">
                         <span class="text-secondary small fw-bold text-uppercase d-block mb-1">{{ __('Created At') }}</span>

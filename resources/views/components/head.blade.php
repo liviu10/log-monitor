@@ -1,7 +1,7 @@
 @php
     $appName = config('app.name') ?? 'LogMonitor';
     $pageTitle = isset($title) && !empty($title) ? $title . ' - ' . $appName : $appName;
-    $langFile = dirname(__DIR__, 3) . '/lang/' . getLang() . '.json';
+    $langFile = dirname(storage_path()) . '/lang/' . basename(getLang()) . '.json';
     $jsTranslations = [];
     if (is_file($langFile)) {
         $rawLang = @file_get_contents($langFile);

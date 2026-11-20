@@ -101,7 +101,7 @@ usage() {
     status                  Show current deployed commit, container status,
                             backup usage, and CPU/memory stats.
 
-    logs [SERVICE...]       Stream live logs (default: app worker; or specify e.g. db).
+    logs [SERVICE...]       Stream live logs (default: app log-worker worker; or specify e.g. db).
 
     help, -h, --help        Display this help message.
 
@@ -342,7 +342,7 @@ configure_env_and_secrets() {
             step "Interactive .env configuration (press Enter to accept default)"
             prompt_env_key "APP_NAME"             "Application name"                    "LogMonitor"
             prompt_env_key "APP_URL"              "Public URL (https://...)"            "https://log-monitor.insightdevhub.ro"
-            prompt_env_key "APP_PORT"             "Host loopback port (cloudflared)"    "8081"
+            prompt_env_key "APP_PORT"             "Host loopback port (cloudflared)"    "8082"
             prompt_env_key "TZ"                   "Timezone"                            "Europe/Bucharest"
             prompt_env_key "DB_DATABASE"          "Database name"                       "${APP_SLUG}"
             prompt_env_key "DB_USERNAME"          "Database user"                       "${APP_SLUG}_user"
@@ -1005,14 +1005,14 @@ cmd_deploy() {
         local db_running
         db_running="$(service_cid db)"
         if [ -n "$db_running" ] && [ "$DB_NEEDS_RECREATE" = false ]; then
-            # Keep MariaDB warm; explicitly stop/remove app & worker before recreating
+            # Keep MariaDB warm; explicitly stop/remove app, log-worker & worker before recreating
             # so Debian's podman-compose never fails with 'container name is already in use'.
-            "${compose[@]}" stop -t 10 app worker 2>/dev/null || true
-            $engine rm -f "${APP_SLUG}_app_1" "${APP_SLUG}_worker_1" 2>/dev/null || true
-            "${compose[@]}" up -d --no-deps app worker || return 1
+            "${compose[@]}" stop -t 10 app log-worker worker 2>/dev/null || true
+            $engine rm -f "${APP_SLUG}_app_1" "${APP_SLUG}_log-worker_1" "${APP_SLUG}_worker_1" 2>/dev/null || true
+            "${compose[@]}" up -d --no-deps app log-worker worker || return 1
         else
             "${compose[@]}" down 2>/dev/null || true
-            $engine rm -f "${APP_SLUG}_app_1" "${APP_SLUG}_worker_1" "${APP_SLUG}_db_1" 2>/dev/null || true
+            $engine rm -f "${APP_SLUG}_app_1" "${APP_SLUG}_log-worker_1" "${APP_SLUG}_worker_1" "${APP_SLUG}_db_1" 2>/dev/null || true
             "${compose[@]}" up -d --remove-orphans || return 1
         fi
         wait_healthy
@@ -1154,7 +1154,7 @@ cmd_logs() {
     if [ $# -gt 0 ]; then
         exec podman compose logs -f --tail 100 "$@"
     else
-        exec podman compose logs -f --tail 100 app worker
+        exec podman compose logs -f --tail 100 app log-worker worker
     fi
 }
 

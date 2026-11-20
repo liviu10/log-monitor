@@ -130,7 +130,7 @@ namespace Tests\Feature\Controllers\Auth {
 
             self::assertIsString($result);
             self::assertStringContainsString('html', strtolower($result));
-            self::assertStringContainsString('Click to fill', $result);
+            self::assertStringContainsString('fillCredentials(', $result);
         }
 
         public function test_show_login_hides_quick_fill_in_production(): void
@@ -147,7 +147,7 @@ namespace Tests\Feature\Controllers\Auth {
 
                 self::assertIsString($result);
                 self::assertStringContainsString('html', strtolower($result));
-                self::assertStringNotContainsString('Click to fill', $result);
+                self::assertStringNotContainsString('fillCredentials(', $result);
             } finally {
                 if ($previousEnv !== null) {
                     $_ENV['APP_ENV'] = $previousEnv;

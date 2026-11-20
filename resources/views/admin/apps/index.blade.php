@@ -55,7 +55,7 @@
                                     @php
                                         $escapedName = htmlspecialchars((string) $app['name'], ENT_QUOTES, 'UTF-8');
                                     @endphp
-                                    <tr x-data="{ editingName: @json((string) $app['name']), keyCopied: false }">
+                                    <tr x-data="{ editingName: {{ json_encode((string) $app['name'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) }}, keyCopied: false }">
                                         <td class="ps-4">
                                             @if(hasPermission('admin.apps.update'))
                                             <div x-show="editingAppId === {{ (int) $app['id'] }}" x-cloak>
@@ -63,7 +63,7 @@
                                                     {!! csrf_field() !!}
                                                     <input type="text" name="name" x-model="editingName" class="form-control form-control-sm" required minlength="3" maxlength="100">
                                                     <button type="submit" class="btn btn-success btn-sm" title="{{ __('Save') }}"><i class="fa-solid fa-check"></i></button>
-                                                    <button type="button" class="btn btn-secondary btn-sm" @click="editingAppId = null; editingName = @json((string) $app['name'])" title="{{ __('Cancel') }}"><i class="fa-solid fa-xmark"></i></button>
+                                                    <button type="button" class="btn btn-secondary btn-sm" @click="editingAppId = null; editingName = {{ json_encode((string) $app['name'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) }}" title="{{ __('Cancel') }}"><i class="fa-solid fa-xmark"></i></button>
                                                 </form>
                                             </div>
                                             @endif
@@ -76,14 +76,14 @@
                                                 <input type="text" class="form-control text-info font-monospace" value="{{ $app['api_key'] }}" readonly id="key-{{ (int) $app['id'] }}">
                                                 <button class="btn btn-outline-secondary"
                                                         type="button"
-                                                        @click="navigator.clipboard.writeText(@json((string) $app['api_key'])).then(() => { keyCopied = true; setTimeout(() => keyCopied = false, 1500); })"
+                                                        @click="navigator.clipboard.writeText({{ json_encode((string) $app['api_key'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) }}).then(() => { keyCopied = true; setTimeout(() => keyCopied = false, 1500); })"
                                                         title="{{ __('Copy Key') }}">
                                                     <i class="fa-solid" :class="keyCopied ? 'fa-check text-success' : 'fa-copy'"></i>
                                                 </button>
                                                 @if(hasPermission('admin.apps.regeneratekey'))
                                                 <form action="/admin/apps/{{ (int) $app['id'] }}/regenerate-key"
                                                       method="POST"
-                                                      @submit.prevent="if (confirm(@json(__('Are you sure you want to regenerate the API key for this application? The old key will no longer work.')))) $el.submit()"
+                                                      @submit.prevent="if (confirm({{ json_encode(__('Are you sure you want to regenerate the API key for this application? The old key will no longer work.'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) }})) $el.submit()"
                                                       class="m-0">
                                                     {!! csrf_field() !!}
                                                     <button type="submit" class="btn btn-outline-warning" style="border-top-left-radius: 0; border-bottom-left-radius: 0;" title="{{ __('Regenerate API Key') }}">
@@ -95,12 +95,12 @@
                                         </td>
                                         <td class="text-end pe-4">
                                             <div class="d-inline-flex gap-3 align-items-center">
-                                                <div x-show="editingAppId !== {{ (int) $app['id'] }}" class="d-flex gap-3 align-items-center">
+                                                <div x-show="editingAppId !== {{ (int) $app['id'] }}" :class="editingAppId !== {{ (int) $app['id'] }} ? 'd-flex gap-3 align-items-center' : 'd-none'">
                                                     @if(hasPermission('admin.apps.update'))
                                                     <button type="button"
                                                             class="btn btn-link text-warning p-0"
                                                             title="{{ __('Edit name') }}"
-                                                            @click="editingAppId = {{ (int) $app['id'] }}; editingName = @json((string) $app['name'])">
+                                                            @click="editingAppId = {{ (int) $app['id'] }}; editingName = {{ json_encode((string) $app['name'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) }}">
                                                         <i class="fa-solid fa-pen-to-square"></i>
                                                     </button>
                                                     @endif
@@ -108,14 +108,14 @@
                                                     <button type="button"
                                                             class="btn btn-link text-info p-0"
                                                             title="{{ __('Application settings') }}"
-                                                            @click="openSettings({{ (int) $app['id'] }}, @json((string) $app['name']))">
+                                                            @click="openSettings({{ (int) $app['id'] }}, {{ json_encode((string) $app['name'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) }})">
                                                         <i class="fa-solid fa-gear"></i>
                                                     </button>
                                                     @endif
                                                     @if(hasPermission('admin.apps.delete'))
                                                     <form action="/admin/apps/{{ (int) $app['id'] }}/delete"
                                                           method="POST"
-                                                          @submit.prevent="if (confirm(@json(__('Are you sure you want to delete this application? The associated logs will remain but you will no longer be able to send new ones with this key.')))) $el.submit()"
+                                                          @submit.prevent="if (confirm({{ json_encode(__('Are you sure you want to delete this application? The associated logs will remain but you will no longer be able to send new ones with this key.'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) }})) $el.submit()"
                                                           class="m-0">
                                                         {!! csrf_field() !!}
                                                         <button type="submit" class="btn btn-link text-danger p-0" title="{{ __('Delete application') }}">
@@ -255,7 +255,7 @@
                                                     <input x-show="setting.editing" type="text" x-model="setting.tempValue" class="form-control form-control-sm">
                                                 </td>
                                                 <td class="text-end pe-3 py-2">
-                                                    <div x-show="!setting.editing && !setting.deleting" class="d-inline-flex gap-2">
+                                                    <div x-show="!setting.editing && !setting.deleting" :class="(!setting.editing && !setting.deleting) ? 'd-inline-flex gap-2' : 'd-none'">
                                                         <button type="button" class="btn btn-link text-warning p-0" title="{{ __('Edit inline') }}" @click="setting.editing = true">
                                                             <i class="fa-solid fa-pen-to-square"></i>
                                                         </button>
@@ -263,11 +263,11 @@
                                                             <i class="fa-regular fa-trash-can"></i>
                                                         </button>
                                                     </div>
-                                                    <div x-show="setting.deleting" x-cloak class="d-inline-flex align-items-center gap-1">
+                                                    <div x-show="setting.deleting" x-cloak :class="setting.deleting ? 'd-inline-flex align-items-center gap-1' : 'd-none'">
                                                         <button type="button" class="btn btn-danger btn-sm py-0 px-2" @click="deleteSetting(setting.dbKey)">{{ __('Yes') }}</button>
                                                         <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2" @click="setting.deleting = false">{{ __('No') }}</button>
                                                     </div>
-                                                    <div x-show="setting.editing" x-cloak class="d-inline-flex gap-2">
+                                                    <div x-show="setting.editing" x-cloak :class="setting.editing ? 'd-inline-flex gap-2' : 'd-none'">
                                                         <button type="button" class="btn btn-link text-success p-0" title="{{ __('Save setting') }}" @click="saveSingleSetting(setting)">
                                                             <i class="fa-solid fa-check"></i>
                                                         </button>

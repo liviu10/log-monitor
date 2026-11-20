@@ -177,7 +177,7 @@
             @endphp
             <div class="card card-custom border-0 border-start border-4 shadow-sm p-3 rounded-3 cursor-pointer"
                  style="border-left-color: {{ $accentColor }} !important;"
-                 @click="openLog(@json($logPayload))">
+                 @click="openLog({{ json_encode($logPayload, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) }})">
                 <div class="row align-items-center g-2">
                     <div class="col-md-2 col-sm-3 d-flex align-items-center gap-2">
                         <span class="badge bg-secondary bg-opacity-25 text-body-emphasis px-2 py-1 font-monospace text-truncate" style="max-width: 140px;">
@@ -201,7 +201,7 @@
                         {{ date('H:i:s d.m.Y', strtotime((string) ($log['created_at'] ?? 'now'))) }}
                     </div>
                     <div class="col-md-1 col-sm-6 text-end">
-                        <button type="button" class="btn btn-link text-info p-0" @click.stop="openLog(@json($logPayload))" aria-label="{{ __('View Details') }}">
+                        <button type="button" class="btn btn-link text-info p-0" @click.stop="openLog({{ json_encode($logPayload, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) }})" aria-label="{{ __('View Details') }}">
                             <i class="fa-solid fa-chevron-right"></i>
                         </button>
                     </div>

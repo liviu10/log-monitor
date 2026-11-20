@@ -4,8 +4,9 @@
      @open-command-palette.window="open()"
      x-show="isOpen"
      x-cloak
-     class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-start justify-content-center pt-5"
+     class="position-fixed top-0 start-0 w-100 h-100 pt-5 px-3"
      style="z-index: 1090; background: rgba(0, 0, 0, 0.55); backdrop-filter: blur(4px);">
+    <div class="d-flex align-items-start justify-content-center w-100">
     <div class="card card-custom shadow-lg border border-secondary border-opacity-25 rounded-4 overflow-hidden mt-5"
          style="width: 100%; max-width: 560px;"
          @click.away="close()"
@@ -40,6 +41,7 @@
                 {{ __('No matching commands found.') }}
             </div>
         </div>
+    </div>
     </div>
 </div>
 

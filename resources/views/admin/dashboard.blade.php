@@ -64,7 +64,7 @@
 
 <!-- Interactive Chart.js Analytics Section -->
 <div class="card card-custom border-0 shadow-sm rounded-4 overflow-hidden mb-4"
-     x-data="dashboardAnalytics(@json($chartData))"
+     x-data="dashboardAnalytics({{ json_encode($chartData, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) }})"
      x-init="initCharts()">
     <div class="card-header bg-transparent border-bottom border-secondary border-opacity-10 p-3 p-lg-4">
         <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
@@ -368,6 +368,6 @@
     </div>
 </div>
 
-<script src="/assets/vendor/chartjs/chart.umd.min.js" defer></script>
+<script src="/assets/vendor/chartjs/chart.umd.min.js" defer nonce="{{ APP_NONCE }}"></script>
 @endsection
 
