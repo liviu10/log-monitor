@@ -3,7 +3,8 @@
     "description": "Centralized logging system for PHP applications",
     "type": "project",
     "require": {
-        "php": "^8.4",
+        "php": "^8.5",
+        "eftec/bladeone": "^4.0",
         "phpmailer/phpmailer": "^6.9",
         "robmorgan/phinx": "^0.16.0",
         "symfony/var-dumper": "^7.1",
@@ -20,10 +21,13 @@
         }
     },
     "require-dev": {
-        "laravel/pint": "^1.16",
-        "phpstan/phpstan": "^2.2",
+        "laravel/pint": "^1.15",
+        "nunomaduro/collision": "^8.0",
+        "phpstan/phpstan": "^2.2.1",
+        "phpstan/phpstan-deprecation-rules": "^2.0",
+        "phpstan/phpstan-strict-rules": "^2.0",
         "phpunit/phpunit": "^11.1",
-        "rector/rector": "^2.4"
+        "spaze/phpstan-disallowed-calls": "^4.0"
     },
     "config": {
         "sort-packages": true,
@@ -31,21 +35,5 @@
         "allow-plugins": {
             "php-http/discovery": true
         }
-    },
-    "scripts": {
-        "test": "vendor/bin/phpunit",
-        "lint": "vendor/bin/pint --test",
-        "format": "vendor/bin/pint",
-        "stan": "php -d memory_limit=2G vendor/bin/phpstan analyse -c phpstan.neon -l 10",
-        "security:deps": "composer audit --locked --ignore-unreachable",
-        "trivy": "trivy fs --severity LOW,MEDIUM,HIGH,CRITICAL .",
-        "check": [
-            "@lint",
-            "@stan",
-            "@security:deps",
-            "@test",
-            "@trivy"
-        ],
-        "qa": "./scripts/qa.sh"
     }
 }

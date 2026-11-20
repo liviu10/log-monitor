@@ -1,0 +1,56 @@
+# ==============================================================================
+# Aegis - Trivy Vulnerability Ignore List
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Package: brotli-libs (Alpine Linux)
+# Target: docker.io/dunglas/frankenphp:1-php8.5-alpine
+# ------------------------------------------------------------------------------
+# Remediated in docker/Dockerfile via `apk upgrade` (brotli-libs >= 1.2.1-r0).
+# Upstream base image awaiting vendor rebuild on Docker Hub.
+CVE-2026-111497
+
+# ------------------------------------------------------------------------------
+# Package: curl & libcurl (Alpine Linux)
+# Target: docker.io/dunglas/frankenphp:1-php8.5-alpine
+# ------------------------------------------------------------------------------
+# Remediated in docker/Dockerfile via `apk upgrade` (curl & libcurl >= 8.23.0-r0).
+# Upstream base image awaiting vendor rebuild on Docker Hub.
+CVE-2026-92392 exp:2026-11-28
+CVE-2026-92388 exp:2026-11-28
+
+# ------------------------------------------------------------------------------
+# Package: zlib (Alpine Linux)
+# Target: docker.io/dunglas/frankenphp:1-php8.5-alpine
+# ------------------------------------------------------------------------------
+# Vulnerability: Out-of-bounds memory buffer operations in zlib.
+# Rationale: Trivy scans the raw upstream base image digest where zlib is 1.3.2-r1.
+# However, our production Dockerfile explicitly executes `RUN apk upgrade --no-cache`
+# during the build stage, upgrading zlib to 1.4-r0 (or latest patched package).
+# The built container running in production is not vulnerable.
+CVE-2026-4738
+
+# ------------------------------------------------------------------------------
+# Package: github.com/go-jose/go-jose/v3 (Go binary: /usr/local/bin/frankenphp)
+# Target: usr/local/bin/frankenphp
+# ------------------------------------------------------------------------------
+# Vulnerability: Denial of Service via crafted RSA parameters in JWKs.
+# Rationale: Embedded dependency within Caddy / FrankenPHP core. In this application,
+# TLS termination is managed externally via Cloudflare Tunnel (`auto_https off` and
+# `admin off` in Caddyfile). FrankenPHP does not expose or process untrusted JSON
+# Web Keys (JWK), making this vector unreachable from external requests.
+# Additionally, no upstream fix has been released for this binary in the current tag.
+CVE-2026-116587
+
+# Vulnerability: Denial of Service via empty ciphertext buffer during JWE decryption.
+# Rationale: Embedded dependency within Caddy / FrankenPHP. The application does not
+# configure Caddy to perform JWE decryption or token inspection at the web server layer.
+# All application authentication is handled in PHP application logic.
+# No upstream fix is currently available.
+CVE-2026-116585
+
+# Vulnerability: Denial of Service via deeply nested JSON parsing in JOSE structures.
+# Rationale: Embedded dependency within Caddy / FrankenPHP. Unreachable because Caddy
+# does not parse or validate JOSE objects on incoming HTTP requests.
+# No upstream fix is currently available.
+CVE-2026-116586

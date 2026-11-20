@@ -6,7 +6,7 @@ use Phinx\Migration\AbstractMigration;
 
 class CreateAppsTable extends AbstractMigration
 {
-    public function change()
+    public function change(): void
     {
         $table = $this->table('apps', ['id' => false, 'primary_key' => ['id']]);
         $table->addColumn('id', 'biginteger', ['identity' => true, 'signed' => false])

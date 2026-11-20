@@ -7,7 +7,7 @@ use Phinx\Migration\AbstractMigration;
 
 class AlterContextColumnSize extends AbstractMigration
 {
-    public function change()
+    public function change(): void
     {
         $table = $this->table('logs');
         $table->changeColumn('context', 'text', ['limit' => MysqlAdapter::TEXT_LONG, 'null' => true])

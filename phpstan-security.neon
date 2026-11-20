@@ -1,0 +1,10 @@
+parameters:
+    disallowedFunctionCalls:
+        -
+            function: 'exec()'
+            allowIn:
+                - bin/commands/build-release.php
+        -
+            function: 'passthru()'
+            allowIn:
+                - bin/commands/build-release.php

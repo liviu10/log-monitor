@@ -4,51 +4,32 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Core\LogViaStream;
+use App\Core\MySQLWrapper;
 use App\Enums\LogLevel;
-use App\Utilities\LogViaStream;
-use App\Utilities\MySQL;
 use InvalidArgumentException;
+use PDO;
 use RuntimeException;
+use Throwable;
 
 /**
- * App Class
+ * App Model
  *
- * Manages application entities that can send logs to the system.
- * Offers methods for application identification via API key, retrieval,
- * creation, updates, and secure deletion.
- *
- * @category Model
- *
- * @version  1.3
- *
- * @since    PHP 8.4
- *
- * @author   Voica Liviu
- * @license  Proprietary
+ * Manages client applications registered to emit logs to LogMonitor.
  */
 class App
 {
-    protected MySQL $db;
+    protected MySQLWrapper $db;
 
-    /**
-     * Constructor for the App class.
-     *
-     * @param  MySQL|null  $db  Database wrapper instance.
-     */
-    public function __construct(
-        ?MySQL $db = null
-    ) {
-        $this->db = $db ?? MySQL::getInstance();
+    public function __construct(?MySQLWrapper $db = null)
+    {
+        $this->db = $db ?? MySQLWrapper::getInstance();
     }
 
     /**
-     * Finds an application in the database using the unique API key.
+     * Finds an application using its unique API key.
      *
-     * @param  string  $apiKey  API key for lookup.
-     * @return array<string, mixed> The found application.
-     *
-     * @throws InvalidArgumentException If the key is empty.
-     * @throws RuntimeException If the application is not found.
+     * @return array<string, mixed>
      */
     public function findByApiKey(string $apiKey): array
     {
@@ -64,10 +45,9 @@ class App
                 throw new RuntimeException(__('Application not found for the provided API key'));
             }
 
-            /** @var array<string, mixed> $first */
             return $first;
-        } catch (\Throwable $e) {
-            if (class_exists('\App\Utilities\LogViaStream') && class_exists('\App\Enums\LogLevel')) {
+        } catch (Throwable $e) {
+            if (class_exists(LogViaStream::class) && class_exists(LogLevel::class)) {
                 LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                     'location' => __METHOD__,
                     'line' => __LINE__,
@@ -76,7 +56,6 @@ class App
                     'exception_line' => $e->getLine(),
                     'exception_trace' => $e->getTraceAsString(),
                     'sql_statement' => 'SELECT FROM apps WHERE api_key = ?',
-                    'sql_parameters' => [$trimmedKey],
                     'identifier' => 'MySQL_Query_Failure',
                 ]);
             }
@@ -86,28 +65,38 @@ class App
     }
 
     /**
+     * Finds an application by ID.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function findById(int $id): ?array
+    {
+        if ($id <= 0) {
+            return null;
+        }
+
+        $results = $this->db->read('apps', ['id' => $id]);
+        $first = $results[0] ?? null;
+
+        return is_array($first) ? $first : null;
+    }
+
+    /**
      * Retrieves all registered applications.
      *
-     * @return array<int, array<string, mixed>> List of applications.
+     * @return array<int, array<string, mixed>>
      */
     public function getAll(): array
     {
         try {
-            $results = $this->db->read('apps', [], ['*']) ?: [];
-
-            /** @var array<int, array<string, mixed>> $results */
-            return $results;
-        } catch (\Throwable $e) {
-            if (class_exists('App\Utilities\LogViaStream')) {
+            return $this->db->read('apps', [], ['*']);
+        } catch (Throwable $e) {
+            if (class_exists(LogViaStream::class) && class_exists(LogLevel::class)) {
                 LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                     'location' => __METHOD__,
                     'line' => __LINE__,
                     'exception_message' => $e->getMessage(),
-                    'exception_file' => $e->getFile(),
-                    'exception_line' => $e->getLine(),
-                    'exception_trace' => $e->getTraceAsString(),
                     'sql_statement' => 'SELECT ALL FROM apps',
-                    'sql_parameters' => [],
                     'identifier' => 'MySQL_Query_Failure',
                 ]);
             }
@@ -116,16 +105,6 @@ class App
         }
     }
 
-    /**
-     * Registers a new application in the system.
-     *
-     * @param  string  $name  Application name.
-     * @param  string  $apiKey  Generated API key.
-     * @return int ID of the new record.
-     *
-     * @throws InvalidArgumentException If the provided data is invalid.
-     * @throws RuntimeException If saving fails.
-     */
     public function create(string $name, string $apiKey): int
     {
         $trimmedName = trim($name);
@@ -135,7 +114,6 @@ class App
             throw new InvalidArgumentException(__('Application name and API key cannot be empty'));
         }
 
-        $sql = 'INSERT INTO apps (name, api_key)';
         $params = ['name' => $trimmedName, 'api_key' => $trimmedKey];
 
         try {
@@ -145,17 +123,13 @@ class App
             }
 
             return (int) $result;
-        } catch (\Throwable $e) {
-            if (class_exists('App\Utilities\LogViaStream')) {
+        } catch (Throwable $e) {
+            if (class_exists(LogViaStream::class) && class_exists(LogLevel::class)) {
                 LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                     'location' => __METHOD__,
                     'line' => __LINE__,
                     'exception_message' => $e->getMessage(),
-                    'exception_file' => $e->getFile(),
-                    'exception_line' => $e->getLine(),
-                    'exception_trace' => $e->getTraceAsString(),
-                    'sql_statement' => $sql,
-                    'sql_parameters' => $params,
+                    'sql_statement' => 'INSERT INTO apps (name, api_key)',
                     'identifier' => 'MySQL_Query_Failure',
                 ]);
             }
@@ -165,37 +139,28 @@ class App
     }
 
     /**
-     * Updates an application's data.
-     *
-     * @param  int  $id  Application ID.
-     * @param  array<string, mixed>  $data  Data for update.
-     *
-     * @throws InvalidArgumentException If the data is empty.
-     * @throws RuntimeException If update fails.
+     * @param  array<string, mixed>  $data
      */
     public function update(int $id, array $data): void
     {
         if ($id <= 0) {
             throw new InvalidArgumentException(__('Invalid application ID'));
         }
-        if (empty($data)) {
+        if ($data === []) {
             throw new InvalidArgumentException(__('Update data cannot be empty'));
         }
 
-        $sql = 'UPDATE apps SET ... WHERE id = ?';
+        $data['updated_at'] = date('Y-m-d H:i:s');
+
         try {
             $this->db->update('apps', $data, ['id' => $id]);
-        } catch (\Throwable $e) {
-            if (class_exists('App\Utilities\LogViaStream')) {
+        } catch (Throwable $e) {
+            if (class_exists(LogViaStream::class) && class_exists(LogLevel::class)) {
                 LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                     'location' => __METHOD__,
                     'line' => __LINE__,
                     'exception_message' => $e->getMessage(),
-                    'exception_file' => $e->getFile(),
-                    'exception_line' => $e->getLine(),
-                    'exception_trace' => $e->getTraceAsString(),
-                    'sql_statement' => $sql,
-                    'sql_parameters' => array_merge($data, ['id' => $id]),
+                    'sql_statement' => 'UPDATE apps SET ... WHERE id = ?',
                     'identifier' => 'MySQL_Query_Failure',
                 ]);
             }
@@ -204,44 +169,71 @@ class App
         }
     }
 
-    /**
-     * Deletes an application from the system based on its ID.
-     *
-     * @param  int  $id  Application ID.
-     *
-     * @throws InvalidArgumentException If the ID is invalid.
-     * @throws RuntimeException If deletion fails.
-     */
     public function delete(int $id): void
     {
         if ($id <= 0) {
             throw new InvalidArgumentException(__('Invalid application ID for deletion'));
         }
 
-        $sql = 'DELETE FROM apps WHERE id = ?';
-        $params = ['id' => $id];
-
         try {
-            $result = $this->db->delete('apps', $params);
-            if (! $result) {
+            $result = $this->db->delete('apps', ['id' => $id]);
+            if ($result === 0) {
                 throw new RuntimeException(__('Application deletion failed or record does not exist'));
             }
-        } catch (\Throwable $e) {
-            if (class_exists('App\Utilities\LogViaStream')) {
+        } catch (Throwable $e) {
+            if (class_exists(LogViaStream::class) && class_exists(LogLevel::class)) {
                 LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                     'location' => __METHOD__,
                     'line' => __LINE__,
                     'exception_message' => $e->getMessage(),
-                    'exception_file' => $e->getFile(),
-                    'exception_line' => $e->getLine(),
-                    'exception_trace' => $e->getTraceAsString(),
-                    'sql_statement' => $sql,
-                    'sql_parameters' => $params,
+                    'sql_statement' => 'DELETE FROM apps WHERE id = ?',
                     'identifier' => 'MySQL_Query_Failure',
                 ]);
             }
 
             throw new RuntimeException(__('Database error during application deletion'), 0, $e);
         }
+    }
+
+    /**
+     * Returns top applications by total log count.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public static function getTopApps(int $limit = 5): array
+    {
+        $db = MySQLWrapper::getInstance();
+        $stmt = $db->query(
+            'SELECT a.id, a.name as app_name, COUNT(l.id) as log_count, MAX(l.created_at) as last_logged_at
+             FROM apps a
+             LEFT JOIN logs l ON l.app_id = a.id
+             GROUP BY a.id, a.name
+             ORDER BY log_count DESC
+             LIMIT '.max(1, $limit)
+        );
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        /** @var array<int, array<string, mixed>> $rows */
+
+        return $rows;
+    }
+
+    /**
+     * Dashboard summary card for registered apps.
+     *
+     * @return array<string, mixed>
+     */
+    public static function dashboardSummaryApps(): array
+    {
+        $db = MySQLWrapper::getInstance();
+        $row = $db->query('SELECT COUNT(*) as total FROM apps')->fetch();
+        $total = is_array($row) && is_numeric($row['total'] ?? null) ? (int) $row['total'] : 0;
+
+        return [
+            'title' => __('Active Apps'),
+            'value' => $total,
+            'icon' => 'fa-solid fa-microchip',
+            'color' => 'info',
+            'url' => '/admin/apps',
+        ];
     }
 }

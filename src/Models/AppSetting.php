@@ -4,50 +4,32 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Core\LogViaStream;
+use App\Core\MySQLWrapper;
 use App\Enums\LogLevel;
-use App\Utilities\LogViaStream;
-use App\Utilities\MySQL;
 use InvalidArgumentException;
 use RuntimeException;
+use Throwable;
 
 /**
- * AppSetting Class
+ * AppSetting Model
  *
- * Manages settings specific to an application in the database.
- * Implements strict validation and defensive Fail Fast architecture.
- *
- * @category Model
- *
- * @version  1.3
- *
- * @since    PHP 8.4
- *
- * @author   Voica Liviu
- * @license  Proprietary
+ * Manages per-application settings (notification channels, levels, recipients).
  */
 class AppSetting
 {
-    /** @var array<int, array{data: array<int, array<string, mixed>>, cached_at: int}> Static in-memory settings cache, useful for the daemon worker */
+    /** @var array<int, array{data: array<int, array<string, mixed>>, cached_at: int}> */
     protected static array $settingsCache = [];
 
-    protected MySQL $db;
+    protected MySQLWrapper $db;
 
-    /**
-     * Constructor for the AppSetting class.
-     *
-     * @param  MySQL|null  $db  Database wrapper instance.
-     */
-    public function __construct(
-        ?MySQL $db = null
-    ) {
-        $this->db = $db ?? MySQL::getInstance();
+    public function __construct(?MySQLWrapper $db = null)
+    {
+        $this->db = $db ?? MySQLWrapper::getInstance();
     }
 
     /**
-     * Retrieves all settings for an application.
-     *
-     * @param  int  $appId  Application ID.
-     * @return array<int, array<string, mixed>> List of found settings.
+     * @return array<int, array<string, mixed>>
      */
     public function getSettingsForApp(int $appId): array
     {
@@ -64,25 +46,20 @@ class AppSetting
         }
 
         try {
-            $data = $this->db->read('app_settings', ['app_id' => $appId]) ?: [];
-            /** @var array<int, array<string, mixed>> $data */
+            $data = $this->db->read('app_settings', ['app_id' => $appId]);
             self::$settingsCache[$appId] = [
                 'data' => $data,
                 'cached_at' => $currentTime,
             ];
 
             return $data;
-        } catch (\Throwable $e) {
-            if (class_exists('App\Utilities\LogViaStream')) {
+        } catch (Throwable $e) {
+            if (class_exists(LogViaStream::class) && class_exists(LogLevel::class)) {
                 LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                     'location' => __METHOD__,
                     'line' => __LINE__,
                     'exception_message' => $e->getMessage(),
-                    'exception_file' => $e->getFile(),
-                    'exception_line' => $e->getLine(),
-                    'exception_trace' => $e->getTraceAsString(),
                     'sql_statement' => 'SELECT FROM app_settings WHERE app_id = ?',
-                    'sql_parameters' => ['app_id' => $appId],
                     'identifier' => 'MySQL_Query_Failure',
                 ]);
             }
@@ -92,11 +69,7 @@ class AppSetting
     }
 
     /**
-     * Finds a specific setting based on app_id and key.
-     *
-     * @param  int  $appId  Application ID.
-     * @param  string  $key  Setting key.
-     * @return array<string, mixed>|null Setting data or null if it does not exist.
+     * @return array<string, mixed>|null
      */
     public function getSetting(int $appId, string $key): ?array
     {
@@ -112,23 +85,15 @@ class AppSetting
             ]);
 
             $first = $results[0] ?? null;
-            if (is_array($first)) {
-                /** @var array<string, mixed> $first */
-                return $first;
-            }
 
-            return null;
-        } catch (\Throwable $e) {
-            if (class_exists('App\Utilities\LogViaStream')) {
+            return is_array($first) ? $first : null;
+        } catch (Throwable $e) {
+            if (class_exists(LogViaStream::class) && class_exists(LogLevel::class)) {
                 LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                     'location' => __METHOD__,
                     'line' => __LINE__,
                     'exception_message' => $e->getMessage(),
-                    'exception_file' => $e->getFile(),
-                    'exception_line' => $e->getLine(),
-                    'exception_trace' => $e->getTraceAsString(),
                     'sql_statement' => 'SELECT FROM app_settings WHERE app_id = ? AND key = ?',
-                    'sql_parameters' => ['app_id' => $appId, 'key' => $trimmedKey],
                     'identifier' => 'MySQL_Query_Failure',
                 ]);
             }
@@ -137,16 +102,6 @@ class AppSetting
         }
     }
 
-    /**
-     * Saves or updates a setting for an application.
-     *
-     * @param  int  $appId  Application ID.
-     * @param  string  $key  Setting key.
-     * @param  string  $value  Setting value.
-     *
-     * @throws InvalidArgumentException If parameters are invalid.
-     * @throws RuntimeException If saving fails.
-     */
     public function saveSetting(int $appId, string $key, string $value): void
     {
         $trimmedKey = trim($key);
@@ -157,15 +112,7 @@ class AppSetting
         $existing = $this->getSetting($appId, $trimmedKey);
         $currentTime = date('Y-m-d H:i:s');
 
-        if ($existing) {
-            $sql = 'UPDATE app_settings SET value = ?, updated_at = ? WHERE app_id = ? AND key = ?';
-            $params = [
-                'value' => $value,
-                'updated_at' => $currentTime,
-                'app_id' => $appId,
-                'key' => $trimmedKey,
-            ];
-
+        if ($existing !== null) {
             try {
                 $this->db->update('app_settings', [
                     'value' => $value,
@@ -174,17 +121,13 @@ class AppSetting
                     'app_id' => $appId,
                     'key' => $trimmedKey,
                 ]);
-            } catch (\Throwable $e) {
-                if (class_exists('App\Utilities\LogViaStream')) {
+            } catch (Throwable $e) {
+                if (class_exists(LogViaStream::class) && class_exists(LogLevel::class)) {
                     LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                         'location' => __METHOD__,
                         'line' => __LINE__,
                         'exception_message' => $e->getMessage(),
-                        'exception_file' => $e->getFile(),
-                        'exception_line' => $e->getLine(),
-                        'exception_trace' => $e->getTraceAsString(),
-                        'sql_statement' => $sql,
-                        'sql_parameters' => $params,
+                        'sql_statement' => 'UPDATE app_settings SET value = ?, updated_at = ? WHERE app_id = ? AND key = ?',
                         'identifier' => 'MySQL_Query_Failure',
                     ]);
                 }
@@ -192,30 +135,23 @@ class AppSetting
                 throw new RuntimeException(__('Database error while updating setting'), 0, $e);
             }
         } else {
-            $sql = 'INSERT INTO app_settings (app_id, key, value, created_at)';
-            $params = [
-                'app_id' => $appId,
-                'key' => $trimmedKey,
-                'value' => $value,
-                'created_at' => $currentTime,
-            ];
-
             try {
-                $result = $this->db->create('app_settings', $params);
+                $result = $this->db->create('app_settings', [
+                    'app_id' => $appId,
+                    'key' => $trimmedKey,
+                    'value' => $value,
+                    'created_at' => $currentTime,
+                ]);
                 if ($result === 0 || $result === '') {
                     throw new RuntimeException(__('Failed to create new setting'));
                 }
-            } catch (\Throwable $e) {
-                if (class_exists('App\Utilities\LogViaStream')) {
+            } catch (Throwable $e) {
+                if (class_exists(LogViaStream::class) && class_exists(LogLevel::class)) {
                     LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                         'location' => __METHOD__,
                         'line' => __LINE__,
                         'exception_message' => $e->getMessage(),
-                        'exception_file' => $e->getFile(),
-                        'exception_line' => $e->getLine(),
-                        'exception_trace' => $e->getTraceAsString(),
-                        'sql_statement' => $sql,
-                        'sql_parameters' => $params,
+                        'sql_statement' => 'INSERT INTO app_settings (app_id, key, value, created_at)',
                         'identifier' => 'MySQL_Query_Failure',
                     ]);
                 }
@@ -227,14 +163,7 @@ class AppSetting
     }
 
     /**
-     * Updates the key and/or value of an existing setting.
-     *
-     * @param  int  $appId  Application ID.
-     * @param  string  $oldKey  The old setting key.
-     * @param  array<string, mixed>  $data  Data to update ('key' and/or 'value').
-     *
-     * @throws InvalidArgumentException If the provided keys are invalid.
-     * @throws RuntimeException If the new key is a duplicate or the operation fails.
+     * @param  array<string, mixed>  $data
      */
     public function updateSetting(int $appId, string $oldKey, array $data): void
     {
@@ -247,20 +176,9 @@ class AppSetting
         $newKey = trim(is_string($rawNewKey) ? $rawNewKey : '');
         $value = $data['value'] ?? '';
 
-        if ($trimmedOldKey !== $newKey) {
-            if ($this->getSetting($appId, $newKey) !== null) {
-                throw new RuntimeException(__('The new setting key already exists'));
-            }
+        if ($trimmedOldKey !== $newKey && $this->getSetting($appId, $newKey) !== null) {
+            throw new RuntimeException(__('The new setting key already exists'));
         }
-
-        $sql = 'UPDATE app_settings SET key = ?, value = ?, updated_at = ? WHERE app_id = ? AND key = ?';
-        $params = [
-            'key' => $newKey,
-            'value' => $value,
-            'updated_at' => date('Y-m-d H:i:s'),
-            'app_id' => $appId,
-            'key_old' => $trimmedOldKey,
-        ];
 
         try {
             $this->db->update('app_settings', [
@@ -272,17 +190,13 @@ class AppSetting
                 'key' => $trimmedOldKey,
             ]);
             unset(self::$settingsCache[$appId]);
-        } catch (\Throwable $e) {
-            if (class_exists('App\Utilities\LogViaStream')) {
+        } catch (Throwable $e) {
+            if (class_exists(LogViaStream::class) && class_exists(LogLevel::class)) {
                 LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                     'location' => __METHOD__,
                     'line' => __LINE__,
                     'exception_message' => $e->getMessage(),
-                    'exception_file' => $e->getFile(),
-                    'exception_line' => $e->getLine(),
-                    'exception_trace' => $e->getTraceAsString(),
-                    'sql_statement' => $sql,
-                    'sql_parameters' => $params,
+                    'sql_statement' => 'UPDATE app_settings SET key = ?, value = ?, updated_at = ? WHERE app_id = ? AND key = ?',
                     'identifier' => 'MySQL_Query_Failure',
                 ]);
             }
@@ -291,15 +205,6 @@ class AppSetting
         }
     }
 
-    /**
-     * Deletes a setting of an application.
-     *
-     * @param  int  $appId  Application ID.
-     * @param  string  $key  Setting key.
-     *
-     * @throws InvalidArgumentException If parameters are invalid.
-     * @throws RuntimeException If deletion fails.
-     */
     public function deleteSetting(int $appId, string $key): void
     {
         $trimmedKey = trim($key);
@@ -307,34 +212,32 @@ class AppSetting
             throw new InvalidArgumentException(__('Invalid criteria for setting deletion'));
         }
 
-        $sql = 'DELETE FROM app_settings WHERE app_id = ? AND key = ?';
-        $params = ['app_id' => $appId, 'key' => $trimmedKey];
-
         try {
             $result = $this->db->delete('app_settings', [
                 'app_id' => $appId,
                 'key' => $trimmedKey,
             ]);
-            if (! $result) {
+            if ($result === 0) {
                 throw new RuntimeException(__('Setting not found or deletion failed'));
             }
             unset(self::$settingsCache[$appId]);
-        } catch (\Throwable $e) {
-            if (class_exists('App\Utilities\LogViaStream')) {
+        } catch (Throwable $e) {
+            if (class_exists(LogViaStream::class) && class_exists(LogLevel::class)) {
                 LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
                     'location' => __METHOD__,
                     'line' => __LINE__,
                     'exception_message' => $e->getMessage(),
-                    'exception_file' => $e->getFile(),
-                    'exception_line' => $e->getLine(),
-                    'exception_trace' => $e->getTraceAsString(),
-                    'sql_statement' => $sql,
-                    'sql_parameters' => $params,
+                    'sql_statement' => 'DELETE FROM app_settings WHERE app_id = ? AND key = ?',
                     'identifier' => 'MySQL_Query_Failure',
                 ]);
             }
 
             throw new RuntimeException(__('Database error during setting removal'), 0, $e);
         }
+    }
+
+    public static function resetCache(): void
+    {
+        self::$settingsCache = [];
     }
 }

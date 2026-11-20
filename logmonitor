@@ -1,0 +1,271 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+/**
+ * LogMonitor CLI Console: The central entry point for all application commands.
+ * Permits host execution (delegating to podman compose) or native container execution.
+ * Run: php logmonitor [command] or ./logmonitor [command]
+ */
+$isInsideContainer = (getenv('LOG_MONITOR_CONTAINER') === 'true') || @file_exists('/run/.containerenv') || @file_exists('/.dockerenv');
+
+if (! $isInsideContainer) {
+    $commandName = $argv[1] ?? 'help';
+    $hostNativeCommands = ['help', 'list', 'serve', 'make:migration', 'make:seed', 'audit:translations', 'cache:clear'];
+
+    if (! in_array($commandName, $hostNativeCommands, true)) {
+        $args = array_slice($argv, 1);
+        $escapedArgs = array_map('escapeshellarg', $args);
+        $engine = trim((string) @shell_exec('command -v podman 2>/dev/null')) !== '' ? 'podman' : 'docker';
+        $cmd = $engine.' compose exec app php logmonitor '.implode(' ', $escapedArgs);
+
+        passthru($cmd, $exitCode);
+        exit($exitCode);
+    }
+}
+
+require_once __DIR__.'/config/bootstrap.php';
+
+$command = $argv[1] ?? 'help';
+$envAppEnv = $_ENV['APP_ENV'] ?? 'development';
+$appEnv = strtolower(is_string($envAppEnv) ? $envAppEnv : 'development');
+
+$currentBranchGlobal = trim((string) (shell_exec('git rev-parse --abbrev-ref HEAD 2>/dev/null') ?: 'unknown'));
+$isProduction = ($appEnv === 'production' || $appEnv === 'prod' || $currentBranchGlobal === 'master');
+
+$universalCommands = [
+    'help', 'list', 'db:migrate', 'db:status', 'log-worker:run', 'worker:run',
+    'logs:purge', 'queue:purge', 'queue:failed', 'queue:retry', 'cache:clear',
+];
+$devCommands = ['db:reset', 'db:rollback', 'db:seed', 'audit:translations', 'serve', 'make:migration', 'make:seed'];
+
+$isAllowed = in_array($command, $universalCommands, true) || (in_array($command, $devCommands, true) && ! $isProduction);
+
+if (! $isAllowed) {
+    echo "\033[31m[SECURITY BLOCK]\033[0m The command '{$command}' is explicitly FORBIDDEN here.\n";
+    if ($currentBranchGlobal === 'master') {
+        echo "Reason: You are on the '\033[1mmaster\033[0m' branch (Production).\n";
+        echo "Action: Please switch to the '\033[1mdev\033[0m' branch to run development tools.\n";
+    } else {
+        echo "Reason: This command is not permitted in APP_ENV ('{$appEnv}') or branch ('{$currentBranchGlobal}').\n";
+    }
+    exit(1);
+}
+
+switch ($command) {
+    case 'help':
+    case 'list':
+        printHelp();
+        break;
+
+    case 'db:migrate':
+        echo "Running database migrations...\n";
+        passthru('php -d error_reporting="E_ALL & ~E_DEPRECATED" vendor/bin/phinx migrate -c config/phinx.php');
+        break;
+
+    case 'db:rollback':
+        echo "Rolling back database migrations...\n";
+        passthru('php -d error_reporting="E_ALL & ~E_DEPRECATED" vendor/bin/phinx rollback -c config/phinx.php');
+        break;
+
+    case 'db:seed':
+        echo "Running database seeds...\n";
+        passthru('php -d error_reporting="E_ALL & ~E_DEPRECATED" vendor/bin/phinx seed:run -c config/phinx.php');
+        break;
+
+    case 'db:status':
+        echo "Showing migration status...\n";
+        passthru('php -d error_reporting="E_ALL & ~E_DEPRECATED" vendor/bin/phinx status -c config/phinx.php');
+        break;
+
+    case 'db:reset':
+        echo "Resetting database (Dropping all tables, Migrate, Seed)...\n";
+        require_once __DIR__.'/vendor/autoload.php';
+        $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
+        $dotenv->safeLoad();
+
+        $rawHost = $_ENV['DB_HOST'] ?? 'localhost';
+        $host = is_string($rawHost) ? $rawHost : 'localhost';
+        $rawDb = $_ENV['DB_DATABASE'] ?? 'log_monitor';
+        $db = is_string($rawDb) ? $rawDb : 'log_monitor';
+        $rawUser = $_ENV['DB_USERNAME'] ?? 'root';
+        $user = is_string($rawUser) ? $rawUser : 'root';
+        $rawPass = $_ENV['DB_PASSWORD'] ?? '';
+        $pass = is_string($rawPass) ? $rawPass : '';
+        $rawPort = $_ENV['DB_PORT'] ?? '3306';
+        $port = is_scalar($rawPort) ? (string) $rawPort : '3306';
+
+        try {
+            $pdo = new PDO("mysql:host={$host};port={$port};dbname={$db}", $user, $pass);
+            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            $pdo->exec('SET FOREIGN_KEY_CHECKS = 0;');
+            $stmt = $pdo->query('SHOW TABLES');
+            if ($stmt !== false) {
+                while ($row = $stmt->fetch(PDO::FETCH_NUM)) {
+                    if (is_array($row) && isset($row[0]) && is_string($row[0])) {
+                        $pdo->exec('DROP TABLE IF EXISTS `'.$row[0].'`;');
+                    }
+                }
+            }
+            $pdo->exec('SET FOREIGN_KEY_CHECKS = 1;');
+            echo "All tables dropped successfully.\n";
+        } catch (PDOException $e) {
+            echo 'Error dropping tables: '.$e->getMessage()."\n";
+            exit(1);
+        }
+
+        passthru('php -d error_reporting="E_ALL & ~E_DEPRECATED" vendor/bin/phinx migrate -c config/phinx.php');
+        passthru('php -d error_reporting="E_ALL & ~E_DEPRECATED" vendor/bin/phinx seed:run -c config/phinx.php');
+        break;
+
+    case 'make:migration':
+        $name = $argv[2] ?? null;
+        if (! is_string($name) || $name === '') {
+            echo "Error: Migration name is required.\nUsage: php logmonitor make:migration <name>\n";
+            exit(1);
+        }
+        passthru('php -d error_reporting="E_ALL & ~E_DEPRECATED" vendor/bin/phinx create '.escapeshellarg($name).' -c config/phinx.php');
+        break;
+
+    case 'make:seed':
+        $name = $argv[2] ?? null;
+        if (! is_string($name) || $name === '') {
+            echo "Error: Seed name is required.\nUsage: php logmonitor make:seed <name>\n";
+            exit(1);
+        }
+        passthru('php -d error_reporting="E_ALL & ~E_DEPRECATED" vendor/bin/phinx seed:create '.escapeshellarg($name).' -c config/phinx.php');
+        break;
+
+    case 'log-worker:run':
+        echo "Starting high-throughput log ingestion worker daemon...\n";
+        require_once __DIR__.'/bin/daemon/log-worker.php';
+        break;
+
+    case 'worker:run':
+        echo "Starting notification queue worker...\n";
+        require_once __DIR__.'/bin/daemon/worker.php';
+        break;
+
+    case 'logs:purge':
+        $days = $argv[2] ?? '30';
+        $argv = [__DIR__.'/bin/cron/purge-logs.php', $days];
+        require_once __DIR__.'/bin/cron/purge-logs.php';
+        break;
+
+    case 'queue:purge':
+        $days = $argv[2] ?? '15';
+        $argv = [__DIR__.'/bin/cron/purge-queue.php', $days];
+        require_once __DIR__.'/bin/cron/purge-queue.php';
+        break;
+
+    case 'queue:failed':
+        $queue = $argv[2] ?? null;
+        $jobs = App\Models\QueueJob::getFailedJobs(is_string($queue) ? $queue : null);
+        if ($jobs === []) {
+            echo "No failed queue jobs found.\n";
+            break;
+        }
+        echo sprintf("%-6s | %-12s | %-8s | %-20s | %s\n", 'ID', 'Queue', 'Attempts', 'Failed At', 'Last Error');
+        echo str_repeat('-', 80)."\n";
+        foreach ($jobs as $j) {
+            $id = is_scalar($j['id'] ?? null) ? (string) $j['id'] : '';
+            $q = is_scalar($j['queue'] ?? null) ? (string) $j['queue'] : '';
+            $att = is_scalar($j['attempts'] ?? null) ? (string) $j['attempts'] : '';
+            $date = is_scalar($j['processed_at'] ?? ($j['created_at'] ?? null)) ? (string) ($j['processed_at'] ?? $j['created_at']) : '';
+            $err = mb_substr(is_string($j['error_message'] ?? null) ? $j['error_message'] : '', 0, 35);
+            echo sprintf("%-6s | %-12s | %-8s | %-20s | %s\n", $id, $q, $att, $date, $err);
+        }
+        echo "\nTotal failed jobs: ".count($jobs)."\n";
+        break;
+
+    case 'queue:retry':
+        $target = $argv[2] ?? null;
+        if (! is_string($target) || $target === '') {
+            echo "Error: Target is required. Use 'all' or specify a job ID.\n";
+            exit(1);
+        }
+        if ($target === 'all') {
+            $queue = $argv[3] ?? null;
+            echo "Testing pre-flight health check...\n";
+            $smtpOk = App\Controllers\Common\QueueController::checkSmtpHealth();
+            echo $smtpOk ? "Pre-flight health check passed.\n" : "Warning: SMTP connection test failed. Proceeding anyway.\n";
+            $count = App\Models\QueueJob::retryFailed(null, is_string($queue) ? $queue : null);
+            echo "Successfully reset {$count} failed job(s) to pending state.\n";
+        } elseif (is_numeric($target)) {
+            $count = App\Models\QueueJob::retryFailed((int) $target);
+            echo $count > 0
+                ? "Successfully reset job ID {$target} to pending state.\n"
+                : "Job ID {$target} not found or not in failed state.\n";
+        } else {
+            echo "Invalid target '{$target}'. Specify 'all' or a valid numeric job ID.\n";
+            exit(1);
+        }
+        break;
+
+    case 'cache:clear':
+        echo "Clearing framework and compiled view cache files...\n";
+        $dirs = [
+            __DIR__.'/storage/framework/cache',
+            __DIR__.'/storage/views',
+        ];
+        foreach ($dirs as $d) {
+            if (is_dir($d)) {
+                $files = glob($d.'/*');
+                if (is_array($files)) {
+                    foreach ($files as $file) {
+                        if (is_file($file) && (str_ends_with($file, '.cache') || str_ends_with($file, '.bladec'))) {
+                            @unlink($file);
+                        }
+                    }
+                }
+            }
+        }
+        echo "Cache cleared successfully.\n";
+        break;
+
+    case 'audit:translations':
+        $argv = [__DIR__.'/bin/commands/audit-translations.php'];
+        require_once __DIR__.'/bin/commands/audit-translations.php';
+        break;
+
+    case 'serve':
+        $currentBranch = trim((string) (shell_exec('git rev-parse --abbrev-ref HEAD 2>/dev/null') ?: 'unknown'));
+        echo "\033[32mStarting LogMonitor Local Development Server...\033[0m\n";
+        echo "Active Git Branch: \033[1m{$currentBranch}\033[0m\n";
+        echo "Listening on: http://localhost:8000\n";
+        echo "Press Ctrl+C to stop.\n";
+        passthru('php -S localhost:8000 -t public/', $exitCode);
+        exit($exitCode);
+
+    default:
+        echo "Unknown command: {$command}\n";
+        echo "Run 'php logmonitor help' to see available commands.\n";
+        exit(1);
+}
+
+function printHelp(): void
+{
+    echo "LogMonitor CLI Console Tool - Version 2.0\n\n";
+    echo "Usage:\n";
+    echo "  php logmonitor <command> [arguments]\n\n";
+    echo "Available Commands:\n";
+    echo "  help, list               Show this help message\n";
+    echo "  serve                    Start local PHP development server (dev)\n";
+    echo "  db:migrate               Run all pending database migrations\n";
+    echo "  db:rollback              Rollback the last database migration (dev)\n";
+    echo "  db:seed                  Run all database seeders (dev)\n";
+    echo "  db:reset                 Drop tables, run migrations, and run seeders (dev)\n";
+    echo "  db:status                Show the status of database migrations\n";
+    echo "  make:migration <name>    Create a new database migration\n";
+    echo "  make:seed <name>         Create a new database seeder\n";
+    echo "  log-worker:run           Start the high-throughput log ingestion worker daemon\n";
+    echo "  worker:run               Run one cycle of the notification queue worker\n";
+    echo "  logs:purge [days=30]     Archive & purge logs older than N days\n";
+    echo "  queue:purge [days=15]    Purge old processed notification queue jobs\n";
+    echo "  queue:failed [queue]     List dead-letter failed notification queue jobs\n";
+    echo "  queue:retry <all|id>     Retry dead-letter failed notification queue jobs\n";
+    echo "  cache:clear              Clear framework and compiled view cache files\n";
+    echo "  audit:translations       Scan codebase and sync missing translations to en.json\n";
+}
+

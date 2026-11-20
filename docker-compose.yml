@@ -1,0 +1,188 @@
+# ==============================================================================
+# LogMonitor - production stack (single source of truth)
+#   docker compose up -d --build
+# Local development extras (DB port on localhost): add -f compose.dev.yml
+# ==============================================================================
+name: log-monitor
+
+x-hardening: &hardening
+  restart: unless-stopped
+  security_opt:
+    - no-new-privileges:true
+  logging:
+    driver: "json-file"
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+x-app-env: &app-env
+  APP_ENV: ${APP_ENV:-production}
+  APP_NAME: ${APP_NAME:-LogMonitor}
+  APP_URL: ${APP_URL:-https://log-monitor.insightdevhub.ro}
+  TZ: ${TZ:-Europe/Bucharest}
+  SESSION_IDLE_TIMEOUT: ${SESSION_IDLE_TIMEOUT:-1800}
+  FRANKENPHP_WORKERS: ${FRANKENPHP_WORKERS:-4}
+  DB_HOST: db
+  DB_PORT: "3306"
+  DB_DATABASE: ${DB_DATABASE:-log_monitor}
+  DB_USERNAME: ${DB_USERNAME:-log_monitor_user}
+  SMTP_HOST: ${SMTP_HOST:-}
+  SMTP_PORT: ${SMTP_PORT:-587}
+  SMTP_USERNAME: ${SMTP_USERNAME:-}
+  SMTP_FROM: ${SMTP_FROM:-}
+  PROXY_HOST: ${PROXY_HOST:-}
+  PROXY_PORT: ${PROXY_PORT:-}
+  SMTP_PROXY_INSECURE: ${SMTP_PROXY_INSECURE:-}
+  LOG_SERVER_URL: ${LOG_SERVER_URL:-http://127.0.0.1:8080/api/log.php}
+  LOG_MONITOR_CONTAINER: "true"
+
+x-php: &php
+  <<: *hardening
+  image: log-monitor-app:${IMAGE_TAG:-latest}
+  read_only: true
+  cap_drop: [ALL]
+  cap_add: [NET_BIND_SERVICE]
+  tmpfs:
+    - /tmp:size=64m,mode=1777
+  volumes:
+    - storage_data:/var/www/html/storage
+  networks: [frontend, backend]
+  depends_on:
+    db:
+      condition: service_healthy
+
+services:
+  app:
+    <<: *php
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+      - /data/caddy:size=1m,mode=1777
+      - /config/caddy:size=1m,mode=1777
+      - /var/www/html/storage/framework/cache:size=16m,mode=1777
+    environment:
+      <<: *app-env
+      AUTO_MIGRATE: ${AUTO_MIGRATE:-true}
+      AUTO_SEED: ${AUTO_SEED:-true}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+    secrets: [app_key, db_password, log_api_key, smtp_password, admin_password]
+    ports:
+      - "${APP_BIND:-127.0.0.1}:${APP_PORT:-8082}:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/healthz"]
+      interval: 60s
+      timeout: 3s
+      retries: 3
+      start_period: 90s
+      start_interval: 3s
+    deploy:
+      resources:
+        limits:
+          cpus: "${APP_CPU_LIMIT:-2.0}"
+          memory: "${APP_MEMORY_LIMIT:-512M}"
+          pids: 128
+
+  log-worker:
+    <<: *php
+    command: ["php", "/var/www/html/bin/daemon/log-worker.php"]
+    init: true
+    stop_grace_period: 15s
+    environment:
+      <<: *app-env
+    secrets: [app_key, db_password, log_api_key, smtp_password]
+    healthcheck:
+      disable: true
+    deploy:
+      resources:
+        limits:
+          cpus: "${LOG_WORKER_CPU_LIMIT:-1.0}"
+          memory: "${LOG_WORKER_MEMORY_LIMIT:-512M}"
+          pids: 32
+
+  worker:
+    <<: *php
+    command: ["queue-worker"]
+    init: true
+    stop_grace_period: 15s
+    environment:
+      <<: *app-env
+    secrets: [app_key, db_password, log_api_key, smtp_password]
+    healthcheck:
+      disable: true
+    deploy:
+      resources:
+        limits:
+          cpus: "${WORKER_CPU_LIMIT:-0.5}"
+          memory: "${WORKER_MEMORY_LIMIT:-256M}"
+          pids: 32
+
+  db:
+    <<: *hardening
+    image: docker.io/library/mariadb:12.3.2@sha256:a02fe89cb597d4375812b2eac90cf9d0775d4686daa7f7cc750ebbcad7525bbc
+    command:
+      - --innodb-buffer-pool-size=${DB_BUFFER_POOL_SIZE:-512M}
+      - --max-connections=${DB_MAX_CONNECTIONS:-100}
+    read_only: true
+    cap_drop: [ALL]
+    cap_add: [CHOWN, SETUID, SETGID, DAC_OVERRIDE]
+    tmpfs:
+      - /run/mysqld:size=1m,mode=1777
+      - /tmp:size=64m,mode=1777
+    environment:
+      MARIADB_DATABASE: ${DB_DATABASE:-log_monitor}
+      MARIADB_USER: ${DB_USERNAME:-log_monitor_user}
+      MARIADB_PASSWORD_FILE: /run/secrets/db_password
+      MARIADB_ROOT_PASSWORD_FILE: /run/secrets/db_root_password
+      MARIADB_AUTO_UPGRADE: "1"
+      APP_ENV: ${APP_ENV:-production}
+      DB_DATABASE: ${DB_DATABASE:-log_monitor}
+      DB_USERNAME: ${DB_USERNAME:-log_monitor_user}
+      TZ: ${TZ:-Europe/Bucharest}
+    secrets: [db_password, db_root_password]
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./docker/my.cnf:/etc/mysql/conf.d/zz-app.cnf:ro
+      - ./docker/init-dbs.sh:/docker-entrypoint-initdb.d/init-dbs.sh:ro
+    networks: [backend]
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: "${DB_CPU_LIMIT:-2.0}"
+          memory: "${DB_MEMORY_LIMIT:-1G}"
+          pids: 256
+
+secrets:
+  app_key:
+    file: ./secrets/app_key
+  db_password:
+    file: ./secrets/db_password
+  db_root_password:
+    file: ./secrets/db_root_password
+  log_api_key:
+    file: ./secrets/log_api_key
+  smtp_password:
+    file: ./secrets/smtp_password
+  admin_password:
+    file: ./secrets/admin_password
+
+volumes:
+  db_data:
+  storage_data:
+
+networks:
+  frontend:
+    name: log_monitor_frontend
+    driver_opts:
+      com.docker.network.bridge.name: log-monitor-fr
+  backend:
+    name: log_monitor_backend
+    internal: true
+

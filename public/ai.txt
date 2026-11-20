@@ -1,0 +1,8 @@
+# ==============================================================================
+# AI.TXT - LOGMONITOR
+# Disallow all automated AI data mining, scraping, and model training.
+# ==============================================================================
+
+User-agent: *
+Disallow: /
+

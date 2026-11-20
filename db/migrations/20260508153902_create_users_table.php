@@ -6,7 +6,7 @@ use Phinx\Migration\AbstractMigration;
 
 class CreateUsersTable extends AbstractMigration
 {
-    public function change()
+    public function change(): void
     {
         $table = $this->table('users');
         $table->addColumn('username', 'string', ['limit' => 50])

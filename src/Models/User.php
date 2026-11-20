@@ -4,256 +4,223 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Enums\LogLevel;
-use App\Utilities\LogViaStream;
-use App\Utilities\MySQL;
-use InvalidArgumentException;
-use RuntimeException;
+use App\Core\MySQLWrapper;
+use App\Utilities\TimeSeriesHelper;
 
 /**
- * User class
+ * User Model
  *
- * Manages administrative users of the logging system.
- * Offers secure functionalities for authentication and registration.
- * All passwords are saved as hashes using exclusively the Argon2id standard.
- *
- * @category Model
- *
- * @version  1.2
- *
- * @since    PHP 8.4
- *
- * @author   Voica Liviu
- * @license  Proprietary
+ * Manages queries and changes in the users table with RBAC support.
  */
 class User
 {
-    protected MySQL $db;
-
     /**
-     * Constructor for the User class.
+     * Finds a user by email address along with their role name.
      *
-     * @param  MySQL|null  $db  Injected database wrapper.
+     * @return array<string, mixed>|null
      */
-    public function __construct(
-        ?MySQL $db = null
-    ) {
-        $this->db = $db ?? MySQL::getInstance();
-    }
-
-    /**
-     * Finds a user in the database based on the username.
-     *
-     * @param  string  $username  The username to look for.
-     * @return array<string, mixed>|null The user's data or null if they do not exist.
-     *
-     * @throws InvalidArgumentException If the provided username is empty.
-     */
-    public function findByUsername(string $username): ?array
+    public static function findByEmail(string $email): ?array
     {
-        $trimmedUsername = trim($username);
-        if ($trimmedUsername === '') {
-            throw new InvalidArgumentException(__('Username cannot be empty'));
+        $db = MySQLWrapper::getInstance();
+        $stmt = $db->query(
+            'SELECT u.*, r.name as role_name FROM users u JOIN roles r ON u.role_id = r.id WHERE u.email = ? LIMIT 1',
+            [$email]
+        );
+        $user = $stmt->fetch();
+
+        if (is_array($user)) {
+            /** @var array<string, mixed> $user */
+            return $user;
         }
 
-        try {
-            $results = $this->db->read('users', ['username' => $trimmedUsername]);
-            $first = $results[0] ?? null;
-            if (is_array($first)) {
-                /** @var array<string, mixed> $first */
-                return $first;
-            }
-
-            return null;
-        } catch (\Throwable $e) {
-            if (class_exists('App\Utilities\LogViaStream')) {
-                LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
-                    'location' => __METHOD__,
-                    'line' => __LINE__,
-                    'exception_message' => $e->getMessage(),
-                    'exception_file' => $e->getFile(),
-                    'exception_line' => $e->getLine(),
-                    'exception_trace' => $e->getTraceAsString(),
-                    'sql_statement' => 'SELECT FROM users WHERE username = ?',
-                    'sql_parameters' => ['username' => $trimmedUsername],
-                    'identifier' => 'MySQL_Query_Failure',
-                ]);
-            }
-
-            return null;
-        }
+        return null;
     }
 
     /**
-     * Registers a new administrator user in the system.
-     * Upgraded to exclusively use PASSWORD_ARGON2ID hashing per OWASP guidelines.
+     * Finds a user by ID along with their role name.
      *
-     * @param  string  $username  Desired username.
-     * @param  string  $password  Clear-text password (will be secured instantly).
-     * @return int ID of the newly registered user.
-     *
-     * @throws InvalidArgumentException If the provided input is invalid.
-     * @throws RuntimeException If database write or hashing fails.
+     * @return array<string, mixed>|null
      */
-    public function create(string $username, string $password): int
+    public static function findById(int $id): ?array
     {
-        $trimmedUsername = trim($username);
-        if ($trimmedUsername === '' || $password === '') {
-            throw new InvalidArgumentException(__('Username and password cannot be empty'));
+        $db = MySQLWrapper::getInstance();
+        $stmt = $db->query(
+            'SELECT u.*, r.name as role_name FROM users u JOIN roles r ON u.role_id = r.id WHERE u.id = ? LIMIT 1',
+            [$id]
+        );
+        $user = $stmt->fetch();
+
+        if (is_array($user)) {
+            /** @var array<string, mixed> $user */
+            return $user;
         }
 
-        // Use PASSWORD_ARGON2ID - The top standard in modern password security (PHP 8+)
-        $hash = password_hash($password, PASSWORD_ARGON2ID);
-
-        $sql = 'INSERT INTO users (username, password_hash)';
-        $params = [
-            'username' => $trimmedUsername,
-            'password_hash' => $hash,
-        ];
-
-        try {
-            $result = $this->db->create('users', $params);
-            if ($result === 0 || $result === '') {
-                throw new RuntimeException(__('Failed to save administrative user record'));
-            }
-
-            return (int) $result;
-        } catch (\Throwable $e) {
-            if (class_exists('App\Utilities\LogViaStream')) {
-                LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
-                    'location' => __METHOD__,
-                    'line' => __LINE__,
-                    'exception_message' => $e->getMessage(),
-                    'exception_file' => $e->getFile(),
-                    'exception_line' => $e->getLine(),
-                    'exception_trace' => $e->getTraceAsString(),
-                    'sql_statement' => $sql,
-                    'sql_parameters' => $params,
-                    'identifier' => 'MySQL_Query_Failure',
-                ]);
-            }
-
-            throw new RuntimeException(__('Database error during administrative user registration'), 0, $e);
-        }
+        return null;
     }
 
     /**
-     * Retrieves all administrator users.
+     * Updates profile info for a specified user.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public static function updateProfile(int $id, array $data): bool
+    {
+        $db = MySQLWrapper::getInstance();
+        $rows = $db->update('users', [
+            'first_name' => $data['first_name'],
+            'last_name' => $data['last_name'],
+            'email' => $data['email'],
+            'updated_at' => date('Y-m-d H:i:s'),
+        ], ['id' => $id]);
+
+        return $rows >= 0;
+    }
+
+    public static function updateEmailVerifiedAt(int $id, string $dateTime): bool
+    {
+        $db = MySQLWrapper::getInstance();
+        $rows = $db->update('users', [
+            'email_verified_at' => ($dateTime !== '') ? $dateTime : null,
+            'updated_at' => date('Y-m-d H:i:s'),
+        ], ['id' => $id]);
+
+        return $rows >= 0;
+    }
+
+    /**
+     * Returns all users along with role names.
      *
      * @return array<int, array<string, mixed>>
      */
-    public function getAll(): array
+    public static function getAllWithRoles(): array
     {
-        try {
-            return $this->db->read('users') ?: [];
-        } catch (\Throwable $e) {
-            if (class_exists('App\Utilities\LogViaStream')) {
-                LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
-                    'location' => __METHOD__,
-                    'line' => __LINE__,
-                    'exception_message' => $e->getMessage(),
-                    'exception_file' => $e->getFile(),
-                    'exception_line' => $e->getLine(),
-                    'exception_trace' => $e->getTraceAsString(),
-                    'sql_statement' => 'SELECT ALL FROM users',
-                    'sql_parameters' => [],
-                    'identifier' => 'MySQL_Query_Failure',
-                ]);
-            }
-            throw new RuntimeException(__('Database error retrieving users list'), 0, $e);
-        }
+        $db = MySQLWrapper::getInstance();
+        $stmt = $db->query(
+            'SELECT u.*, r.name as role_name FROM users u JOIN roles r ON u.role_id = r.id ORDER BY u.id DESC'
+        );
+        $rows = $stmt->fetchAll();
+        /** @var array<int, array<string, mixed>> $rows */
+
+        return $rows;
     }
 
     /**
-     * Deletes a user by ID.
+     * Creates a new user.
      *
-     * @param  int  $id  User ID to delete.
-     * @return int Number of affected rows.
+     * @param  array<string, mixed>  $data
      */
-    public function delete(int $id): int
+    public static function create(array $data): string|int
     {
-        $params = ['id' => $id];
-        try {
-            return (int) $this->db->delete('users', $params);
-        } catch (\Throwable $e) {
-            if (class_exists('App\Utilities\LogViaStream')) {
-                LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
-                    'location' => __METHOD__,
-                    'line' => __LINE__,
-                    'exception_message' => $e->getMessage(),
-                    'exception_file' => $e->getFile(),
-                    'exception_line' => $e->getLine(),
-                    'exception_trace' => $e->getTraceAsString(),
-                    'sql_statement' => 'DELETE FROM users WHERE id = ?',
-                    'sql_parameters' => $params,
-                    'identifier' => 'MySQL_Query_Failure',
-                ]);
-            }
-            throw new RuntimeException(__('Database error deleting user'), 0, $e);
-        }
+        $db = MySQLWrapper::getInstance();
+        $data['created_at'] = date('Y-m-d H:i:s');
+
+        return $db->create('users', $data);
     }
 
     /**
-     * Finds a user by primary key ID.
+     * Updates user information.
      *
-     * @param  int  $id  User ID.
-     * @return array<string, mixed>|null User data or null.
+     * @param  array<string, mixed>  $data
      */
-    public function findById(int $id): ?array
+    public static function updateUser(int $id, array $data): bool
     {
-        if ($id <= 0) {
-            return null;
-        }
+        $db = MySQLWrapper::getInstance();
+        $data['updated_at'] = date('Y-m-d H:i:s');
+        $rows = $db->update('users', $data, ['id' => $id]);
 
-        try {
-            $results = $this->db->read('users', ['id' => $id]);
-            $first = $results[0] ?? null;
-
-            return is_array($first) ? $first : null;
-        } catch (\Throwable) {
-            return null;
-        }
+        return $rows >= 0;
     }
 
     /**
-     * Updates an administrator's password.
-     * Hashes the new password with PASSWORD_ARGON2ID.
+     * Returns summary dashboard card statistics for non-admin users.
      *
-     * @param  int  $id  User ID.
-     * @param  string  $newPassword  Plaintext password.
-     * @return bool True on success.
-     *
-     * @throws InvalidArgumentException If inputs are invalid.
-     * @throws RuntimeException If update fails.
+     * @return array<string, mixed>
      */
-    public function updatePassword(int $id, string $newPassword): bool
+    public static function dashboardSummaryUsers(): array
     {
-        if ($id <= 0 || trim($newPassword) === '') {
-            throw new InvalidArgumentException(__('User ID and new password cannot be empty.'));
-        }
+        $db = MySQLWrapper::getInstance();
+        $stmt = $db->query("SELECT COUNT(u.id) as total FROM users u JOIN roles r ON u.role_id = r.id WHERE UPPER(r.name) NOT IN ('ADMIN', 'ADMINISTRATOR')");
+        $row = $stmt->fetch();
+        $totalRaw = is_array($row) ? ($row['total'] ?? 0) : 0;
+        $total = is_numeric($totalRaw) ? (int) $totalRaw : 0;
 
-        $hash = password_hash($newPassword, PASSWORD_ARGON2ID);
+        return [
+            'title' => __('Registered Users'),
+            'value' => $total,
+            'icon' => 'fa-solid fa-users',
+            'color' => 'primary',
+            'url' => '/admin/settings/users',
+        ];
+    }
 
-        try {
-            $affected = $this->db->update('users', ['password_hash' => $hash], ['id' => $id]);
+    /**
+     * Returns doughnut chart distribution of non-admin users by role.
+     *
+     * @return array<string, mixed>
+     */
+    public static function dashboardChartUsers(): array
+    {
+        $db = MySQLWrapper::getInstance();
+        $stmt = $db->query("SELECT r.name as role_name, COUNT(u.id) as count FROM roles r LEFT JOIN users u ON r.id = u.role_id WHERE UPPER(r.name) NOT IN ('ADMIN', 'ADMINISTRATOR') GROUP BY r.id, r.name");
+        $rows = $stmt->fetchAll();
 
-            return $affected > 0;
-        } catch (\Throwable $e) {
-            if (class_exists('App\Utilities\LogViaStream')) {
-                LogViaStream::send(LogLevel::ERROR->value, 'Query execution failure event', [
-                    'location' => __METHOD__,
-                    'line' => __LINE__,
-                    'exception_message' => $e->getMessage(),
-                    'exception_file' => $e->getFile(),
-                    'exception_line' => $e->getLine(),
-                    'exception_trace' => $e->getTraceAsString(),
-                    'sql_statement' => 'UPDATE users SET password_hash = ? WHERE id = ?',
-                    'sql_parameters' => ['id' => $id],
-                    'identifier' => 'MySQL_Query_Failure',
-                ]);
+        $labels = [];
+        $data = [];
+        foreach ($rows as $row) {
+            if (! is_array($row)) {
+                continue;
             }
-
-            throw new RuntimeException(__('Database error updating user password'), 0, $e);
+            $roleName = $row['role_name'] ?? 'USER';
+            $labels[] = __(is_string($roleName) ? $roleName : 'USER');
+            $countVal = $row['count'] ?? 0;
+            $data[] = is_numeric($countVal) ? (int) $countVal : 0;
         }
+
+        return [
+            'id' => 'chart_users_by_role',
+            'title' => __('Users by Role'),
+            'type' => 'doughnut',
+            'labels' => $labels,
+            'datasets' => [
+                [
+                    'label' => __('Users'),
+                    'data' => $data,
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * Returns user registration trend chart data.
+     *
+     * @return array<string, mixed>
+     */
+    public static function dashboardChartUsersTrend(): array
+    {
+        $periods = TimeSeriesHelper::buildPeriods('users', 'created_at');
+        $activePeriod = 'months';
+        $periodData = $periods[$activePeriod] ?? $periods['days'];
+
+        return [
+            'id' => 'chart_users_registration_trend',
+            'title' => __('Users Registration Trend'),
+            'type' => 'line',
+            'labels' => $periodData['labels'],
+            'datasets' => [
+                [
+                    'label' => __('New Users'),
+                    'data' => $periodData['data'],
+                    'borderColor' => 'rgb(111, 66, 193)',
+                    'backgroundColor' => 'rgba(111, 66, 193, 0.15)',
+                    'fill' => true,
+                    'tension' => 0.35,
+                    'borderWidth' => 2,
+                    'pointRadius' => 3,
+                    'pointHoverRadius' => 6,
+                ],
+            ],
+            'periods' => $periods,
+            'activePeriod' => $activePeriod,
+        ];
     }
 }

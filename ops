@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# LogMonitor - Unified Operations Entry Point:  ./ops <command> [options]
+#
+# Context-aware dispatcher:
+#   - Local workstation : delegates to scripts/local.sh
+#   - Debian server     : delegates to scripts/server.sh
+# ==============================================================================
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$ROOT"
+
+chmod +x "$ROOT/ops" "$ROOT/scripts/local.sh" "$ROOT/scripts/server.sh" 2>/dev/null || true
+
+if [ -f /etc/os-release ] && grep -qi '^ID=.*debian' /etc/os-release; then
+    exec "$ROOT/scripts/server.sh" "$@"
+else
+    exec "$ROOT/scripts/local.sh" "$@"
+fi
+

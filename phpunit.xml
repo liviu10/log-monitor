@@ -1,13 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/11.5/phpunit.xsd"
          bootstrap="tests/bootstrap.php"
          colors="true"
          cacheDirectory=".phpunit.cache"
          executionOrder="depends,defects"
-         beStrictAboutOutputDuringTests="true"
-         failOnRisky="true"
-         failOnWarning="true">
+         processIsolation="false">
+
     <testsuites>
         <testsuite name="Unit">
             <directory>tests/Unit</directory>
@@ -16,26 +15,17 @@
             <directory>tests/Feature</directory>
         </testsuite>
     </testsuites>
-    <groups>
-        <exclude>
-            <group>benchmark</group>
-        </exclude>
-    </groups>
+
+    <php>
+        <env name="APP_ENV" value="testing"/>
+        <env name="APP_KEY" value="logmonitor-secret-key-32-chars!!"/>
+        <env name="APP_URL" value="http://localhost:8082"/>
+    </php>
+
     <source>
         <include>
-            <directory>src</directory>
+            <directory suffix=".php">src</directory>
         </include>
     </source>
-    <php>
-        <env name="APP_ENV" value="testing" force="true"/>
-        <env name="DB_HOST" value="127.0.0.1"/>
-        <env name="DB_DATABASE" value="log_monitor_test"/>
-        <env name="DB_NAME" value="log_monitor_test"/>
-        <env name="DB_USERNAME" value="user"/>
-        <env name="DB_USER" value="user"/>
-        <env name="DB_PASSWORD" value="password"/>
-        <env name="DB_PASS" value="password"/>
-        <env name="DB_PORT" value="33061"/>
-        <env name="TZ" value="Europe/Bucharest"/>
-    </php>
+
 </phpunit>

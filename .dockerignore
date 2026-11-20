@@ -1,32 +1,22 @@
-# Version control
-.git
-.gitignore
+# Whitelist approach: ignore everything, then re-include only what runtime needs.
+*
 
-# Environment & secrets
-.env
-.env.example
+!logmonitor
+!composer.json
+!composer.lock
+!bin/
+!config/
+!db/
+!lang/
+!public/
+!resources/
+!routes/
+!src/
+!docker/Caddyfile
+!docker/php.ini
+!docker/docker-entrypoint.sh
+!docker/worker.sh
 
-# Documentation
-README.md
-LICENSE
-
-# Testing & development tooling
-.phpunit.cache/
-tests/
-phpunit.xml
-phpstan.neon
-phpstan-report.json
-
-# Docker setup files
-.dockerignore
-
-# OS metadata
-.DS_Store
-Thumbs.db
-*.swp
-*.swo
-
-# Local runtime data & dependencies
-vendor/
-storage/logs/*
-storage/backups/*
+# Never ship runtime state or local symlinks
+public/storage
+**/.DS_Store

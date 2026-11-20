@@ -1,5 +1,41 @@
-.phpunit.cache/
-storage/
-vendor/
+# Dependencies
+/vendor/
+
+# Environment
 .env
+.env.*
+!.env.example
+!.env.*.example
+
+# Docker/Podman
+.data/
+docker-compose.override.yml
+
+# Logs & debug dumps
+*.log
+storage/
+debug.txt
+debug*.txt
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing & analysis caches
+.phpunit.cache/
+.phpstan.cache/
 phpstan-report.json
+/public/storage
+examples/
+/analiza/
+
+# Deploy state, secrets & backups
+.deploy/
+/secrets/
+/backups/

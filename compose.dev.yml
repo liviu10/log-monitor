@@ -1,0 +1,26 @@
+# Local development overlay:
+#   docker compose -f docker-compose.yml -f compose.dev.yml up -d --build
+# Publishes MariaDB on localhost so `./logmonitor db:*` works from the host.
+services:
+  app:
+    environment:
+      APP_ENV: development
+      APP_URL: "http://localhost:${APP_PORT:-8082}"
+      LOG_SERVER_URL: "http://127.0.0.1:8080/api/log.php"
+  log-worker:
+    environment:
+      APP_ENV: development
+      APP_URL: "http://localhost:${APP_PORT:-8082}"
+      LOG_SERVER_URL: "http://app:8080/api/log.php"
+  worker:
+    environment:
+      APP_ENV: development
+      APP_URL: "http://localhost:${APP_PORT:-8082}"
+      LOG_SERVER_URL: "http://app:8080/api/log.php"
+  db:
+    environment:
+      APP_ENV: development
+    ports:
+      - "127.0.0.1:${DB_HOST_PORT:-33061}:3306"
+    networks: [backend, frontend]
+

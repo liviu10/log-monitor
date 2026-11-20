@@ -5,104 +5,59 @@ declare(strict_types=1);
 /**
  * Global Helper Functions File
  *
- * Contains global utility functions and core configurations for session and security.
+ * Contains global utility functions and basic configuration for sessions and security.
  * All translation keys use English for consistency.
- *
- * @category Utilities
- *
- * @version  2.5
- *
- * @since    PHP 8.4
- *
- * @author   Voica Liviu
- * @license  Proprietary
  */
 
-use App\Utilities\Date;
-use App\Utilities\Token;
+use App\Core\LogViaStream;
+use App\Core\MySQLWrapper;
+use App\Core\View;
+use App\Enums\LogLevel;
+use App\Exceptions\RedirectException;
+use App\Utilities\Breadcrumbs;
+use App\Utilities\TokenManager;
 use Symfony\Component\VarDumper\VarDumper;
 
-/**
- * Injects security headers at PHP runtime level.
- * Ensures protection on classic servers (where configuration access is missing)
- * and provides a second layer of protection (Defense in Depth) in containers.
- *
- * @return void
- */
-if (! function_exists('injectRuntimeSecurityHeaders')) {
-    function injectRuntimeSecurityHeaders(): void
+if (! function_exists('debug')) {
+    function debug(mixed ...$args): never
     {
-        // Prevents Clickjacking attacks by blocking iframe embedding
-        header('X-Frame-Options: DENY', true);
-
-        // Prevents MIME sniffing attacks
-        header('X-Content-Type-Options: nosniff', true);
-
-        // Sets the Referrer-Policy header policy
-        header('Referrer-Policy: strict-origin-when-cross-origin', true);
-
-        // Blocks all search engines, web crawlers, archivers, and AI scrapers/bots
-        header('X-Robots-Tag: noindex, nofollow, noarchive, nosnippet, noimageindex, notranslate, noai, noimageai', true);
-
-        // Strict policy for executing Vanilla JS scripts and resources
-        header("Content-Security-Policy: default-src 'self'; script-src 'self'; object-src 'none'; style-src 'self' 'unsafe-inline'; base-uri 'self'; form-action 'self';", true);
-
-        // Activate HSTS if request is secure
-        $isHttps = (! empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||
-                   (($_SERVER['SERVER_PORT'] ?? '') === '443') ||
-                   (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
-
-        if ($isHttps) {
-            header('Strict-Transport-Security: max-age=63072000; includeSubDomains; preload', true);
+        $appEnv = config('app.env') ?? 'development';
+        if ($appEnv === 'production') {
+            if (class_exists(LogViaStream::class) && class_exists(LogLevel::class)) {
+                LogViaStream::send('CRITICAL', 'Leftover debug() call reached in production environment', [
+                    'backtrace' => debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 5),
+                ]);
+            }
+            throw new RuntimeException('Internal Server Error', 500);
         }
-    }
-}
 
-/** @const string ROLE_ADMIN The identifier for the administrator role. */
-define('ROLE_ADMIN', 'admin');
-
-/**
- * Dumps the received variables and terminates script execution (Dump and Die).
- * Uses Symfony's VarDumper component for a clean view.
- *
- * @param  mixed  ...$args  One or more variables to be inspected.
- * @return never Definitive termination of program execution.
- */
-if (! function_exists('dd')) {
-    function dd(mixed ...$args): never
-    {
+        // @codeCoverageIgnoreStart
         foreach ($args as $x) {
             VarDumper::dump($x);
         }
         exit(1);
+        // @codeCoverageIgnoreEnd
     }
 }
 
-/**
- * Dynamically builds the base URL of the application.
- * Automatically detects the secure protocol, server, and installation subdirectory.
- * Prevents Host Header Injection attacks through strict validation.
- *
- * @return string Complete base URL of the application.
- */
 if (! function_exists('constructUrl')) {
     function constructUrl(): string
     {
-        $rawHost = $_SERVER['HTTP_HOST'] ?? 'localhost';
-
-        // Strict validation of the host to prevent injection
+        $rawHost = config('server.http_host') ?? 'localhost';
         $host = filter_var($rawHost, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME);
         if ($host === false) {
             $host = 'localhost';
         }
 
-        $rawScriptName = $_SERVER['SCRIPT_NAME'] ?? '';
-        $scriptDir = str_replace('\\', '/', dirname(is_string($rawScriptName) ? $rawScriptName : ''));
+        $scriptName = config('server.script_name') ?? '';
+        $scriptNameStr = is_string($scriptName) ? $scriptName : '';
+        $scriptDir = str_replace('\\', '/', dirname($scriptNameStr));
         $basePath = rtrim($scriptDir, '/\\');
 
-        $isHttps = (! empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||
-                   (($_SERVER['SERVER_PORT'] ?? '') === 443) ||
-                   (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+        $serverHttps = config('server.https');
+        $isHttps = ($serverHttps !== null && $serverHttps !== '' && $serverHttps !== 'off') ||
+                   ((config('server.server_port') ?? '') === 443) ||
+                   ((config('server.http_x_forwarded_proto') ?? '') === 'https');
 
         $protocol = $isHttps ? 'https' : 'http';
 
@@ -110,119 +65,20 @@ if (! function_exists('constructUrl')) {
     }
 }
 
-/**
- * Detects the real client IP address, safely parsing Cloudflare Tunnel and reverse proxy headers.
- *
- * @return string Client IP address.
- */
-if (! function_exists('getClientIp')) {
-    function getClientIp(): string
-    {
-        $remoteAddr = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
-        $remote = is_string($remoteAddr) ? trim($remoteAddr) : '127.0.0.1';
-
-        // When request originates from a local proxy / container network / Cloudflare Tunnel
-        $isLocalProxy = in_array($remote, ['127.0.0.1', '::1', 'localhost'], true)
-            || str_starts_with($remote, '10.')
-            || str_starts_with($remote, '172.')
-            || str_starts_with($remote, '192.168.');
-
-        if ($isLocalProxy) {
-            $cfIp = $_SERVER['HTTP_CF_CONNECTING_IP'] ?? null;
-            if (is_string($cfIp) && filter_var(trim($cfIp), FILTER_VALIDATE_IP) !== false) {
-                return trim($cfIp);
-            }
-
-            $forwarded = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? null;
-            if (is_string($forwarded) && trim($forwarded) !== '') {
-                $ips = explode(',', $forwarded);
-                $firstIp = trim($ips[0]);
-                if (filter_var($firstIp, FILTER_VALIDATE_IP) !== false) {
-                    return $firstIp;
-                }
-            }
-        }
-
-        return $remote !== '' ? $remote : '127.0.0.1';
-    }
-}
-
-/**
- * Verifies authentication state and handles the logout process.
- * Applies the Fail Fast principle and regenerates the session to prevent Session Fixation.
- *
- * @return bool Returns true if the user has a valid session.
- */
 if (! function_exists('checkAuthUser')) {
     function checkAuthUser(): bool
     {
-        // Handle logout action
-        if (isset($_GET['action']) && $_GET['action'] === 'logout') {
-            unset($_SESSION['auth.user'], $_SESSION['auth.last_activity'], $_SESSION['auth.login_time']);
-            if (session_status() === PHP_SESSION_ACTIVE) {
-                session_destroy();
-            }
-
-            if (session_status() === PHP_SESSION_NONE) {
-                session_start();
-            }
-            session_regenerate_id(true);
-
-            setFlash('info', __('Logged Out'), __('You have been logged out successfully.'));
-            header('Location: login.php?logged_out=1');
-            exit;
-        }
-
-        $rawPhpSelf = $_SERVER['PHP_SELF'] ?? '';
-        $currentPage = basename(is_string($rawPhpSelf) ? $rawPhpSelf : '');
-
-        if ($currentPage === 'login.php' || $currentPage === 'logout.php') {
+        if (isset($_SESSION['auth.user'])) {
             return true;
         }
 
-        if (isset($_SESSION['auth.user']) && is_array($_SESSION['auth.user'])) {
-            $rawTimeout = $_ENV['SESSION_IDLE_TIMEOUT'] ?? $_ENV['APP_SESSION_IDLE_TIMEOUT'] ?? 1800;
-            $idleTimeout = is_numeric($rawTimeout) ? (int) $rawTimeout : 1800;
-            $lastActivity = $_SESSION['auth.last_activity'] ?? null;
-
-            if (is_int($lastActivity) && (time() - $lastActivity > $idleTimeout)) {
-                unset($_SESSION['auth.user'], $_SESSION['auth.last_activity'], $_SESSION['auth.login_time']);
-                if (session_status() === PHP_SESSION_ACTIVE) {
-                    session_destroy();
-                }
-
-                if (session_status() === PHP_SESSION_NONE) {
-                    session_start();
-                }
-                session_regenerate_id(true);
-
-                setFlash('warning', __('Session Expired'), __('Your session has expired due to inactivity. Please log in again.'));
-                header('Location: login.php?expired=1');
-                exit;
-            }
-
-            $_SESSION['auth.last_activity'] = time();
-
-            return true;
-        }
-
-        // Set flash message with exclusively English keys
-        setFlash(
-            'warning',
-            __('Authentication Warning'),
-            __('You must log in to access this page.')
-        );
-
-        header('Location: login.php');
-        exit;
+        redirect('/login');
     }
 }
 
 if (! function_exists('getCurrentAuthUser')) {
     /**
-     * Returns the authenticated user's data from the current session.
-     *
-     * @return array<string, mixed>|null Array of user data or null if not authenticated.
+     * @return array<string, mixed>|null
      */
     function getCurrentAuthUser(): ?array
     {
@@ -237,83 +93,146 @@ if (! function_exists('getCurrentAuthUser')) {
     }
 }
 
-/**
- * Formates a date from SQL format to standard European format.
- *
- * @param  string  $dateString  Date string (e.g., Y-m-d).
- * @return string Formatted date as day.month.year.
- */
 if (! function_exists('formatDate')) {
     function formatDate(string $dateString): string
     {
         try {
-            return Date::dbToRo($dateString);
-        } catch (Throwable) {
             $timestamp = strtotime($dateString);
-
-            return date('d.m.Y', $timestamp ?: time());
+            $timestamp = is_int($timestamp) ? $timestamp : time();
+            // @codeCoverageIgnoreStart
+        } catch (Throwable) {
+            $timestamp = time();
         }
+        // @codeCoverageIgnoreEnd
+
+        return date('d.m.Y', $timestamp);
     }
 }
 
-/**
- * Checks if the current user has a specific permission (Mockup).
- *
- * @param  string  $permission  Checked permission identifier.
- * @return bool True if permission is granted.
- */
-if (! function_exists('can')) {
-    function can(string $permission): bool
+if (! function_exists('hasPermission')) {
+    function hasPermission(string $permissionKey): bool
     {
-        return true;
-    }
-}
-
-/**
- * Generates a cryptographic CSRF token and saves it in the session.
- *
- * @return string Generated token in hexadecimal format.
- */
-if (! function_exists('generateCsrfToken')) {
-    function generateCsrfToken(): string
-    {
-        if (empty($_SESSION['csrf_token']) || ! is_string($_SESSION['csrf_token'])) {
-            $_SESSION['csrf_token'] = Token::random(32);
-        }
-
-        return $_SESSION['csrf_token'];
-    }
-}
-
-/**
- * Verifies validity of a CSRF token using a comparison immune to timing attacks.
- *
- * @param  string|null  $token  Received token for verification.
- * @return bool True if token matches the one in session.
- */
-if (! function_exists('verifyCsrfToken')) {
-    function verifyCsrfToken(?string $token): bool
-    {
-        if (! $token || empty($_SESSION['csrf_token'])) {
+        $user = $_SESSION['auth.user'] ?? null;
+        if (! is_array($user)) {
             return false;
         }
 
-        $sessionToken = $_SESSION['csrf_token'];
+        $roleNameVal = $user['role_name'] ?? '';
+        $roleName = strtoupper(is_scalar($roleNameVal) ? (string) $roleNameVal : '');
+        if ($roleName === 'ADMIN') {
+            return true;
+        }
 
-        return hash_equals(is_string($sessionToken) ? $sessionToken : '', $token);
+        $roleIdVal = $user['role_id'] ?? 0;
+        $roleId = is_numeric($roleIdVal) ? (int) $roleIdVal : 0;
+        if ($roleId === 0) {
+            return false;
+        }
+
+        /** @var array<string, bool>|null $permissionsCache */
+        static $permissionsCache = null;
+
+        if ($permissionsCache === null || defined('PHPUNIT_RUNNING')) {
+            $db = MySQLWrapper::getInstance();
+            $stmt = $db->query(
+                'SELECT permission_key FROM role_permissions WHERE role_id = ? AND value = 1',
+                [$roleId]
+            );
+            $rows = $stmt->fetchAll();
+            $permissionsCache = [];
+            foreach ($rows as $row) {
+                if (is_array($row)) {
+                    $k = $row['permission_key'] ?? '';
+                    if (is_string($k) && $k !== '') {
+                        $permissionsCache[strtolower($k)] = true;
+                    }
+                }
+            }
+        }
+
+        $requiredKey = strtolower($permissionKey);
+
+        if (isset($permissionsCache[$requiredKey])) {
+            return true;
+        }
+
+        if (str_ends_with($requiredKey, '.*')) {
+            $prefix = substr($requiredKey, 0, -1);
+            foreach ($permissionsCache as $cachedKey => $val) {
+                if (str_starts_with($cachedKey, $prefix)) {
+                    return true;
+                }
+            }
+        }
+
+        $parts = explode('.', $requiredKey);
+        $currentPath = '';
+        foreach ($parts as $part) {
+            $currentPath .= ($currentPath === '' ? '' : '.').$part;
+            if (isset($permissionsCache[$currentPath.'.*'])) {
+                return true;
+            }
+        }
+
+        if (isset($permissionsCache['*'])) {
+            return true;
+        }
+
+        return false;
     }
 }
 
-/**
- * Registers a temporary flash message in the application session.
- *
- * @param  string  $type  Message type (e.g. success, error, warning).
- * @param  string  $title  Notification title.
- * @param  string  $message  Descriptive notification text.
- * @param  int  $toastDelay  Display time in milliseconds.
- * @param  string  $redirectUrl  Optional URL for redirection.
- * @return void
- */
+if (! function_exists('hasAnyPermission')) {
+    /**
+     * @param  array<int, string>  $keys
+     */
+    function hasAnyPermission(array $keys): bool
+    {
+        foreach ($keys as $key) {
+            if (hasPermission($key)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+}
+
+if (! function_exists('can')) {
+    function can(string $permissionKey): bool
+    {
+        return hasPermission($permissionKey);
+    }
+}
+
+if (! function_exists('generateCsrfToken')) {
+    function generateCsrfToken(): string
+    {
+        return TokenManager::generateCsrf();
+    }
+}
+
+if (! function_exists('csrf_token')) {
+    function csrf_token(): string
+    {
+        return generateCsrfToken();
+    }
+}
+
+if (! function_exists('csrf_field')) {
+    function csrf_field(): string
+    {
+        return '<input type="hidden" name="csrf_token" value="'.htmlspecialchars(generateCsrfToken(), ENT_QUOTES, 'UTF-8').'">';
+    }
+}
+
+if (! function_exists('verifyCsrfToken')) {
+    function verifyCsrfToken(?string $token): bool
+    {
+        return TokenManager::verifyCsrf($token);
+    }
+}
+
 if (! function_exists('setFlash')) {
     function setFlash(string $type, string $title, string $message, int $toastDelay = 10000, string $redirectUrl = ''): void
     {
@@ -329,9 +248,7 @@ if (! function_exists('setFlash')) {
 
 if (! function_exists('getFlash')) {
     /**
-     * Extracts and deletes the existing flash message in the session (single consumption).
-     *
-     * @return array<string, mixed>|null Flash message data or null if not present.
+     * @return array{type: string, title: string, message: string, toastDelay: int, redirectUrl: string}|null
      */
     function getFlash(): ?array
     {
@@ -340,7 +257,7 @@ if (! function_exists('getFlash')) {
             unset($_SESSION['app_flash']);
 
             if (is_array($flash)) {
-                /** @var array<string, mixed> $flash */
+                /** @var array{type: string, title: string, message: string, toastDelay: int, redirectUrl: string} $flash */
                 return $flash;
             }
         }
@@ -349,68 +266,197 @@ if (! function_exists('getFlash')) {
     }
 }
 
-/**
- * Returns the code for the active language in the application.
- *
- * @return string Language code (default 'en').
- */
+if (! function_exists('supportedLocales')) {
+    /**
+     * @param  array<string, string>|null  $customLocales
+     * @return array<string, string>
+     */
+    function supportedLocales(?array $customLocales = null): array
+    {
+        $raw = $customLocales ?? (function_exists('config') ? config('app.supported_locales', [
+            'en' => 'English',
+            'ro' => 'Romana',
+        ]) : [
+            'en' => 'English',
+            'ro' => 'Romana',
+        ]);
+
+        if (is_array($raw)) {
+            /** @var array<string, string> $languages */
+            $languages = [];
+            foreach ($raw as $key => $val) {
+                if (is_string($key) && is_string($val)) {
+                    $languages[$key] = $val;
+                }
+            }
+            if ($languages !== []) {
+                return $languages;
+            }
+        }
+
+        $fallback = function_exists('config') ? config('app.locale', 'en') : 'en';
+        $fbCode = is_string($fallback) && $fallback !== '' ? $fallback : 'en';
+
+        return [$fbCode => strtoupper($fbCode)];
+    }
+}
+
 if (! function_exists('getLang')) {
     function getLang(): string
     {
+        $default = function_exists('config') ? config('app.locale', 'en') : 'en';
+        $fallback = is_string($default) && trim($default) !== '' ? $default : 'en';
+
         if (session_status() !== PHP_SESSION_ACTIVE) {
-            return 'en';
+            return $fallback;
         }
-        if (! isset($_SESSION['app_lang'])) {
-            $_SESSION['app_lang'] = 'en';
-        }
+        $appLang = $_SESSION['app_lang'] ?? $fallback;
 
-        $lang = $_SESSION['app_lang'];
-
-        return is_string($lang) ? $lang : 'en';
+        return is_string($appLang) && trim($appLang) !== '' ? $appLang : $fallback;
     }
 }
 
 if (! function_exists('__')) {
     /**
-     * Translates a text key and safely replaces dynamic parameters to prevent XSS.
-     * Uses native PHP 8.4 json_validate for enhanced safety.
-     *
-     * @param  string  $key  Translation frame key.
-     * @param  array<string, string|int|float|bool>  $replacements  Associative array of replacement parameters.
-     * @return string Final translated and sanitized text.
+     * @param  array<string, mixed>  $replacements
      */
     function __(string $key, array $replacements = []): string
     {
         static $translations = null;
+
+        if ($key === '::reset') {
+            $translations = null;
+
+            return '';
+        }
 
         if ($translations === null) {
             $lang = getLang();
             $path = __DIR__."/../../lang/{$lang}.json";
 
             if (file_exists($path)) {
-                $content = file_get_contents($path);
-                if ($content !== false && json_validate($content)) {
-                    $translations = json_decode($content, true) ?: [];
-                } else {
+                try {
+                    $content = file_get_contents($path);
+                    if (is_string($content) && json_validate($content)) {
+                        $decoded = json_decode($content, true);
+                        $translations = is_array($decoded) ? $decoded : [];
+                    } else {
+                        $translations = [];
+                    }
+                    // @codeCoverageIgnoreStart
+                } catch (Throwable) {
                     $translations = [];
                 }
+                // @codeCoverageIgnoreEnd
             } else {
                 $translations = [];
             }
         }
 
-        if (! is_array($translations)) {
-            $translations = [];
-        }
-
-        $text = $translations[$key] ?? $key;
-        $text = is_string($text) ? $text : $key;
+        $translationsList = is_array($translations) ? $translations : [];
+        $textVal = $translationsList[$key] ?? $key;
+        $text = (is_string($textVal) && $textVal !== '') ? $textVal : $key;
 
         foreach ($replacements as $placeholder => $value) {
-            $safeValue = htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+            $safeValue = htmlspecialchars(is_scalar($value) ? (string) $value : '', ENT_QUOTES, 'UTF-8');
             $text = str_replace(':'.$placeholder, $safeValue, $text);
         }
 
         return $text;
+    }
+}
+
+if (! function_exists('view')) {
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    function view(string $view, array $data = []): string
+    {
+        return View::render($view, $data);
+    }
+}
+
+if (! function_exists('redirect')) {
+    function redirect(string $url): never
+    {
+        if (defined('PHPUNIT_RUNNING')) {
+            throw new RedirectException($url);
+        }
+        // @codeCoverageIgnoreStart
+        http_response_code(302);
+        header("Location: {$url}");
+        exit;
+        // @codeCoverageIgnoreEnd
+    }
+}
+
+if (! function_exists('old')) {
+    function old(string $key, mixed $default = null): mixed
+    {
+        $oldData = $_SESSION['old'] ?? null;
+        $oldDataList = is_array($oldData) ? $oldData : [];
+
+        return $oldDataList[$key] ?? $default;
+    }
+}
+
+if (! function_exists('config')) {
+    function config(string $key, mixed $default = null): mixed
+    {
+        /** @var array<string, mixed> $configs */
+        static $configs = [];
+
+        if ($key === '::reset') {
+            $configs = [];
+
+            return null;
+        }
+
+        $parts = explode('.', $key);
+        $file = $parts[0];
+
+        if (! isset($configs[$file])) {
+            $filePath = dirname(__DIR__, 2)."/config/{$file}.php";
+            if (file_exists($filePath)) {
+                $loaded = require $filePath;
+                $configs[$file] = is_array($loaded) ? $loaded : [];
+            } else {
+                $configs[$file] = [];
+            }
+        }
+
+        $value = $configs[$file];
+        $totalParts = count($parts);
+        for ($i = 1; $i < $totalParts; $i++) {
+            if (is_array($value) && array_key_exists($parts[$i], $value)) {
+                $value = $value[$parts[$i]];
+            } else {
+                return $default;
+            }
+        }
+
+        return $value;
+    }
+}
+
+if (! function_exists('storage_path')) {
+    function storage_path(string $path = ''): string
+    {
+        try {
+            $base = realpath(__DIR__.'/../../storage');
+            // @codeCoverageIgnoreStart
+        } catch (Throwable) {
+            $base = __DIR__.'/../../storage';
+        }
+        // @codeCoverageIgnoreEnd
+
+        return $base.($path !== '' ? '/'.ltrim($path, '/') : '');
+    }
+}
+
+if (! function_exists('breadcrumbs')) {
+    function breadcrumbs(): string
+    {
+        return Breadcrumbs::getInstance()->render();
     }
 }

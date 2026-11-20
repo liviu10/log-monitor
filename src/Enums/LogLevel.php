@@ -6,8 +6,9 @@ namespace App\Enums;
 
 /**
  * LogLevel Enum
- * * Defines the allowed logging levels in the system, according to RFC 5424.
- * A Native Backed Enum (string) is used for strict typing and automatic validation.
+ *
+ * Defines allowed logging levels in the system, according to RFC 5424 standard.
+ * Uses a native Backed Enum (string) for strict typing and automatic validation.
  *
  * @category Enum
  *
@@ -20,13 +21,13 @@ namespace App\Enums;
  */
 enum LogLevel: string
 {
-    /** The system is unusable. */
+    /** System is unusable. */
     case EMERGENCY = 'EMERGENCY';
 
-    /** Action must be taken immediately. */
+    /** Trebuie actionat imediat. */
     case ALERT = 'ALERT';
 
-    /** Critical conditions. */
+    /** Conditii critice. */
     case CRITICAL = 'CRITICAL';
 
     /** Error conditions. */
@@ -35,17 +36,17 @@ enum LogLevel: string
     /** Warning conditions. */
     case WARNING = 'WARNING';
 
-    /** Normal but significant condition. */
+    /** Conditie normala, dar semnificativa. */
     case NOTICE = 'NOTICE';
 
-    /** Informational messages. */
+    /** Mesaje informationale. */
     case INFO = 'INFO';
 
     /** Debug messages. */
     case DEBUG = 'DEBUG';
 
     /**
-     * Returns all raw (string) values of the logging levels.
+     * Returns all raw string values of log levels.
      *
      * @return array<int, string>
      */
@@ -55,10 +56,9 @@ enum LogLevel: string
     }
 
     /**
-     * Verifies if a given string is a valid logging level.
-     * Implements Fail Fast philosophy via defensive input processing.
+     * Checks if a given string is a valid log level.
      *
-     * * @param string $level The level to check.
+     * @param  string  $level  The level to check.
      */
     public static function isValid(string $level): bool
     {

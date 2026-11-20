@@ -6,7 +6,7 @@ use Phinx\Migration\AbstractMigration;
 
 class CreateLogsTable extends AbstractMigration
 {
-    public function change()
+    public function change(): void
     {
         $table = $this->table('logs');
         $table->addColumn('app_id', 'biginteger', ['signed' => false])

@@ -1,39 +1,94 @@
 {
-    # Global options
-    frankenphp
-    order php_server before file_server
+	# TLS is terminated by Cloudflare; the tunnel talks plain HTTP to us.
+	auto_https off
+	admin off
+	order php_server before file_server
+	persist_config off
+
+	frankenphp {
+		num_threads 2
+		max_threads 8
+		php_ini disable_functions "exec,passthru,shell_exec,system,proc_open,popen,pcntl_exec,dl,show_source"
+	}
+
+	servers {
+		trusted_proxies static private_ranges
+		client_ip_headers CF-Connecting-IP X-Forwarded-For
+		timeouts {
+			read_header 10s
+			read_body 30s
+			write 60s
+			idle 2m
+		}
+	}
+
+	log {
+		output stderr
+		format console
+		level WARN
+	}
 }
 
-:80 {
-    # Set the root directory
-    root * /var/www/html
+:8080 {
+	root * /var/www/html/public
 
-    # Global security mitigation against massive payload attacks (DoS/OOM)
-    request_body {
-        max_size 16MB
-    }
+	request_body {
+		max_size 16MB
+	}
 
-    # Enable compression
-    encode zstd gzip
+	encode zstd gzip
 
-    # Defensive Security Headers (OWASP recommendations & Anti-Bot/Anti-AI)
-    header {
-        X-Content-Type-Options "nosniff"
-        X-Frame-Options "DENY"
-        Referrer-Policy "strict-origin-when-cross-origin"
-        Permissions-Policy "camera=(), microphone=(), geolocation=()"
-        X-Robots-Tag "noindex, nofollow, noarchive, nosnippet, noimageindex, notranslate, noai, noimageai"
-        -Server
-    }
+	header {
+		-Server
+		-X-Powered-By
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		X-Robots-Tag "noindex, nofollow, noarchive, nosnippet, noimageindex, notranslate, noai, noimageai"
+	}
 
-    # Protect sensitive files and directories by faking a 404 Not Found
-    @forbidden {
-        path /.* */.* /bin /bin/* /config /config/* /db /db/* /dist /dist/* /docker /docker/* /lang /lang/* /Modules /Modules/* /resources /resources/* /src /src/* /tests /tests/* /vendor /vendor/* /storage/logs /storage/logs/* /storage/framework /storage/framework/* /storage/views /storage/views/* /storage/commands /storage/commands/* /storage/backups /storage/backups/* /storage/reports /storage/reports/* /composer.json /composer.lock /phpunit.xml /phpstan.neon /phpstan-security.neon /phpstan-report.json /web.config
-    }
-    respond @forbidden "Not Found" 404
+	# In-container liveness probe (no PHP, no session, no DB).
+	@health {
+		path /healthz
+		remote_ip 127.0.0.1 ::1 private_ranges
+	}
+	handle @health {
+		respond "ok" 200
+	}
 
-    # Execute PHP files with FrankenPHP worker for high-speed log ingestion
-    php_server {
-        worker api/log.php {$FRANKENPHP_WORKERS:2}
-    }
+	# Static root files (strict crawler block: robots.txt, ai.txt, favicon)
+	@rootstatic path /favicon.svg /favicon.ico /robots.txt /ai.txt
+	header @rootstatic Cache-Control "public, max-age=86400"
+
+	handle_path /storage/profile/* {
+		root * /var/www/html/storage/profile
+		header {
+			Content-Security-Policy "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; sandbox"
+			Cache-Control "public, max-age=31536000, immutable"
+		}
+		file_server
+	}
+
+	handle /assets/* {
+		@vendor path /assets/vendor/*
+		header @vendor Cache-Control "public, max-age=31536000, immutable"
+		@images path /assets/images/*
+		header @images Cache-Control "public, max-age=31536000, immutable"
+		@ownassets path /assets/app.css /assets/app.js /assets/js/*
+		header @ownassets Cache-Control "public, max-age=31536000, immutable"
+		file_server {
+			precompressed zstd gzip
+		}
+	}
+
+	# Never expose source, config, backups or tooling. Fake a 404.
+	@forbidden {
+		path /.* /storage /storage/* /analiza /analiza/* /bin /bin/* /config /config/* /db /db/* /docker /docker/* /examples /examples/* /lang /lang/* /resources /resources/* /routes /routes/* /scripts /scripts/* /secrets /secrets/* /src /src/* /tests /tests/* /vendor /vendor/* /logmonitor /composer.json /composer.lock /phpunit.xml /phpstan.neon /phpstan-security.neon /phpstan-report.json /sitemap.xml /llms.txt /llms-full.txt
+		not path /.well-known/*
+	}
+	respond @forbidden "Not Found" 404
+
+	# FrankenPHP with persistent worker on high-throughput log ingestion API
+	php_server {
+		worker /var/www/html/public/api/log.php {$FRANKENPHP_WORKERS:2}
+	}
 }

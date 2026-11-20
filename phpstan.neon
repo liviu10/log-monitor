@@ -1,13 +1,20 @@
+includes:
+    - vendor/spaze/phpstan-disallowed-calls/extension.neon
+    - vendor/spaze/phpstan-disallowed-calls/disallowed-dangerous-calls.neon
+    - vendor/spaze/phpstan-disallowed-calls/disallowed-execution-calls.neon
+    - vendor/spaze/phpstan-disallowed-calls/disallowed-insecure-calls.neon
+    - vendor/phpstan/phpstan-strict-rules/rules.neon
+    - vendor/phpstan/phpstan-deprecation-rules/rules.neon
+    - phpstan-security.neon
+
 parameters:
     level: 10
-    bootstrapFiles:
-        - bootstrap.php
     paths:
-        - src
-        - api
         - bin
-        - bootstrap.php
-        - index.php
-        - login.php
-        - queue.php
-        - users.php
+        - config
+        - db
+        - public
+        - resources
+        - routes
+        - src
+        - tests

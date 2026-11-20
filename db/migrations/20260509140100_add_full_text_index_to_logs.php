@@ -6,7 +6,7 @@ use Phinx\Migration\AbstractMigration;
 
 class AddFullTextIndexToLogs extends AbstractMigration
 {
-    public function up()
+    public function up(): void
     {
         // 1. Change column context from JSON to TEXT to allow FULLTEXT indexing
         $this->table('logs')
@@ -17,7 +17,7 @@ class AddFullTextIndexToLogs extends AbstractMigration
         $this->execute('ALTER TABLE logs ADD FULLTEXT INDEX idx_message_context (message, context)');
     }
 
-    public function down()
+    public function down(): void
     {
         // Drop the index
         $this->execute('ALTER TABLE logs DROP INDEX idx_message_context');
