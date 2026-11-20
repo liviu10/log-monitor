@@ -132,7 +132,9 @@ class LogViaStreamTest extends TestCase
 
         $this->resetLogViaStreamState();
 
+        $_SERVER['SCRIPT_NAME'] = '/index.php';
         $_SERVER['REMOTE_ADDR'] = '127.0.0.1';
+        unset($_ENV['LOG_MONITOR_CONTAINER']);
         LogViaStream::$allowTestLogging = false;
         MockHttpStreamWrapper::$throwException = null;
 

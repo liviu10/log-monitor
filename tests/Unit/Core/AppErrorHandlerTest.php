@@ -90,24 +90,35 @@ class AppErrorHandlerTest extends TestCase
         MockHttpStreamWrapperForErrorHandler::$lastHeaders = [];
         MockHttpStreamWrapperForErrorHandler::$throwException = null;
 
+        $_ENV['APP_ENV'] = 'testing';
         $_ENV['LOG_SERVER_URL'] = 'http://localhost/log';
         $_ENV['LOG_API_KEY'] = 'test-api-key';
+        $_SERVER['SCRIPT_NAME'] = '/index.php';
+        $_SERVER['REQUEST_METHOD'] = 'GET';
+        $_SERVER['REQUEST_URI'] = '/test-uri';
+        $_SERVER['REMOTE_ADDR'] = '127.0.0.1';
+        unset($GLOBALS['mock_http_response_header']);
+
+        $limitFile = sys_get_temp_dir().'/log_rate_limit.json';
+        if (is_file($limitFile)) {
+            @unlink($limitFile);
+        }
 
         // Reset LogViaStream static state using reflection
         $reflection = new ReflectionClass(LogViaStream::class);
-        $urlProp = $reflection->getProperty('url');
-        $urlProp->setValue(null, '');
-
-        $apiKeyProp = $reflection->getProperty('apiKey');
-        $apiKeyProp->setValue(null, '');
-
-        $isLoggingProp = $reflection->getProperty('isLogging');
-        $isLoggingProp->setValue(null, false);
+        $reflection->getProperty('url')->setValue(null, '');
+        $reflection->getProperty('apiKey')->setValue(null, '');
+        $reflection->getProperty('isLogging')->setValue(null, false);
+        $reflection->getProperty('logCountInRequest')->setValue(null, 0);
+        $reflection->getProperty('requestId')->setValue(null, null);
     }
 
     protected function tearDown(): void
     {
-        stream_wrapper_restore('http');
+        if (in_array('http', stream_get_wrappers(), true)) {
+            @stream_wrapper_restore('http');
+        }
+        unset($GLOBALS['mock_http_response_header']);
         parent::tearDown();
     }
 
@@ -135,18 +146,20 @@ class AppErrorHandlerTest extends TestCase
     {
         AppErrorHandler::register();
 
-        $handler = set_error_handler(function () {
-            return true;
-        });
-        restore_error_handler();
-        self::assertNotNull($handler);
+        try {
+            $handler = set_error_handler(function () {
+                return true;
+            });
+            restore_error_handler();
+            self::assertNotNull($handler);
 
-        $exceptionHandler = set_exception_handler(function () {});
-        restore_exception_handler();
-        self::assertNotNull($exceptionHandler);
-
-        restore_error_handler();
-        restore_exception_handler();
+            $exceptionHandler = set_exception_handler(function () {});
+            restore_exception_handler();
+            self::assertNotNull($exceptionHandler);
+        } finally {
+            restore_error_handler();
+            restore_exception_handler();
+        }
     }
 
     public function test_error_handler_throws_error_exception(): void
@@ -181,16 +194,19 @@ class AppErrorHandlerTest extends TestCase
         restore_exception_handler();
 
         $GLOBALS['mock_http_response_header'] = ['HTTP/1.1 200 OK'];
-        if (is_callable($handler)) {
-            $handler(new RuntimeException('Unhandled exception test'));
+
+        try {
+            if (is_callable($handler)) {
+                $handler(new RuntimeException('Unhandled exception test'));
+            }
+
+            $payload = $this->getDecodedPayload();
+            self::assertEquals('Exception: Unhandled exception test', $payload['message']);
+        } finally {
+            unset($GLOBALS['mock_http_response_header']);
+            restore_error_handler();
+            restore_exception_handler();
         }
-
-        $payload = $this->getDecodedPayload();
-        self::assertEquals('Exception: Unhandled exception test', $payload['message']);
-        unset($GLOBALS['mock_http_response_header']);
-
-        restore_error_handler();
-        restore_exception_handler();
     }
 
     public function test_exception_handler_integration(): void
