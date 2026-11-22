@@ -3,7 +3,7 @@
     $currentLang = getLang();
 @endphp
 <div class="dropdown">
-    <button class="btn btn-sm btn-outline-custom dropdown-toggle d-flex align-items-center gap-2.5 px-2.5 py-1.5" type="button" id="langDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+    <button class="btn btn-sm btn-outline-custom admin-topbar-btn dropdown-toggle d-flex align-items-center gap-2 px-3 py-2 rounded-3" type="button" id="langDropdown" data-bs-toggle="dropdown" aria-expanded="false">
         @if($currentLang === 'ro')
             <svg class="me-1 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 3 2" width="16" height="11" style="border: 1px solid rgba(255,255,255,0.15); border-radius: 2px;">
                 <rect width="1" height="2" fill="#002B7F"/>

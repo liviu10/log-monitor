@@ -2,7 +2,7 @@
 
 @section('navbar-actions')
     <div class="d-flex align-items-center gap-2">
-        <div class="d-none d-lg-flex align-items-center gap-2 px-3 py-1.5 rounded-pill border border-secondary border-opacity-25 bg-secondary bg-opacity-10 small">
+        <div class="d-none d-xl-flex align-items-center gap-2 px-3 py-2 admin-topbar-btn rounded-pill border border-secondary border-opacity-25 bg-secondary bg-opacity-10 small">
             <div class="pulse-dot bg-success"></div>
             <span class="text-secondary small fw-medium">{{ __('Last synchronized at') }}:</span>
             <span class="fw-semibold text-body-emphasis small">
@@ -10,10 +10,10 @@
             </span>
         </div>
         <a href="/admin?refresh=1"
-           class="btn btn-sm btn-outline-custom d-flex align-items-center gap-2 rounded-3 px-2.5 py-1.5 shadow-sm"
+           class="btn btn-sm btn-outline-custom admin-topbar-btn d-inline-flex align-items-center gap-2 rounded-3 px-3 py-2 shadow-sm"
            title="{{ __('Refresh Stats') }}">
-            <i class="fa-solid fa-rotate"></i>
-            <span class="d-none d-xl-inline fw-medium small">{{ __('Refresh Stats') }}</span>
+            <i class="fa-solid fa-rotate text-info"></i>
+            <span class="d-none d-lg-inline fw-medium small">{{ __('Refresh Stats') }}</span>
         </a>
     </div>
 @endsection
@@ -77,26 +77,26 @@
                 </div>
             </div>
 
-            <div class="btn-group bg-body-tertiary p-1 rounded-3 border border-secondary border-opacity-25">
-                <button type="button" class="btn btn-sm px-3 py-1 rounded-2 fw-medium"
-                        :class="period === 'day' ? 'btn-info text-white shadow-sm' : 'text-secondary'"
+            <div class="chart-period-filters-container d-inline-flex flex-wrap align-items-center">
+                <button type="button" class="chart-period-btn d-inline-flex align-items-center gap-1"
+                        :class="period === 'day' ? 'active' : ''"
                         @click="selectPeriod('day')" :disabled="loading">
-                    <i class="fa-regular fa-clock me-1"></i>{{ __('Day (24h)') }}
+                    <i class="fa-regular fa-clock"></i><span>{{ __('Day (24h)') }}</span>
                 </button>
-                <button type="button" class="btn btn-sm px-3 py-1 rounded-2 fw-medium"
-                        :class="period === 'month' ? 'btn-info text-white shadow-sm' : 'text-secondary'"
+                <button type="button" class="chart-period-btn d-inline-flex align-items-center gap-1"
+                        :class="period === 'month' ? 'active' : ''"
                         @click="selectPeriod('month')" :disabled="loading">
-                    <i class="fa-regular fa-calendar-days me-1"></i>{{ __('Month (30d)') }}
+                    <i class="fa-regular fa-calendar-days"></i><span>{{ __('Month (30d)') }}</span>
                 </button>
-                <button type="button" class="btn btn-sm px-3 py-1 rounded-2 fw-medium"
-                        :class="period === 'year' ? 'btn-info text-white shadow-sm' : 'text-secondary'"
+                <button type="button" class="chart-period-btn d-inline-flex align-items-center gap-1"
+                        :class="period === 'year' ? 'active' : ''"
                         @click="selectPeriod('year')" :disabled="loading">
-                    <i class="fa-solid fa-calendar me-1"></i>{{ __('Year (12m)') }}
+                    <i class="fa-solid fa-calendar"></i><span>{{ __('Year (12m)') }}</span>
                 </button>
-                <button type="button" class="btn btn-sm px-3 py-1 rounded-2 fw-medium"
-                        :class="period === 'custom' ? 'btn-info text-white shadow-sm' : 'text-secondary'"
+                <button type="button" class="chart-period-btn d-inline-flex align-items-center gap-1"
+                        :class="period === 'custom' ? 'active' : ''"
                         @click="selectPeriod('custom')" :disabled="loading">
-                    <i class="fa-solid fa-sliders me-1"></i>{{ __('Custom') }}
+                    <i class="fa-solid fa-sliders"></i><span>{{ __('Custom') }}</span>
                 </button>
             </div>
         </div>

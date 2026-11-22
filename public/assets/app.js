@@ -512,29 +512,52 @@ const App = {
 
 /**
  * Dashboard Chart.js Analytics Constructor
+ * Keep Chart instances outside Alpine's reactive Proxy to prevent recursive stack overflows.
  */
 window.dashboardAnalytics = function(initialData) {
+    let volumeChart = null;
+    let severityChart = null;
+    let appsChart = null;
+
+    const toRaw = (val) => {
+        try {
+            return JSON.parse(JSON.stringify(val ?? {}));
+        } catch (e) {
+            return val;
+        }
+    };
+
+    const rawInitial = toRaw(initialData);
+
+    const chartTheme = () => {
+        const isLight = document.documentElement.getAttribute('data-bs-theme') === 'light';
+        return {
+            gridColor: isLight ? 'rgba(15, 23, 42, 0.08)' : 'rgba(255, 255, 255, 0.06)',
+            tickColor: isLight ? '#475569' : '#94a3b8',
+            appTickColor: isLight ? '#1e293b' : '#e2e8f0',
+            doughnutBorder: isLight ? '#ffffff' : '#0f172a',
+            emptyColor: isLight ? 'rgba(15, 23, 42, 0.08)' : 'rgba(255, 255, 255, 0.05)',
+        };
+    };
+
     return {
-        period: initialData.period || 'day',
-        rangeLabel: (initialData.range && initialData.range.label) || '',
-        summary: initialData.summary || { total: 0, errors: 0 },
+        period: rawInitial.period || 'day',
+        rangeLabel: (rawInitial.range && rawInitial.range.label) || '',
+        summary: rawInitial.summary || { total: 0, errors: 0 },
         customStart: new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0],
         customEnd: new Date().toISOString().split('T')[0],
         loading: false,
-        severityEmpty: !initialData.severityPie || !initialData.severityPie.data || initialData.severityPie.data.length === 0,
-        appsEmpty: !initialData.appsBar || !initialData.appsBar.data || initialData.appsBar.data.length === 0,
-        volumeChart: null,
-        severityChart: null,
-        appsChart: null,
+        severityEmpty: !rawInitial.severityPie || !rawInitial.severityPie.data || rawInitial.severityPie.data.length === 0,
+        appsEmpty: !rawInitial.appsBar || !rawInitial.appsBar.data || rawInitial.appsBar.data.length === 0,
 
         initCharts() {
             this.$nextTick(() => {
                 if (typeof Chart === 'undefined') {
                     return;
                 }
-                this.buildVolumeChart(initialData.lineChart || { labels: [], total: [], errors: [] });
-                this.buildSeverityChart(initialData.severityPie || { labels: [], data: [], colors: [] });
-                this.buildAppsChart(initialData.appsBar || { labels: [], data: [] });
+                this.buildVolumeChart(rawInitial.lineChart || { labels: [], total: [], errors: [] });
+                this.buildSeverityChart(rawInitial.severityPie || { labels: [], data: [], colors: [] });
+                this.buildAppsChart(rawInitial.appsBar || { labels: [], data: [] });
             });
         },
 
@@ -563,7 +586,7 @@ window.dashboardAnalytics = function(initialData) {
                     headers: { 'X-Requested-With': 'XMLHttpRequest' },
                 });
                 if (!res.ok) throw new Error('Network error fetching chart data');
-                const data = await res.json();
+                const data = toRaw(await res.json());
 
                 this.rangeLabel = data.range ? data.range.label : '';
                 this.summary = data.summary || { total: 0, errors: 0 };
@@ -580,21 +603,25 @@ window.dashboardAnalytics = function(initialData) {
             }
         },
 
-        buildVolumeChart(data) {
+        buildVolumeChart(raw) {
             const ctx = document.getElementById('chartLogVolume');
             if (!ctx) return;
 
-            const gridColor = 'rgba(255, 255, 255, 0.05)';
-            const tickColor = '#94a3b8';
+            const data = toRaw(raw);
+            const theme = chartTheme();
 
-            this.volumeChart = new Chart(ctx, {
+            if (volumeChart) {
+                volumeChart.destroy();
+            }
+
+            volumeChart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: data.labels,
+                    labels: data.labels || [],
                     datasets: [
                         {
                             label: window.__('Total Logs'),
-                            data: data.total,
+                            data: data.total || [],
                             borderColor: '#06b6d4',
                             backgroundColor: 'rgba(6, 182, 212, 0.12)',
                             fill: true,
@@ -605,7 +632,7 @@ window.dashboardAnalytics = function(initialData) {
                         },
                         {
                             label: window.__('Error / Critical'),
-                            data: data.errors,
+                            data: data.errors || [],
                             borderColor: '#ef4444',
                             backgroundColor: 'rgba(239, 68, 68, 0.12)',
                             fill: true,
@@ -638,10 +665,10 @@ window.dashboardAnalytics = function(initialData) {
                     },
                     scales: {
                         x: {
-                            grid: { color: gridColor },
+                            grid: { color: theme.gridColor },
                             ticks: {
-                                color: tickColor,
-                                font: { size: 10 },
+                                color: theme.tickColor,
+                                font: { size: 11 },
                                 maxRotation: 0,
                                 autoSkip: true,
                                 maxTicksLimit: 12,
@@ -649,10 +676,10 @@ window.dashboardAnalytics = function(initialData) {
                         },
                         y: {
                             beginAtZero: true,
-                            grid: { color: gridColor },
+                            grid: { color: theme.gridColor },
                             ticks: {
-                                color: tickColor,
-                                font: { size: 10 },
+                                color: theme.tickColor,
+                                font: { size: 11 },
                                 precision: 0,
                             },
                         },
@@ -661,27 +688,34 @@ window.dashboardAnalytics = function(initialData) {
             });
         },
 
-        updateVolumeChart(data) {
-            if (!this.volumeChart) {
+        updateVolumeChart(raw) {
+            const data = toRaw(raw);
+            if (!volumeChart) {
                 this.buildVolumeChart(data);
                 return;
             }
-            this.volumeChart.data.labels = data.labels;
-            this.volumeChart.data.datasets[0].data = data.total;
-            this.volumeChart.data.datasets[1].data = data.errors;
-            this.volumeChart.update();
+            volumeChart.data.labels = data.labels || [];
+            volumeChart.data.datasets[0].data = data.total || [];
+            volumeChart.data.datasets[1].data = data.errors || [];
+            volumeChart.update();
         },
 
-        buildSeverityChart(data) {
+        buildSeverityChart(raw) {
             const ctx = document.getElementById('chartSeverityBreakdown');
             if (!ctx) return;
 
+            const data = toRaw(raw);
+            const theme = chartTheme();
             const hasData = data && data.data && data.data.length > 0;
             const labels = hasData ? data.labels : ['No Data'];
             const counts = hasData ? data.data : [1];
-            const colors = hasData ? data.colors : ['rgba(255, 255, 255, 0.05)'];
+            const colors = hasData ? data.colors : [theme.emptyColor];
 
-            this.severityChart = new Chart(ctx, {
+            if (severityChart) {
+                severityChart.destroy();
+            }
+
+            severityChart = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
                     labels: labels,
@@ -689,7 +723,7 @@ window.dashboardAnalytics = function(initialData) {
                         data: counts,
                         backgroundColor: colors,
                         borderWidth: 2,
-                        borderColor: '#0f172a',
+                        borderColor: theme.doughnutBorder,
                     }],
                 },
                 options: {
@@ -700,7 +734,7 @@ window.dashboardAnalytics = function(initialData) {
                         legend: {
                             position: 'bottom',
                             labels: {
-                                color: '#94a3b8',
+                                color: theme.tickColor,
                                 boxWidth: 10,
                                 padding: 12,
                                 font: { size: 11 },
@@ -720,34 +754,43 @@ window.dashboardAnalytics = function(initialData) {
             });
         },
 
-        updateSeverityChart(data) {
-            if (!this.severityChart) {
+        updateSeverityChart(raw) {
+            const data = toRaw(raw);
+            const theme = chartTheme();
+            if (!severityChart) {
                 this.buildSeverityChart(data);
                 return;
             }
             const hasData = data && data.data && data.data.length > 0;
-            this.severityChart.data.labels = hasData ? data.labels : ['No Data'];
-            this.severityChart.data.datasets[0].data = hasData ? data.data : [1];
-            this.severityChart.data.datasets[0].backgroundColor = hasData ? data.colors : ['rgba(255, 255, 255, 0.05)'];
-            this.severityChart.options.plugins.tooltip.enabled = hasData;
-            this.severityChart.update();
+            severityChart.data.labels = hasData ? data.labels : ['No Data'];
+            severityChart.data.datasets[0].data = hasData ? data.data : [1];
+            severityChart.data.datasets[0].backgroundColor = hasData ? data.colors : [theme.emptyColor];
+            severityChart.options.plugins.tooltip.enabled = hasData;
+            severityChart.update();
         },
 
-        buildAppsChart(data) {
+        buildAppsChart(raw) {
             const ctx = document.getElementById('chartAppsDistribution');
             if (!ctx) return;
 
-            this.appsChart = new Chart(ctx, {
+            const data = toRaw(raw);
+            const theme = chartTheme();
+
+            if (appsChart) {
+                appsChart.destroy();
+            }
+
+            appsChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: data.labels,
+                    labels: data.labels || [],
                     datasets: [{
                         label: window.__('Logs Count'),
-                        data: data.data,
+                        data: data.data || [],
                         backgroundColor: 'rgba(59, 130, 246, 0.75)',
                         hoverBackgroundColor: '#3b82f6',
-                        borderRadius: 4,
-                        barThickness: 16,
+                        borderRadius: 6,
+                        barThickness: 18,
                     }],
                 },
                 options: {
@@ -768,17 +811,17 @@ window.dashboardAnalytics = function(initialData) {
                     scales: {
                         x: {
                             beginAtZero: true,
-                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            grid: { color: theme.gridColor },
                             ticks: {
-                                color: '#94a3b8',
-                                font: { size: 10 },
+                                color: theme.tickColor,
+                                font: { size: 11 },
                                 precision: 0,
                             },
                         },
                         y: {
                             grid: { display: false },
                             ticks: {
-                                color: '#e2e8f0',
+                                color: theme.appTickColor,
                                 font: { size: 11, family: 'monospace' },
                             },
                         },
@@ -787,16 +830,17 @@ window.dashboardAnalytics = function(initialData) {
             });
         },
 
-        updateAppsChart(data) {
-            if (!this.appsChart) {
+        updateAppsChart(raw) {
+            const data = toRaw(raw);
+            if (!appsChart) {
                 this.buildAppsChart(data);
                 return;
             }
-            this.appsChart.data.labels = data.labels;
-            this.appsChart.data.datasets[0].data = data.data;
-            this.appsChart.update();
+            appsChart.data.labels = data.labels || [];
+            appsChart.data.datasets[0].data = data.data || [];
+            appsChart.update();
             this.$nextTick(() => {
-                if (this.appsChart) this.appsChart.resize();
+                if (appsChart) appsChart.resize();
             });
         },
     };
