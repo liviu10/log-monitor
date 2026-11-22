@@ -37,7 +37,7 @@
 </style>
 <link href="/assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
 <link href="/assets/vendor/fontawesome/css/all.min.css" rel="stylesheet">
-<link href="/assets/app.css" rel="stylesheet">
+<link href="/assets/app.css?v={{ @filemtime(dirname(storage_path()) . '/public/assets/app.css') ?: '1' }}" rel="stylesheet">
 <script nonce="{{ APP_NONCE }}">
     (function() {
         const theme = localStorage.getItem('app_theme') || 'dark';

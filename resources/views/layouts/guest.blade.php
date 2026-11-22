@@ -8,7 +8,7 @@
 
     <header class="py-3 px-4 d-flex justify-content-between align-items-center position-relative" style="z-index: 10;">
         <a href="/login" class="d-flex align-items-center gap-2 text-decoration-none">
-            <img src="/assets/images/logo.svg" alt="LogMonitor" style="height: 34px; width: auto;">
+            @include('components.brand-logo', ['iconSize' => 34, 'fontSize' => '1.2rem'])
         </a>
         <div class="d-flex align-items-center gap-2">
             @include('components.theme-switcher')

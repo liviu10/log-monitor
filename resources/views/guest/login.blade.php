@@ -6,7 +6,9 @@
         <div class="card card-custom p-4 shadow-lg border border-secondary border-opacity-25 rounded-4">
             <div class="card-body p-2 p-sm-4">
                 <div class="text-center mb-4">
-                    <img src="/assets/images/logo.svg" alt="LogMonitor" class="mb-3" style="height: 44px; width: auto;">
+                    <div class="mb-3 d-flex justify-content-center">
+                        @include('components.brand-logo', ['iconSize' => 42, 'fontSize' => '1.45rem'])
+                    </div>
                     <h4 class="fw-bold mb-1">{{ __('Welcome Back') }}</h4>
                     <p class="text-secondary small mb-0">{{ __('Sign in to access centralized telemetry and system logs') }}</p>
                 </div>

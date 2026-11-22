@@ -31,7 +31,7 @@
            :class="isMobile ? (sidebarOpen ? 'show shadow-lg' : '') : (sidebarOpen ? '' : 'is-collapsed')">
         <div class="admin-sidebar-brand border-bottom border-secondary border-opacity-25 d-flex align-items-center justify-content-between">
             <a href="/admin" class="d-flex align-items-center gap-2 text-decoration-none sidebar-logo">
-                <img src="/assets/images/logo.svg" alt="LogMonitor" style="height: 36px; width: auto;">
+                @include('components.brand-logo', ['iconSize' => 36, 'fontSize' => '1.25rem'])
             </a>
             <button type="button" class="btn btn-sm btn-outline-custom d-lg-none" @click="sidebarOpen = false" aria-label="{{ __('Close') }}">
                 <i class="fa-solid fa-xmark fs-6"></i>

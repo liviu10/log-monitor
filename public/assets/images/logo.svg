@@ -9,6 +9,6 @@
   <path d="M12 16L19 22L12 28" stroke="#FFFFFF" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M22 28H31" stroke="#A5F3FC" stroke-width="2.75" stroke-linecap="round"/>
   <circle cx="34" cy="10" r="4" fill="#22C55E" stroke="#0F172A" stroke-width="1.5"/>
-  <text x="52" y="29" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="22" font-weight="800" letter-spacing="-0.03em" fill="currentColor">Log<tspan fill="#06B6D4">Monitor</tspan></text>
+  <text x="52" y="29" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="22" font-weight="800" letter-spacing="-0.03em" fill="#F8FAFC">Log<tspan fill="#06B6D4">Monitor</tspan></text>
 </svg>
 
