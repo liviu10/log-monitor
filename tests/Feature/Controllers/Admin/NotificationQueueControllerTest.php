@@ -338,6 +338,11 @@ class NotificationQueueControllerTest extends TestCase
 
     public function test_is_worker_active_when_unlocked(): void
     {
+        $heartbeatFile = \storage_path('queue_worker.heartbeat');
+        if (file_exists($heartbeatFile)) {
+            @unlink($heartbeatFile);
+        }
+
         $lockFile = dirname(__DIR__, 4).'/storage/views/worker.lock';
         if (file_exists($lockFile)) {
             @unlink($lockFile);
@@ -357,5 +362,13 @@ class NotificationQueueControllerTest extends TestCase
         flock($fp, LOCK_UN);
         fclose($fp);
         @unlink($lockFile);
+
+        // Fresh heartbeat indicates active daemon polling between lock runs
+        file_put_contents($heartbeatFile, (string) time());
+        self::assertTrue($this->controller->isWorkerActive());
+
+        file_put_contents($heartbeatFile, (string) (time() - 120));
+        self::assertFalse($this->controller->isWorkerActive());
+        @unlink($heartbeatFile);
     }
 }

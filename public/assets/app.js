@@ -482,33 +482,68 @@ const App = {
     },
 
     /**
-     * Alpine.js data constructor for the Raw Log Queue Manager page.
+     * Shared Alpine modal & JSON formatter factory for queue management pages.
      */
-    logQueuePageData() {
+    createQueuePageData(modalPrefix, payloadField) {
+        const showModalBySuffix = (suffix) => {
+            const el = document.getElementById(`${modalPrefix}${suffix}`);
+            if (el) {
+                bootstrap.Modal.getOrCreateInstance(el).show();
+            }
+        };
+
         return {
-            selectedJob: null,
-            showModal: false,
+            activeJob: null,
+            formattedPayload: '',
             payloadCopied: false,
 
-            viewJob(job) {
-                this.selectedJob = job;
-                this.showModal = true;
+            showPayload(job) {
+                this.activeJob = job;
                 this.payloadCopied = false;
-            },
-
-            formatJson(rawJson) {
+                const raw = job ? (job[payloadField] || '') : '';
                 try {
-                    const parsed = JSON.parse(rawJson);
-                    return JSON.stringify(parsed, null, 4);
+                    const parsed = JSON.parse(raw);
+                    this.formattedPayload = JSON.stringify(parsed, null, 4);
                 } catch (e) {
-                    return rawJson;
+                    this.formattedPayload = raw;
                 }
+                showModalBySuffix('PayloadModal');
             },
 
             copyJobPayload() {
-                App.copyPayload(this, this.selectedJob, 'payloadCopied');
+                App.copyPayload(this, this.activeJob, 'payloadCopied');
+            },
+
+            showError(job) {
+                this.activeJob = job;
+                showModalBySuffix('ErrorModal');
+            },
+
+            confirmRetrySingle(job) {
+                this.activeJob = job;
+                showModalBySuffix('RetryConfirmModal');
+            },
+
+            confirmRetryAll() {
+                showModalBySuffix('RetryAllModal');
+            },
+
+            confirmDelete(job) {
+                this.activeJob = job;
+                showModalBySuffix('DeleteModal');
+            },
+
+            confirmPurge() {
+                showModalBySuffix('PurgeModal');
             },
         };
+    },
+
+    /**
+     * Alpine.js data constructor for the Raw Log Queue Manager page.
+     */
+    logQueuePageData() {
+        return App.createQueuePageData('logQueue', 'payload_raw');
     },
 
     /**
@@ -548,56 +583,7 @@ const App = {
      * Alpine.js data constructor for Notification Queue details, retry, delete, and purge modals.
      */
     notificationQueuePageData() {
-        return {
-            activeJob: null,
-            formattedPayload: '',
-            payloadCopied: false,
-
-            showPayload(job) {
-                this.activeJob = job;
-                this.payloadCopied = false;
-                try {
-                    const parsed = JSON.parse(job.payload || '');
-                    this.formattedPayload = JSON.stringify(parsed, null, 4);
-                } catch (e) {
-                    this.formattedPayload = job.payload || '';
-                }
-                const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('queuePayloadModal'));
-                modal.show();
-            },
-
-            copyJobPayload() {
-                App.copyPayload(this, this.activeJob, 'payloadCopied');
-            },
-
-            showError(job) {
-                this.activeJob = job;
-                const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('queueErrorModal'));
-                modal.show();
-            },
-
-            confirmRetrySingle(job) {
-                this.activeJob = job;
-                const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('queueRetryConfirmModal'));
-                modal.show();
-            },
-
-            confirmRetryAll() {
-                const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('queueRetryAllModal'));
-                modal.show();
-            },
-
-            confirmDelete(job) {
-                this.activeJob = job;
-                const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('queueDeleteModal'));
-                modal.show();
-            },
-
-            confirmPurge() {
-                const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('queuePurgeModal'));
-                modal.show();
-            },
-        };
+        return App.createQueuePageData('queue', 'payload');
     },
 };
 

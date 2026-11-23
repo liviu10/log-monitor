@@ -15,9 +15,11 @@
     $endPage = min($totalPagesVal, $currentPage + $range);
     $limitOptions = [10, 25, 50, 100];
     $currentSearch = (string) ($filters['search'] ?? '');
+    $currentStatus = (string) ($filters['status'] ?? 'all');
     $currentAppId = (string) ($filters['app_id'] ?? 'all');
     $paginationParams = array_filter([
         'search' => $currentSearch !== '' ? $currentSearch : null,
+        'filter_status' => $currentStatus !== 'all' ? $currentStatus : null,
         'filter_app_id' => $currentAppId !== 'all' ? $currentAppId : null,
         'sort_by' => $sortBy ?? 'id',
         'sort_dir' => $sortDir ?? 'DESC',
@@ -30,41 +32,62 @@
 ])
 
 <div x-data="App.logQueuePageData()">
-    <!-- Metric Cards -->
+    <!-- Stats Cards Grid -->
     <div class="row g-3 mb-4">
-        <div class="col-6 col-lg-3">
+        <div class="col-6 col-lg-2">
             <div class="card card-custom p-3 border-0 shadow-sm h-100 rounded-4">
-                <div class="text-secondary small fw-medium mb-1">{{ __('Buffered Jobs') }}</div>
+                <div class="text-secondary small fw-medium mb-1">{{ __('Total Jobs') }}</div>
                 <div class="h4 fw-bold text-body-emphasis mb-0">{{ number_format($stats['total'] ?? ($totalJobs ?? 0)) }}</div>
             </div>
         </div>
-        <div class="col-6 col-lg-3">
+
+        <div class="col-6 col-lg-2">
             <div class="card card-custom p-3 border-0 shadow-sm h-100 rounded-4 border-start border-warning border-3">
                 <div class="text-secondary small fw-medium mb-1 d-flex align-items-center gap-1">
                     <i class="fa-solid fa-clock text-warning"></i>
-                    <span>{{ __('Queued Apps') }}</span>
+                    <span>{{ __('Pending') }}</span>
                 </div>
-                <div class="h4 fw-bold text-warning mb-0">{{ number_format($stats['distinct_apps'] ?? count($distinctApps ?? [])) }}</div>
+                <div class="h4 fw-bold text-warning mb-0">{{ number_format($stats['pending'] ?? 0) }}</div>
             </div>
         </div>
-        <div class="col-6 col-lg-3">
+
+        <div class="col-6 col-lg-2">
             <div class="card card-custom p-3 border-0 shadow-sm h-100 rounded-4 border-start border-info border-3">
                 <div class="text-secondary small fw-medium mb-1 d-flex align-items-center gap-1">
-                    <i class="fa-solid fa-calendar-day text-info"></i>
-                    <span>{{ __('Oldest Pending') }}</span>
+                    <i class="fa-solid fa-spinner fa-spin text-info"></i>
+                    <span>{{ __('Processing') }}</span>
                 </div>
-                <div class="small fw-bold font-monospace text-info mb-0">{{ $stats['oldest_at'] ?? '-' }}</div>
+                <div class="h4 fw-bold text-info mb-0">{{ number_format($stats['processing'] ?? 0) }}</div>
             </div>
         </div>
-        <div class="col-6 col-lg-3">
-            <div class="card card-custom p-3 border-0 shadow-sm h-100 rounded-4 border-start {{ !empty($isWorkerRunning) ? 'border-success' : 'border-secondary' }} border-3">
+
+        <div class="col-6 col-lg-2">
+            <div class="card card-custom p-3 border-0 shadow-sm h-100 rounded-4 border-start border-success border-3">
                 <div class="text-secondary small fw-medium mb-1 d-flex align-items-center gap-1">
-                    <i class="fa-solid {{ !empty($isWorkerRunning) ? 'fa-circle-check text-success' : 'fa-circle-pause text-secondary' }}"></i>
-                    <span>{{ __('Log Worker Status') }}</span>
+                    <i class="fa-solid fa-circle-check text-success"></i>
+                    <span>{{ __('Completed') }}</span>
                 </div>
-                <div class="h5 fw-bold {{ !empty($isWorkerRunning) ? 'text-success' : 'text-secondary' }} mb-0">
-                    {{ !empty($isWorkerRunning) ? __('ACTIVE') : __('IDLE') }}
+                <div class="h4 fw-bold text-success mb-0">{{ number_format($stats['completed'] ?? 0) }}</div>
+            </div>
+        </div>
+
+        <div class="col-6 col-lg-2">
+            <div class="card card-custom p-3 border-0 shadow-sm h-100 rounded-4 border-start border-danger border-3">
+                <div class="text-secondary small fw-medium mb-1 d-flex align-items-center gap-1">
+                    <i class="fa-solid fa-triangle-exclamation text-danger"></i>
+                    <span>{{ __('Failed (DLQ)') }}</span>
                 </div>
+                <div class="h4 fw-bold text-danger mb-0">{{ number_format($stats['failed'] ?? 0) }}</div>
+            </div>
+        </div>
+
+        <div class="col-6 col-lg-2">
+            <div class="card card-custom p-3 border-0 shadow-sm h-100 rounded-4 border-start border-secondary border-3">
+                <div class="text-secondary small fw-medium mb-1 d-flex align-items-center gap-1">
+                    <i class="fa-solid fa-calendar-xmark text-secondary"></i>
+                    <span>{{ __('Expired') }}</span>
+                </div>
+                <div class="h4 fw-bold text-secondary mb-0">{{ number_format($stats['expired'] ?? 0) }}</div>
             </div>
         </div>
     </div>
@@ -97,17 +120,18 @@
             </form>
             @endif
 
-            @if(($totalJobs ?? 0) > 0 && hasPermission('admin.logqueue.purge'))
-            <form action="/admin/log-queue/purge"
-                  method="POST"
-                  @submit.prevent="if (confirm({{ json_encode(__('Are you sure you want to completely purge the log queue?'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) }})) $el.submit()"
-                  class="m-0">
-                {!! csrf_field() !!}
-                <button type="submit" class="btn btn-outline-danger btn-sm rounded-3 d-inline-flex align-items-center gap-2 px-3 py-2 fw-semibold">
-                    <i class="fa-solid fa-broom"></i>
-                    <span>{{ __('Purge Queue') }}</span>
-                </button>
-            </form>
+            @if(hasPermission('admin.logqueue.retryall'))
+            <button type="button" @click="confirmRetryAll()" class="btn btn-outline-warning btn-sm rounded-3 d-inline-flex align-items-center gap-2 px-3 py-2 fw-semibold" {{ ($stats['failed'] ?? 0) === 0 ? 'disabled' : '' }}>
+                <i class="fa-solid fa-rotate-right"></i>
+                <span>{{ __('Retry All Failed') }}</span>
+            </button>
+            @endif
+
+            @if(hasPermission('admin.logqueue.purge'))
+            <button type="button" @click="confirmPurge()" class="btn btn-outline-danger btn-sm rounded-3 d-inline-flex align-items-center gap-2 px-3 py-2 fw-semibold">
+                <i class="fa-solid fa-broom"></i>
+                <span>{{ __('Purge Processed') }}</span>
+            </button>
             @endif
         </div>
     </div>
@@ -121,7 +145,7 @@
 
                 <div class="input-group input-group-sm" style="max-width: 320px;">
                     <span class="input-group-text text-secondary"><i class="fa-solid fa-magnifying-glass"></i></span>
-                    <input type="text" name="search" class="form-control" placeholder="{{ __('Search ID, application, or payload...') }}" value="{{ $currentSearch }}">
+                    <input type="text" name="search" class="form-control" placeholder="{{ __('Search ID, application, payload, error...') }}" value="{{ $currentSearch }}">
                 </div>
 
                 <div class="d-flex flex-wrap align-items-center gap-2">
@@ -134,6 +158,15 @@
                         </select>
                         <span class="text-secondary small text-nowrap">{{ __('entries') }}</span>
                     </div>
+
+                    <select name="filter_status" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
+                        <option value="all" @if($currentStatus === 'all') selected @endif>{{ __('All Statuses') }}</option>
+                        <option value="pending" @if($currentStatus === 'pending') selected @endif>{{ __('Pending') }}</option>
+                        <option value="processing" @if($currentStatus === 'processing') selected @endif>{{ __('Processing') }}</option>
+                        <option value="completed" @if($currentStatus === 'completed') selected @endif>{{ __('Completed') }}</option>
+                        <option value="failed" @if($currentStatus === 'failed') selected @endif>{{ __('Failed') }}</option>
+                        <option value="expired" @if($currentStatus === 'expired') selected @endif>{{ __('Expired') }}</option>
+                    </select>
 
                     <select name="filter_app_id" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
                         <option value="all" @if($currentAppId === 'all') selected @endif>{{ __('All Applications') }}</option>
@@ -162,7 +195,7 @@
                 <table class="table table-custom table-hover mb-0 align-middle">
                     <thead>
                         <tr>
-                            <th class="ps-4" style="width: 130px;">
+                            <th class="ps-4" style="width: 110px;">
                                 @php
                                     $nextDirId = ($sortBy === 'id' && strtoupper($sortDir) === 'DESC') ? 'ASC' : 'DESC';
                                     $urlId = '/admin/log-queue?' . http_build_query(array_merge($paginationParams, ['page' => 1, 'limit' => $limit, 'sort_by' => 'id', 'sort_dir' => $nextDirId]));
@@ -176,7 +209,7 @@
                                     @endif
                                 </a>
                             </th>
-                            <th style="width: 180px;">
+                            <th style="width: 160px;">
                                 @php
                                     $nextDirApp = ($sortBy === 'app_name' && strtoupper($sortDir) === 'DESC') ? 'ASC' : 'DESC';
                                     $urlApp = '/admin/log-queue?' . http_build_query(array_merge($paginationParams, ['page' => 1, 'limit' => $limit, 'sort_by' => 'app_name', 'sort_dir' => $nextDirApp]));
@@ -191,7 +224,49 @@
                                 </a>
                             </th>
                             <th>{{ __('Payload Preview') }}</th>
-                            <th style="width: 180px;">
+                            <th style="width: 135px;">
+                                @php
+                                    $nextDirStatus = ($sortBy === 'status' && strtoupper($sortDir) === 'DESC') ? 'ASC' : 'DESC';
+                                    $urlStatus = '/admin/log-queue?' . http_build_query(array_merge($paginationParams, ['page' => 1, 'limit' => $limit, 'sort_by' => 'status', 'sort_dir' => $nextDirStatus]));
+                                @endphp
+                                <a href="{{ $urlStatus }}" class="text-decoration-none text-secondary d-flex align-items-center gap-1">
+                                    {{ __('Status') }}
+                                    @if($sortBy === 'status')
+                                        <i class="fa-solid fa-sort-{{ strtoupper($sortDir) === 'ASC' ? 'up' : 'down' }} text-info ms-1"></i>
+                                    @else
+                                        <i class="fa-solid fa-sort text-secondary opacity-50 ms-1"></i>
+                                    @endif
+                                </a>
+                            </th>
+                            <th style="width: 110px;">
+                                @php
+                                    $nextDirAttempts = ($sortBy === 'attempts' && strtoupper($sortDir) === 'DESC') ? 'ASC' : 'DESC';
+                                    $urlAttempts = '/admin/log-queue?' . http_build_query(array_merge($paginationParams, ['page' => 1, 'limit' => $limit, 'sort_by' => 'attempts', 'sort_dir' => $nextDirAttempts]));
+                                @endphp
+                                <a href="{{ $urlAttempts }}" class="text-decoration-none text-secondary d-flex align-items-center gap-1">
+                                    {{ __('Attempts') }}
+                                    @if($sortBy === 'attempts')
+                                        <i class="fa-solid fa-sort-{{ strtoupper($sortDir) === 'ASC' ? 'up' : 'down' }} text-info ms-1"></i>
+                                    @else
+                                        <i class="fa-solid fa-sort text-secondary opacity-50 ms-1"></i>
+                                    @endif
+                                </a>
+                            </th>
+                            <th style="width: 175px;">
+                                @php
+                                    $nextDirAvailable = ($sortBy === 'available_at' && strtoupper($sortDir) === 'DESC') ? 'ASC' : 'DESC';
+                                    $urlAvailable = '/admin/log-queue?' . http_build_query(array_merge($paginationParams, ['page' => 1, 'limit' => $limit, 'sort_by' => 'available_at', 'sort_dir' => $nextDirAvailable]));
+                                @endphp
+                                <a href="{{ $urlAvailable }}" class="text-decoration-none text-secondary d-flex align-items-center gap-1">
+                                    {{ __('Available At') }}
+                                    @if($sortBy === 'available_at')
+                                        <i class="fa-solid fa-sort-{{ strtoupper($sortDir) === 'ASC' ? 'up' : 'down' }} text-info ms-1"></i>
+                                    @else
+                                        <i class="fa-solid fa-sort text-secondary opacity-50 ms-1"></i>
+                                    @endif
+                                </a>
+                            </th>
+                            <th style="width: 175px;">
                                 @php
                                     $nextDirTime = ($sortBy === 'created_at' && strtoupper($sortDir) === 'DESC') ? 'ASC' : 'DESC';
                                     $urlTime = '/admin/log-queue?' . http_build_query(array_merge($paginationParams, ['page' => 1, 'limit' => $limit, 'sort_by' => 'created_at', 'sort_dir' => $nextDirTime]));
@@ -205,19 +280,28 @@
                                     @endif
                                 </a>
                             </th>
-                            <th class="text-end pe-4" style="width: 140px;">{{ __('Actions') }}</th>
+                            <th class="text-end pe-4" style="width: 170px;">{{ __('Actions') }}</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach($jobs as $job)
                             @php
-                                $payload = json_decode((string) $job['payload_raw'], true) ?: [];
+                                $payload = json_decode((string) ($job['payload_raw'] ?? ''), true) ?: [];
                                 $previewMsg = $payload['message'] ?? ($payload[0]['message'] ?? 'N/A');
                                 if (is_array($previewMsg)) {
                                     $previewMsg = json_encode($previewMsg);
                                 }
-                                $previewMsg = mb_strimwidth((string) $previewMsg, 0, 80, '...');
-                                $payloadSize = number_format(strlen((string) $job['payload_raw']) / 1024, 2) . ' KB';
+                                $previewMsg = mb_strimwidth((string) $previewMsg, 0, 75, '...');
+                                $payloadSize = number_format(strlen((string) ($job['payload_raw'] ?? '')) / 1024, 2) . ' KB';
+
+                                $statusVal = (string) ($job['status'] ?? 'pending');
+                                $statusPillClass = match ($statusVal) {
+                                    'completed' => 'status-active',
+                                    'processing' => 'status-info',
+                                    'pending' => 'status-pending',
+                                    'expired' => 'status-inactive',
+                                    default => 'status-danger',
+                                };
                             @endphp
                             <tr>
                                 <td class="ps-4 text-secondary font-monospace">#{{ $job['id'] }}</td>
@@ -226,22 +310,36 @@
                                     <span>{{ $previewMsg }}</span>
                                     <span class="badge bg-secondary bg-opacity-25 text-secondary ms-2">{{ $payloadSize }}</span>
                                 </td>
+                                <td>
+                                    <span class="badge-status-pill {{ $statusPillClass }}">
+                                        <span class="status-dot @if($statusVal === 'processing' || $statusVal === 'pending') pulse @endif"></span>
+                                        <span>{{ $statusVal }}</span>
+                                    </span>
+                                </td>
+                                <td class="small fw-semibold font-monospace">
+                                    {{ (int) ($job['attempts'] ?? 0) }} / {{ (int) ($job['max_attempts'] ?? 5) }}
+                                </td>
+                                <td class="text-secondary small font-monospace text-nowrap">{{ $job['available_at'] ?? '-' }}</td>
                                 <td class="text-secondary small font-monospace text-nowrap">{{ $job['created_at'] }}</td>
                                 <td class="text-end pe-4">
                                     <div class="d-inline-flex gap-1.5 align-items-center justify-content-end">
-                                        <button type="button" class="btn btn-sm btn-outline-info px-2 py-1 rounded-3" title="{{ __('View Details') }}" @click="viewJob({{ json_encode($job, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) }})">
+                                        <button type="button" class="btn btn-sm btn-outline-info px-2 py-1 rounded-3" title="{{ __('View Payload') }}" @click="showPayload({{ json_encode($job, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) }})">
                                             <i class="fa-regular fa-eye"></i>
                                         </button>
+                                        @if(!empty($job['error_message']))
+                                        <button type="button" class="btn btn-sm btn-outline-warning px-2 py-1 rounded-3" title="{{ __('View Error Details') }}" @click="showError({{ json_encode($job, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) }})">
+                                            <i class="fa-solid fa-triangle-exclamation"></i>
+                                        </button>
+                                        @endif
+                                        @if(($statusVal === 'failed' || $statusVal === 'expired') && hasPermission('admin.logqueue.retry'))
+                                        <button type="button" class="btn btn-sm btn-outline-primary px-2 py-1 rounded-3" title="{{ __('Retry Job') }}" @click="confirmRetrySingle({{ json_encode($job, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) }})">
+                                            <i class="fa-solid fa-rotate-right"></i>
+                                        </button>
+                                        @endif
                                         @if(hasPermission('admin.logqueue.delete'))
-                                        <form action="/admin/log-queue/{{ (int) $job['id'] }}/delete"
-                                              method="POST"
-                                              @submit.prevent="if (confirm({{ json_encode(__('Are you sure you want to delete this job from the queue?'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) }})) $el.submit()"
-                                              class="m-0">
-                                            {!! csrf_field() !!}
-                                            <button type="submit" class="btn btn-sm btn-outline-danger px-2 py-1 rounded-3" title="{{ __('Delete') }}">
-                                                <i class="fa-regular fa-trash-can"></i>
-                                            </button>
-                                        </form>
+                                        <button type="button" class="btn btn-sm btn-outline-danger px-2 py-1 rounded-3" title="{{ __('Delete Job') }}" @click="confirmDelete({{ json_encode($job, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) }})">
+                                            <i class="fa-regular fa-trash-can"></i>
+                                        </button>
                                         @endif
                                     </div>
                                 </td>
@@ -249,7 +347,7 @@
                         @endforeach
                         @if(empty($jobs))
                             <tr>
-                                <td colspan="5" class="text-center py-5 text-secondary">
+                                <td colspan="8" class="text-center py-5 text-secondary">
                                     <i class="fa-solid fa-inbox fs-2 mb-2 opacity-25 d-block"></i>
                                     <p class="mb-0 small">{{ __('No jobs currently in the queue.') }}</p>
                                 </td>
@@ -270,7 +368,7 @@
                     @php
                         $url = '/admin/log-queue?' . http_build_query(array_merge($paginationParams, ['page' => 1, 'limit' => $l]));
                     @endphp
-                    <option value="{{ $url }}" @if($limit === $l) selected @endif>{{ $l }}</option>
+                    <option value="{{ $url }}" @if((int) $limit === $l) selected @endif>{{ $l }}</option>
                 @endforeach
             </select>
         </div>
@@ -308,34 +406,31 @@
         @endif
     </div>
 
-    <!-- Job Details Modal -->
-    <template x-if="showModal">
-        <div class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center p-3"
-             style="z-index: 1050; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(4px);"
-             @click.self="showModal = false">
-            <div class="card card-custom shadow-lg border border-secondary border-opacity-25 rounded-4 overflow-hidden" style="width: 100%; max-width: 800px;" @click.stop>
-                <div class="card-header border-bottom border-secondary border-opacity-25 p-4 d-flex align-items-center justify-content-between">
-                    <h4 class="h5 mb-0 fw-bold">
-                        <i class="fa-solid fa-list-check text-info me-2"></i>{{ __('Job details:') }} <span class="text-info">#<span x-text="selectedJob?.id"></span></span>
-                    </h4>
-                    <button type="button" class="btn-close" @click="showModal = false" aria-label="{{ __('Close') }}"></button>
+    <!-- Payload Viewer Modal -->
+    <div class="modal fade" id="logQueuePayloadModal" tabindex="-1" aria-hidden="true" style="background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px);">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content modal-custom p-3">
+                <div class="modal-header border-bottom border-secondary border-opacity-25 pb-3">
+                    <h5 class="modal-title fw-bold">
+                        <i class="fa-solid fa-code text-info me-2"></i>{{ __('Job Payload') }} #<span x-text="activeJob?.id"></span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ __('Close') }}"></button>
                 </div>
-                <div class="card-body p-4 overflow-auto" style="max-height: 70vh;">
-                    <div class="mb-3">
-                        <span class="text-secondary small fw-bold text-uppercase d-block mb-1">{{ __('Application') }}</span>
-                        <span class="fw-medium" x-text="selectedJob?.app_name || {{ json_encode(__('Unknown App'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) }}"></span>
+                <div class="modal-body py-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2 small text-secondary">
+                        <div>
+                            <span>{{ __('Application') }}:</span>
+                            <span class="badge bg-secondary ms-1" x-text="activeJob?.app_name || {{ json_encode(__('Unknown App'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) }}"></span>
+                        </div>
+                        <div>
+                            <span>{{ __('Attempts') }}:</span>
+                            <span class="fw-bold ms-1" x-text="activeJob?.attempts ?? 0"></span>
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <span class="text-secondary small fw-bold text-uppercase d-block mb-1">{{ __('Created At') }}</span>
-                        <span class="font-monospace text-secondary" x-text="selectedJob?.created_at"></span>
-                    </div>
-                    <div>
-                        <span class="text-secondary small fw-bold text-uppercase d-block mb-1">{{ __('Payload (JSON Raw)') }}</span>
-                        <pre class="bg-dark text-info p-3 rounded font-monospace small overflow-auto" style="max-height: 400px; white-space: pre-wrap; word-break: break-all;" x-text="formatJson(selectedJob?.payload_raw || '')"></pre>
-                    </div>
+                    <pre class="bg-dark text-info p-3 rounded-3 small mb-0 font-monospace" style="max-height: 400px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;" x-text="formattedPayload"></pre>
                 </div>
-                <div class="card-footer border-top border-secondary border-opacity-25 p-3 d-flex justify-content-end gap-2">
-                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-4" @click="showModal = false">{{ __('Close') }}</button>
+                <div class="modal-footer border-top border-secondary border-opacity-25 pt-3">
+                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-4" data-bs-dismiss="modal">{{ __('Close') }}</button>
                     <button type="button"
                             class="btn btn-sm rounded-pill px-4 fw-bold"
                             :class="payloadCopied ? 'btn-success' : 'btn-info text-white'"
@@ -346,6 +441,157 @@
                 </div>
             </div>
         </div>
-    </template>
+    </div>
+
+    <!-- Error Details Modal -->
+    <div class="modal fade" id="logQueueErrorModal" tabindex="-1" aria-hidden="true" style="background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px);">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content modal-custom p-3">
+                <div class="modal-header border-bottom border-secondary border-opacity-25 pb-3">
+                    <h5 class="modal-title fw-bold text-danger">
+                        <i class="fa-solid fa-triangle-exclamation me-2"></i>{{ __('Error Details') }} #<span x-text="activeJob?.id"></span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ __('Close') }}"></button>
+                </div>
+                <div class="modal-body py-3">
+                    <div class="p-3 rounded-3 border border-danger border-opacity-25 bg-danger bg-opacity-10 text-danger mb-3">
+                        <h6 class="fw-bold mb-1">{{ __('Failure Reason') }}</h6>
+                        <div class="small" x-text="activeJob?.error_message || {{ json_encode(__('No error message logged.'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) }}"></div>
+                    </div>
+                    <div class="small text-secondary mb-2">{{ __('Available / Next Attempt') }}: <span class="text-body-emphasis fw-semibold" x-text="activeJob?.available_at || '-'"></span></div>
+                </div>
+                <div class="modal-footer border-top border-secondary border-opacity-25 pt-3">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">{{ __('Close') }}</button>
+                    @if(hasPermission('admin.logqueue.retry'))
+                    <form :action="'/admin/log-queue/' + activeJob?.id + '/retry'" method="POST" class="m-0">
+                        {!! csrf_field() !!}
+                        <button type="submit" class="btn btn-primary rounded-pill px-4">
+                            <i class="fa-solid fa-rotate-right me-1"></i>{{ __('Retry Job Now') }}
+                        </button>
+                    </form>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Retry Single Modal -->
+    <div class="modal fade" id="logQueueRetryConfirmModal" tabindex="-1" aria-hidden="true" style="background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content modal-custom p-3">
+                <div class="modal-header border-bottom border-secondary border-opacity-25 pb-3">
+                    <h5 class="modal-title fw-bold">
+                        <i class="fa-solid fa-rotate-right text-primary me-2"></i>{{ __('Confirm Job Retry') }}
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ __('Close') }}"></button>
+                </div>
+                <div class="modal-body text-center py-4">
+                    <i class="fa-solid fa-rotate-right fa-3x text-primary mb-3"></i>
+                    <p class="fs-6 fw-medium text-body-emphasis mb-1">
+                        {{ __('Are you sure you want to retry job') }} #<span x-text="activeJob?.id"></span>?
+                    </p>
+                    <p class="text-secondary small mb-0">{{ __('The status will be reset to pending and attempts reset to 0 for immediate execution.') }}</p>
+                </div>
+                <div class="modal-footer border-top border-secondary border-opacity-25 pt-3 justify-content-center">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
+                    <form :action="'/admin/log-queue/' + activeJob?.id + '/retry'" method="POST" class="m-0" @submit="const b=$el.querySelector('button[type=submit]'); if(b){b.disabled=true; b.innerHTML='<i class=\'fa-solid fa-spinner fa-spin me-2\'></i>{{ __('Retrying...') }}';}">
+                        {!! csrf_field() !!}
+                        <button type="submit" class="btn btn-primary rounded-pill px-4">{{ __('Retry Job') }}</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Retry All Modal -->
+    <div class="modal fade" id="logQueueRetryAllModal" tabindex="-1" aria-hidden="true" style="background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content modal-custom p-3">
+                <div class="modal-header border-bottom border-secondary border-opacity-25 pb-3">
+                    <h5 class="modal-title fw-bold text-warning">
+                        <i class="fa-solid fa-rotate-right me-2"></i>{{ __('Retry All Failed Jobs') }}
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ __('Close') }}"></button>
+                </div>
+                <div class="modal-body text-center py-4">
+                    <i class="fa-solid fa-triangle-exclamation fa-3x text-warning mb-3"></i>
+                    <p class="fs-6 fw-medium text-body-emphasis mb-1">
+                        {{ __('Reset and retry all currently failed jobs in Dead-Letter Queue?') }}
+                    </p>
+                    <p class="text-secondary small mb-0">{{ __('Failed jobs will be queued for immediate reprocessing.') }}</p>
+                </div>
+                <div class="modal-footer border-top border-secondary border-opacity-25 pt-3 justify-content-center">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
+                    <form action="/admin/log-queue/retry-all" method="POST" class="m-0" @submit="const b=$el.querySelector('button[type=submit]'); if(b){b.disabled=true; b.innerHTML='<i class=\'fa-solid fa-spinner fa-spin me-2\'></i>{{ __('Retrying...') }}';}">
+                        {!! csrf_field() !!}
+                        <button type="submit" class="btn btn-warning rounded-pill px-4">{{ __('Retry All') }}</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Delete Modal -->
+    <div class="modal fade" id="logQueueDeleteModal" tabindex="-1" aria-hidden="true" style="background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content modal-custom p-3">
+                <div class="modal-header border-bottom border-secondary border-opacity-25 pb-3">
+                    <h5 class="modal-title fw-bold text-danger">
+                        <i class="fa-solid fa-trash-can me-2"></i>{{ __('Delete Queue Job') }}
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ __('Close') }}"></button>
+                </div>
+                <div class="modal-body text-center py-4">
+                    <i class="fa-solid fa-trash-can fa-3x text-danger mb-3"></i>
+                    <p class="fs-6 fw-medium text-body-emphasis mb-1">
+                        {{ __('Are you sure you want to permanently delete job') }} #<span x-text="activeJob?.id"></span>?
+                    </p>
+                    <p class="text-secondary small mb-0">{{ __('This action cannot be undone.') }}</p>
+                </div>
+                <div class="modal-footer border-top border-secondary border-opacity-25 pt-3 justify-content-center">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
+                    <form :action="'/admin/log-queue/' + activeJob?.id + '/delete'" method="POST" class="m-0" @submit="const b=$el.querySelector('button[type=submit]'); if(b){b.disabled=true; b.innerHTML='<i class=\'fa-solid fa-spinner fa-spin me-2\'></i>{{ __('Deleting...') }}';}">
+                        {!! csrf_field() !!}
+                        <button type="submit" class="btn btn-danger rounded-pill px-4">{{ __('Delete') }}</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Purge Modal -->
+    <div class="modal fade" id="logQueuePurgeModal" tabindex="-1" aria-hidden="true" style="background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content modal-custom p-3">
+                <div class="modal-header border-bottom border-secondary border-opacity-25 pb-3">
+                    <h5 class="modal-title fw-bold text-danger">
+                        <i class="fa-solid fa-broom me-2"></i>{{ __('Purge Processed Jobs') }}
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ __('Close') }}"></button>
+                </div>
+                <div class="modal-body text-center py-4">
+                    <i class="fa-solid fa-broom fa-3x text-danger mb-3"></i>
+                    <p class="fs-6 fw-medium text-body-emphasis mb-1">
+                        {{ __('Purge completed, failed, and expired jobs older than retention period?') }}
+                    </p>
+                    <p class="text-secondary small mb-3">{{ __('Select retention threshold in days:') }}</p>
+                    <form id="purge-log-queue-form" action="/admin/log-queue/purge" method="POST">
+                        {!! csrf_field() !!}
+                        <select name="days" class="form-select w-auto mx-auto mb-2">
+                            <option value="7">7 {{ __('days') }}</option>
+                            <option value="14">14 {{ __('days') }}</option>
+                            <option value="30" selected>30 {{ __('days') }}</option>
+                            <option value="60">60 {{ __('days') }}</option>
+                            <option value="90">90 {{ __('days') }}</option>
+                        </select>
+                    </form>
+                </div>
+                <div class="modal-footer border-top border-secondary border-opacity-25 pt-3 justify-content-center">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
+                    <button type="button" @click="const b=$event.currentTarget; b.disabled=true; b.innerHTML='<i class=\'fa-solid fa-spinner fa-spin me-2\'></i>{{ __('Purging...') }}'; document.getElementById('purge-log-queue-form').submit();" class="btn btn-danger rounded-pill px-4">{{ __('Purge Now') }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 @endsection

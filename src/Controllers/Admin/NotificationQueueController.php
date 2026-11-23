@@ -187,10 +187,18 @@ class NotificationQueueController extends BaseController
     }
 
     /**
-     * Inspects the worker lock file to determine if a worker daemon is currently executing.
+     * Inspects the worker lock file or recent daemon heartbeat to determine if the worker is active.
      */
     public function isWorkerActive(): bool
     {
+        $heartbeatFile = \storage_path('queue_worker.heartbeat');
+        if (file_exists($heartbeatFile)) {
+            $lastSeenRaw = @file_get_contents($heartbeatFile);
+            if (is_string($lastSeenRaw) && is_numeric(trim($lastSeenRaw)) && (time() - (int) trim($lastSeenRaw)) <= 30) {
+                return true;
+            }
+        }
+
         $lockFile = dirname(__DIR__, 3).'/storage/views/worker.lock';
 
         if (! file_exists($lockFile)) {

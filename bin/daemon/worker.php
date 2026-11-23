@@ -25,6 +25,7 @@ use App\Enums\LogLevel;
 
 // Lock file location to prevent parallel runs
 $lockFile = dirname(dirname(__DIR__)).'/storage/views/worker.lock';
+$heartbeatFile = dirname(dirname(__DIR__)).'/storage/queue_worker.heartbeat';
 
 try {
     $lockFp = fopen($lockFile, 'w');
@@ -37,6 +38,7 @@ try {
 }
 
 try {
+    @file_put_contents($heartbeatFile, (string) time(), LOCK_EX);
     $controller = new QueueController;
     $controller->processQueue();
 } catch (Throwable $e) {

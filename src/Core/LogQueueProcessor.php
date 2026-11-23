@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Core;
 
 use App\Controllers\Common\NotificationController;
+use App\Models\LogQueue;
 use Throwable;
 
 /**
- * Processes buffered payloads from the `log_queue` table into `logs` and dispatches alert rules.
+ * Processes buffered payloads from the `log_queue` table into `logs`, tracking completion,
+ * exponential backoff retries, error reporting, and expiration.
  */
 final class LogQueueProcessor
 {
@@ -51,6 +53,32 @@ final class LogQueueProcessor
     }
 
     /**
+     * Calculates future timestamp based on configured exponential backoff delays (in minutes).
+     */
+    public static function calculateBackoffAvailableAt(int $attempts): string
+    {
+        $delaysConfig = function_exists('config') ? config('app.queue.backoff_delays') : null;
+        $delays = [1, 5, 20, 60];
+
+        if (is_array($delaysConfig)) {
+            $filtered = [];
+            foreach ($delaysConfig as $val) {
+                if (is_numeric($val)) {
+                    $filtered[] = (int) $val;
+                }
+            }
+            if ($filtered !== []) {
+                $delays = $filtered;
+            }
+        }
+
+        $index = max(0, min($attempts - 1, count($delays) - 1));
+        $minutes = $delays[$index];
+
+        return date('Y-m-d H:i:s', time() + ($minutes * 60));
+    }
+
+    /**
      * Processes one batch (up to 2000 rows) of queued logs inside a database transaction.
      *
      * @param  array<int, array{data: array<string, mixed>|null, settings: array<string, mixed>, cached_at: int}>  $appsCache
@@ -61,10 +89,25 @@ final class LogQueueProcessor
         $pdo = $db->getConnection();
         $notifier = $notificationController ?? new NotificationController;
 
+        LogQueue::markExpired();
+
+        $maxAttemptsCfg = function_exists('config') ? config('app.queue.max_attempts') : null;
+        $maxAttempts = is_numeric($maxAttemptsCfg) ? max(1, (int) $maxAttemptsCfg) : 5;
+
         try {
             $pdo->beginTransaction();
 
-            $stmt = $db->query('SELECT id, app_id, payload_raw FROM log_queue ORDER BY id ASC LIMIT 2000 FOR UPDATE SKIP LOCKED');
+            $stmt = $db->query(
+                "SELECT id, app_id, payload_raw, attempts
+                 FROM log_queue
+                 WHERE (status = 'pending' OR (status = 'failed' AND attempts < ?))
+                   AND (available_at IS NULL OR available_at <= NOW())
+                   AND (expires_at IS NULL OR expires_at > NOW())
+                 ORDER BY id ASC
+                 LIMIT 2000
+                 FOR UPDATE SKIP LOCKED",
+                [$maxAttempts]
+            );
             $jobs = $stmt->fetchAll();
 
             if ($jobs === []) {
@@ -73,9 +116,13 @@ final class LogQueueProcessor
                 return 0;
             }
 
-            $idsToDelete = [];
+            $idsCompleted = [];
+            /** @var array<int, array{attempts: int, error: string}> $failedJobs */
+            $failedJobs = [];
             $insertRows = [];
             $insertValues = [];
+            /** @var array<int, array{id: int, attempts: int}> $claimedJobs */
+            $claimedJobs = [];
 
             foreach ($jobs as $job) {
                 if (! is_array($job) || ! isset($job['id'], $job['app_id'], $job['payload_raw'])) {
@@ -94,9 +141,16 @@ final class LogQueueProcessor
 
                 $jobId = (int) $jobIdVal;
                 $appId = (int) $appIdVal;
-                $idsToDelete[] = $jobId;
+                $currentAttempts = isset($job['attempts']) && is_numeric($job['attempts']) ? (int) $job['attempts'] : 0;
+                $nextAttempts = $currentAttempts + 1;
+                $claimedJobs[] = ['id' => $jobId, 'attempts' => $nextAttempts];
 
                 if (! json_validate($payloadRawVal)) {
+                    $failedJobs[$jobId] = [
+                        'attempts' => $nextAttempts,
+                        'error' => 'Job payload is invalid JSON.',
+                    ];
+
                     continue;
                 }
 
@@ -107,6 +161,11 @@ final class LogQueueProcessor
                 }
 
                 if (! is_array($payload)) {
+                    $failedJobs[$jobId] = [
+                        'attempts' => $nextAttempts,
+                        'error' => 'Decoded log payload must be a JSON object/array.',
+                    ];
+
                     continue;
                 }
 
@@ -115,6 +174,15 @@ final class LogQueueProcessor
 
                 $level = strtoupper(trim(is_string($levelVal) ? $levelVal : 'INFO'));
                 $message = self::sanitizeLogMessage(trim(is_string($messageVal) ? $messageVal : ''));
+                if ($message === '') {
+                    $failedJobs[$jobId] = [
+                        'attempts' => $nextAttempts,
+                        'error' => 'Log payload is missing a non-empty "message" field.',
+                    ];
+
+                    continue;
+                }
+
                 $context = isset($payload['context']) && is_array($payload['context'])
                     ? self::sanitizeSensitivePayload($payload['context'])
                     : [];
@@ -126,6 +194,7 @@ final class LogQueueProcessor
                 $insertValues[] = $level;
                 $insertValues[] = $message;
                 $insertValues[] = $jsonContext;
+                $idsCompleted[] = $jobId;
 
                 $now = time();
                 if (! isset($appsCache[$appId]) || ($now - $appsCache[$appId]['cached_at']) > 10) {
@@ -165,16 +234,28 @@ final class LogQueueProcessor
                 $stmtInsert->execute($insertValues);
             }
 
-            if ($idsToDelete !== []) {
-                $placeholders = implode(', ', array_fill(0, count($idsToDelete), '?'));
-                $sqlDelete = "DELETE FROM log_queue WHERE id IN ({$placeholders})";
-                $stmtDelete = $pdo->prepare($sqlDelete);
-                $stmtDelete->execute($idsToDelete);
+            if ($idsCompleted !== []) {
+                $placeholders = implode(', ', array_fill(0, count($idsCompleted), '?'));
+                $sqlComplete = "UPDATE log_queue
+                                SET status = 'completed', attempts = attempts + 1, error_message = NULL, processed_at = NOW()
+                                WHERE id IN ({$placeholders})";
+                $stmtComplete = $pdo->prepare($sqlComplete);
+                $stmtComplete->execute($idsCompleted);
+            }
+
+            foreach ($failedJobs as $failedId => $meta) {
+                $nextAvailableAt = self::calculateBackoffAvailableAt($meta['attempts']);
+                $stmtFail = $pdo->prepare(
+                    "UPDATE log_queue
+                     SET status = 'failed', attempts = ?, error_message = ?, available_at = ?, processed_at = NOW()
+                     WHERE id = ?"
+                );
+                $stmtFail->execute([$meta['attempts'], $meta['error'], $nextAvailableAt, $failedId]);
             }
 
             $pdo->commit();
 
-            return count($idsToDelete);
+            return count($claimedJobs);
         } catch (Throwable $e) {
             try {
                 if ($pdo->inTransaction()) {

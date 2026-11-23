@@ -69,6 +69,8 @@ return function (Router $router): void {
 
             $rAdmin->group(['middleware' => [CsrfMiddleware::class]], function (Router $rAdminPost): void {
                 $rAdminPost->post('/log-queue/run-worker', 'Admin\LogQueueController@runWorker');
+                $rAdminPost->post('/log-queue/retry-all', 'Admin\LogQueueController@retryAll');
+                $rAdminPost->post('/log-queue/{id}/retry', 'Admin\LogQueueController@retry');
                 $rAdminPost->post('/log-queue/{id}/delete', 'Admin\LogQueueController@delete');
                 $rAdminPost->post('/log-queue/purge', 'Admin\LogQueueController@purge');
 

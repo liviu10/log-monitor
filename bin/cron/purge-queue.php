@@ -7,6 +7,7 @@ require_once dirname(__DIR__, 2).'/config/bootstrap.php';
 use App\Controllers\Common\QueueController;
 use App\Core\LogViaStream;
 use App\Enums\LogLevel;
+use App\Models\LogQueue;
 
 $daysArgument = $argv[1] ?? '15';
 if (! is_numeric($daysArgument) || (int) $daysArgument < 1) {
@@ -25,10 +26,12 @@ echo "Retention policy: {$days} days\n";
 try {
     $controller = new QueueController;
     $deletedCount = $controller->purge($days);
+    $cutoffDate = date('Y-m-d H:i:s', time() - ($days * 86400));
+    $deletedLogQueueCount = LogQueue::purgeProcessed($cutoffDate);
 
     echo json_encode([
         'status' => 'success',
-        'message' => "Successfully purged {$deletedCount} old processed queue jobs.",
+        'message' => "Successfully purged {$deletedCount} notification queue jobs and {$deletedLogQueueCount} log queue jobs.",
     ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)."\n";
     exit(0);
 } catch (Throwable $e) {
