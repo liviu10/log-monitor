@@ -95,7 +95,7 @@
     <!-- Global Actions Bar -->
     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
         <div class="d-flex align-items-center gap-2 flex-wrap">
-            <h3 class="h5 mb-0 fw-bold">{{ __('Notification Queue Jobs') }}</h3>
+            <h3 class="h5 mb-0 fw-bold">{{ __('Active Notifications Buffer') }}</h3>
             @if(!empty($isWorkerRunning))
                 <span class="badge bg-success-subtle text-success border border-success border-opacity-25 px-2.5 py-1 rounded-pill d-inline-flex align-items-center gap-1.5 small">
                     <span class="status-dot pulse" style="background-color: var(--bs-success);"></span>
