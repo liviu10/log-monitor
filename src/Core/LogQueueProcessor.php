@@ -188,4 +188,3 @@ final class LogQueueProcessor
         }
     }
 }
-

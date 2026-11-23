@@ -211,4 +211,3 @@ class NotificationQueueController extends BaseController
         return $locked;
     }
 }
-

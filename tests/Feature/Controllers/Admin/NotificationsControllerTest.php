@@ -131,4 +131,3 @@ class NotificationsControllerTest extends TestCase
         self::assertStringContainsString('No sent notifications found for the selected filters.', $html);
     }
 }
-

@@ -365,9 +365,10 @@ run_qa_gates() {
         s_end=$(date +%s)
         echo -e "${GREEN}✓ Code Style Formatting passed ($((s_end - s_start))s).${NC}"
         if [ -n "$(git status --porcelain)" ]; then
-            echo -e "${YELLOW}⚠️ Laravel Pint reformatted files. Commit the style fixes first, then re-run ./ops publish.${NC}" >&2
+            echo -e "${YELLOW}ℹ️ Laravel Pint reformatted files; committing style fixes automatically...${NC}"
             git status -s
-            return 1
+            git add -A
+            git commit -m "Apply Laravel Pint code style fixes"
         fi
     else
         s_end=$(date +%s)

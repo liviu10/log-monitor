@@ -91,4 +91,3 @@ class NotificationsController extends BaseController
         }
     }
 }
-
