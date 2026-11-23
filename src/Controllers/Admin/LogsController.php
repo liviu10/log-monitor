@@ -57,6 +57,7 @@ class LogsController extends BaseController
             $stats = $logModel->getStats();
 
             return $this->render('admin.logs.index', [
+                'title' => __('Logs'),
                 'logs' => $logs,
                 'apps' => $apps,
                 'levels' => $levels,

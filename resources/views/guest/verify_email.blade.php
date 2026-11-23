@@ -1,5 +1,7 @@
 @extends('layouts.guest')
 
+@section('title', __('Confirm Email Address'))
+
 @section('content')
 <div class="row justify-content-center align-items-center" style="min-height: 60vh;">
     <div class="col-12">

@@ -369,6 +369,116 @@ class QueueJob
     }
 
     /**
+     * Returns paginated, searchable, sortable list of sent notifications (`status = 'completed'`).
+     *
+     * @param  array<string, mixed>  $filters
+     * @return array{items: array<int, array<string, mixed>>, total: int}
+     */
+    public static function getSentNotifications(
+        array $filters = [],
+        int $limit = 10,
+        int $offset = 0,
+        string $sortBy = 'id',
+        string $sortDir = 'DESC'
+    ): array {
+        $db = MySQLWrapper::getInstance();
+        $where = ["status = 'completed'"];
+        $params = [];
+
+        if (isset($filters['search']) && is_string($filters['search']) && trim($filters['search']) !== '') {
+            $searchTerm = '%'.trim($filters['search']).'%';
+            $where[] = '(id LIKE ? OR queue LIKE ? OR payload LIKE ?)';
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+        }
+
+        if (isset($filters['queue']) && is_string($filters['queue']) && $filters['queue'] !== '' && $filters['queue'] !== 'all') {
+            $where[] = 'queue = ?';
+            $params[] = $filters['queue'];
+        }
+
+        $whereClause = 'WHERE '.implode(' AND ', $where);
+
+        $countRow = $db->query("SELECT COUNT(*) as total FROM queue_jobs {$whereClause}", $params)->fetch();
+        $total = is_array($countRow) && isset($countRow['total']) && is_numeric($countRow['total']) ? (int) $countRow['total'] : 0;
+
+        $allowedSortColumns = ['id', 'queue', 'created_at', 'processed_at'];
+        $cleanSortBy = in_array($sortBy, $allowedSortColumns, true) ? $sortBy : 'id';
+        $orderDir = strtoupper($sortDir) === 'ASC' ? 'ASC' : 'DESC';
+
+        $orderClause = $cleanSortBy === 'id'
+            ? "ORDER BY id {$orderDir}"
+            : "ORDER BY {$cleanSortBy} {$orderDir}, id {$orderDir}";
+
+        $querySql = "SELECT * FROM queue_jobs {$whereClause} {$orderClause} LIMIT ".max(1, $limit).' OFFSET '.max(0, $offset);
+        $rows = $db->query($querySql, $params)->fetchAll();
+
+        $items = [];
+        foreach ($rows as $row) {
+            if (is_array($row)) {
+                /** @var array<string, mixed> $row */
+                $items[] = $row;
+            }
+        }
+
+        return [
+            'items' => $items,
+            'total' => $total,
+        ];
+    }
+
+    /**
+     * Retrieves summary counts for delivered notifications (`status = 'completed'`).
+     *
+     * @return array{total: int, alerts: int, emails: int, today: int}
+     */
+    public static function getSentStats(): array
+    {
+        $db = MySQLWrapper::getInstance();
+        $row = $db->query(
+            "SELECT
+                COUNT(*) as total,
+                SUM(CASE WHEN queue = 'alerts' THEN 1 ELSE 0 END) as alerts,
+                SUM(CASE WHEN queue = 'emails' THEN 1 ELSE 0 END) as emails,
+                SUM(CASE WHEN DATE(COALESCE(processed_at, created_at)) = CURDATE() THEN 1 ELSE 0 END) as today
+             FROM queue_jobs
+             WHERE status = 'completed'"
+        )->fetch();
+
+        if (! is_array($row)) {
+            return ['total' => 0, 'alerts' => 0, 'emails' => 0, 'today' => 0];
+        }
+
+        return [
+            'total' => isset($row['total']) && is_numeric($row['total']) ? (int) $row['total'] : 0,
+            'alerts' => isset($row['alerts']) && is_numeric($row['alerts']) ? (int) $row['alerts'] : 0,
+            'emails' => isset($row['emails']) && is_numeric($row['emails']) ? (int) $row['emails'] : 0,
+            'today' => isset($row['today']) && is_numeric($row['today']) ? (int) $row['today'] : 0,
+        ];
+    }
+
+    /**
+     * Retrieves distinct queue names for delivered notifications.
+     *
+     * @return array<int, string>
+     */
+    public static function getDistinctCompletedQueues(): array
+    {
+        $db = MySQLWrapper::getInstance();
+        $rows = $db->query("SELECT DISTINCT queue FROM queue_jobs WHERE status = 'completed' ORDER BY queue ASC")->fetchAll();
+
+        $queues = [];
+        foreach ($rows as $row) {
+            if (is_array($row) && isset($row['queue']) && is_string($row['queue']) && $row['queue'] !== '') {
+                $queues[] = $row['queue'];
+            }
+        }
+
+        return $queues;
+    }
+
+    /**
      * Purges processed jobs (completed/failed/expired) older than cutoff.
      *
      * @param  string  $cutoffDate  Jobs retention limit date.

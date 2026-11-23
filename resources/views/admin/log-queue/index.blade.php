@@ -1,5 +1,7 @@
 @extends('layouts.admin')
 
+@section('title', __('Log Queue'))
+
 @section('content')
 @php
     \App\Utilities\Breadcrumbs::reset();
@@ -12,10 +14,14 @@
     $startPage = max(1, $currentPage - $range);
     $endPage = min($totalPagesVal, $currentPage + $range);
     $limitOptions = [10, 25, 50, 100];
-    $paginationParams = [
+    $currentSearch = (string) ($filters['search'] ?? '');
+    $currentAppId = (string) ($filters['app_id'] ?? 'all');
+    $paginationParams = array_filter([
+        'search' => $currentSearch !== '' ? $currentSearch : null,
+        'filter_app_id' => $currentAppId !== 'all' ? $currentAppId : null,
         'sort_by' => $sortBy ?? 'id',
         'sort_dir' => $sortDir ?? 'DESC',
-    ];
+    ], static fn ($v) => $v !== null);
 @endphp
 
 @include('components.page-header', [
@@ -26,38 +32,127 @@
 <div x-data="App.logQueuePageData()">
     <!-- Metric Cards -->
     <div class="row g-3 mb-4">
-        <div class="col-md-6">
-            @include('components.stat-card', [
-                'title' => __('Pending Jobs'),
-                'value' => $totalJobs ?? 0,
-                'color' => 'info',
-                'icon' => 'fa-solid fa-list-check',
-            ])
+        <div class="col-6 col-lg-3">
+            <div class="card card-custom p-3 border-0 shadow-sm h-100 rounded-4">
+                <div class="text-secondary small fw-medium mb-1">{{ __('Buffered Jobs') }}</div>
+                <div class="h4 fw-bold text-body-emphasis mb-0">{{ number_format($stats['total'] ?? ($totalJobs ?? 0)) }}</div>
+            </div>
         </div>
-        <div class="col-md-6">
-            @include('components.stat-card', [
-                'title' => __('Log Worker Status'),
-                'value' => $isWorkerRunning ? __('ACTIVE') : __('INACTIVE'),
-                'color' => $isWorkerRunning ? 'success' : 'danger',
-                'icon' => $isWorkerRunning ? 'fa-solid fa-circle-check' : 'fa-solid fa-circle-xmark',
-            ])
+        <div class="col-6 col-lg-3">
+            <div class="card card-custom p-3 border-0 shadow-sm h-100 rounded-4 border-start border-warning border-3">
+                <div class="text-secondary small fw-medium mb-1 d-flex align-items-center gap-1">
+                    <i class="fa-solid fa-clock text-warning"></i>
+                    <span>{{ __('Queued Apps') }}</span>
+                </div>
+                <div class="h4 fw-bold text-warning mb-0">{{ number_format($stats['distinct_apps'] ?? count($distinctApps ?? [])) }}</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card card-custom p-3 border-0 shadow-sm h-100 rounded-4 border-start border-info border-3">
+                <div class="text-secondary small fw-medium mb-1 d-flex align-items-center gap-1">
+                    <i class="fa-solid fa-calendar-day text-info"></i>
+                    <span>{{ __('Oldest Pending') }}</span>
+                </div>
+                <div class="small fw-bold font-monospace text-info mb-0">{{ $stats['oldest_at'] ?? '-' }}</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card card-custom p-3 border-0 shadow-sm h-100 rounded-4 border-start {{ !empty($isWorkerRunning) ? 'border-success' : 'border-secondary' }} border-3">
+                <div class="text-secondary small fw-medium mb-1 d-flex align-items-center gap-1">
+                    <i class="fa-solid {{ !empty($isWorkerRunning) ? 'fa-circle-check text-success' : 'fa-circle-pause text-secondary' }}"></i>
+                    <span>{{ __('Log Worker Status') }}</span>
+                </div>
+                <div class="h5 fw-bold {{ !empty($isWorkerRunning) ? 'text-success' : 'text-secondary' }} mb-0">
+                    {{ !empty($isWorkerRunning) ? __('ACTIVE') : __('IDLE') }}
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Global Actions -->
+    <!-- Global Actions Bar -->
     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-        <h3 class="h5 mb-0 fw-bold">{{ __('Active Log Buffer') }}</h3>
-        @if(($totalJobs ?? 0) > 0 && hasPermission('admin.logqueue.purge'))
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <h3 class="h5 mb-0 fw-bold">{{ __('Active Log Buffer') }}</h3>
+            @if(!empty($isWorkerRunning))
+                <span class="badge bg-success-subtle text-success border border-success border-opacity-25 px-2.5 py-1 rounded-pill d-inline-flex align-items-center gap-1.5 small">
+                    <span class="status-dot pulse" style="background-color: var(--bs-success);"></span>
+                    {{ __('Worker Active') }}
+                </span>
+            @else
+                <span class="badge bg-secondary-subtle text-secondary border border-secondary border-opacity-25 px-2.5 py-1 rounded-pill d-inline-flex align-items-center gap-1.5 small">
+                    <span class="status-dot" style="background-color: var(--bs-secondary);"></span>
+                    {{ __('Worker Idle') }}
+                </span>
+            @endif
+        </div>
+
+        <div class="d-flex flex-wrap gap-2">
+            @if(hasPermission('admin.logqueue.runworker'))
+            <form action="/admin/log-queue/run-worker" method="POST" class="m-0" @submit="const b=$el.querySelector('button[type=submit]'); if(b){b.disabled=true; b.innerHTML='<i class=\'fa-solid fa-spinner fa-spin me-2\'></i>{{ __('Running...') }}';}">
+                {!! csrf_field() !!}
+                <button type="submit" class="btn btn-outline-primary btn-sm rounded-3 d-inline-flex align-items-center gap-2 px-3 py-2 fw-semibold">
+                    <i class="fa-solid fa-play"></i>
+                    <span>{{ __('Run Worker Now') }}</span>
+                </button>
+            </form>
+            @endif
+
+            @if(($totalJobs ?? 0) > 0 && hasPermission('admin.logqueue.purge'))
             <form action="/admin/log-queue/purge"
                   method="POST"
                   @submit.prevent="if (confirm({{ json_encode(__('Are you sure you want to completely purge the log queue?'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) }})) $el.submit()"
                   class="m-0">
                 {!! csrf_field() !!}
-                <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill px-3 fw-semibold">
-                    <i class="fa-regular fa-trash-can me-2"></i>{{ __('Purge Queue') }}
+                <button type="submit" class="btn btn-outline-danger btn-sm rounded-3 d-inline-flex align-items-center gap-2 px-3 py-2 fw-semibold">
+                    <i class="fa-solid fa-broom"></i>
+                    <span>{{ __('Purge Queue') }}</span>
                 </button>
             </form>
-        @endif
+            @endif
+        </div>
+    </div>
+
+    <!-- Search & Filter Bar -->
+    <div class="card card-custom mb-4 border-0 shadow-sm rounded-4">
+        <div class="card-body p-3">
+            <form action="/admin/log-queue" method="GET" class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                <input type="hidden" name="sort_by" value="{{ $sortBy ?? 'id' }}">
+                <input type="hidden" name="sort_dir" value="{{ $sortDir ?? 'DESC' }}">
+
+                <div class="input-group input-group-sm" style="max-width: 320px;">
+                    <span class="input-group-text text-secondary"><i class="fa-solid fa-magnifying-glass"></i></span>
+                    <input type="text" name="search" class="form-control" placeholder="{{ __('Search ID, application, or payload...') }}" value="{{ $currentSearch }}">
+                </div>
+
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="text-secondary small text-nowrap">{{ __('Show') }}</span>
+                        <select name="limit" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
+                            @foreach($limitOptions as $l)
+                                <option value="{{ $l }}" @if((int) ($limit ?? 10) === $l) selected @endif>{{ $l }}</option>
+                            @endforeach
+                        </select>
+                        <span class="text-secondary small text-nowrap">{{ __('entries') }}</span>
+                    </div>
+
+                    <select name="filter_app_id" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
+                        <option value="all" @if($currentAppId === 'all') selected @endif>{{ __('All Applications') }}</option>
+                        @foreach(($distinctApps ?? []) as $appItem)
+                            <option value="{{ $appItem['id'] }}" @if($currentAppId === (string) $appItem['id']) selected @endif>{{ $appItem['name'] }}</option>
+                        @endforeach
+                    </select>
+
+                    <button type="submit" class="btn btn-sm btn-primary-custom fw-semibold px-3">
+                        <i class="fa-solid fa-filter me-1"></i>{{ __('Filter') }}
+                    </button>
+
+                    <a href="/admin/log-queue" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1 px-3">
+                        <i class="fa-solid fa-filter-circle-xmark"></i>
+                        <span>{{ __('Reset') }}</span>
+                    </a>
+                </div>
+            </form>
+        </div>
     </div>
 
     <!-- Table of Jobs -->
@@ -70,12 +165,12 @@
                             <th class="ps-4" style="width: 130px;">
                                 @php
                                     $nextDirId = ($sortBy === 'id' && strtoupper($sortDir) === 'DESC') ? 'ASC' : 'DESC';
-                                    $urlId = '/admin/log-queue?' . http_build_query(['page' => 1, 'limit' => $limit, 'sort_by' => 'id', 'sort_dir' => $nextDirId]);
+                                    $urlId = '/admin/log-queue?' . http_build_query(array_merge($paginationParams, ['page' => 1, 'limit' => $limit, 'sort_by' => 'id', 'sort_dir' => $nextDirId]));
                                 @endphp
                                 <a href="{{ $urlId }}" class="text-decoration-none text-secondary d-flex align-items-center gap-1">
                                     {{ __('Job ID') }}
                                     @if($sortBy === 'id')
-                                        <i class="fa-solid fa-sort-{{ $sortDir === 'ASC' ? 'up' : 'down' }} text-info ms-1"></i>
+                                        <i class="fa-solid fa-sort-{{ strtoupper($sortDir) === 'ASC' ? 'up' : 'down' }} text-info ms-1"></i>
                                     @else
                                         <i class="fa-solid fa-sort text-secondary opacity-50 ms-1"></i>
                                     @endif
@@ -84,12 +179,12 @@
                             <th style="width: 180px;">
                                 @php
                                     $nextDirApp = ($sortBy === 'app_name' && strtoupper($sortDir) === 'DESC') ? 'ASC' : 'DESC';
-                                    $urlApp = '/admin/log-queue?' . http_build_query(['page' => 1, 'limit' => $limit, 'sort_by' => 'app_name', 'sort_dir' => $nextDirApp]);
+                                    $urlApp = '/admin/log-queue?' . http_build_query(array_merge($paginationParams, ['page' => 1, 'limit' => $limit, 'sort_by' => 'app_name', 'sort_dir' => $nextDirApp]));
                                 @endphp
                                 <a href="{{ $urlApp }}" class="text-decoration-none text-secondary d-flex align-items-center gap-1">
                                     {{ __('App Name') }}
                                     @if($sortBy === 'app_name')
-                                        <i class="fa-solid fa-sort-{{ $sortDir === 'ASC' ? 'up' : 'down' }} text-info ms-1"></i>
+                                        <i class="fa-solid fa-sort-{{ strtoupper($sortDir) === 'ASC' ? 'up' : 'down' }} text-info ms-1"></i>
                                     @else
                                         <i class="fa-solid fa-sort text-secondary opacity-50 ms-1"></i>
                                     @endif
@@ -99,12 +194,12 @@
                             <th style="width: 180px;">
                                 @php
                                     $nextDirTime = ($sortBy === 'created_at' && strtoupper($sortDir) === 'DESC') ? 'ASC' : 'DESC';
-                                    $urlTime = '/admin/log-queue?' . http_build_query(['page' => 1, 'limit' => $limit, 'sort_by' => 'created_at', 'sort_dir' => $nextDirTime]);
+                                    $urlTime = '/admin/log-queue?' . http_build_query(array_merge($paginationParams, ['page' => 1, 'limit' => $limit, 'sort_by' => 'created_at', 'sort_dir' => $nextDirTime]));
                                 @endphp
                                 <a href="{{ $urlTime }}" class="text-decoration-none text-secondary d-flex align-items-center gap-1">
                                     {{ __('Created At') }}
                                     @if($sortBy === 'created_at')
-                                        <i class="fa-solid fa-sort-{{ $sortDir === 'ASC' ? 'up' : 'down' }} text-info ms-1"></i>
+                                        <i class="fa-solid fa-sort-{{ strtoupper($sortDir) === 'ASC' ? 'up' : 'down' }} text-info ms-1"></i>
                                     @else
                                         <i class="fa-solid fa-sort text-secondary opacity-50 ms-1"></i>
                                     @endif
@@ -131,10 +226,10 @@
                                     <span>{{ $previewMsg }}</span>
                                     <span class="badge bg-secondary bg-opacity-25 text-secondary ms-2">{{ $payloadSize }}</span>
                                 </td>
-                                <td class="text-secondary small font-monospace">{{ $job['created_at'] }}</td>
+                                <td class="text-secondary small font-monospace text-nowrap">{{ $job['created_at'] }}</td>
                                 <td class="text-end pe-4">
-                                    <div class="d-inline-flex gap-3 align-items-center">
-                                        <button type="button" class="btn btn-link text-info p-0" title="{{ __('View Details') }}" @click="viewJob({{ json_encode($job, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) }})">
+                                    <div class="d-inline-flex gap-1.5 align-items-center justify-content-end">
+                                        <button type="button" class="btn btn-sm btn-outline-info px-2 py-1 rounded-3" title="{{ __('View Details') }}" @click="viewJob({{ json_encode($job, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) }})">
                                             <i class="fa-regular fa-eye"></i>
                                         </button>
                                         @if(hasPermission('admin.logqueue.delete'))
@@ -143,7 +238,7 @@
                                               @submit.prevent="if (confirm({{ json_encode(__('Are you sure you want to delete this job from the queue?'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) }})) $el.submit()"
                                               class="m-0">
                                             {!! csrf_field() !!}
-                                            <button type="submit" class="btn btn-link text-danger p-0" title="{{ __('Delete') }}">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger px-2 py-1 rounded-3" title="{{ __('Delete') }}">
                                                 <i class="fa-regular fa-trash-can"></i>
                                             </button>
                                         </form>
@@ -254,4 +349,3 @@
     </template>
 </div>
 @endsection
-

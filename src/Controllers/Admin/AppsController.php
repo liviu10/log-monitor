@@ -23,6 +23,7 @@ class AppsController extends BaseController
         $apps = $appModel->getAll();
 
         return $this->render('admin.apps.index', [
+            'title' => __('Applications'),
             'apps' => $apps,
         ]);
     }

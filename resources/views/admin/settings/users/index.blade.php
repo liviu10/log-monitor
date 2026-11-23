@@ -1,5 +1,7 @@
 @extends('layouts.admin')
 
+@section('title', __('Users Management'))
+
 @section('content')
 @php
     \App\Utilities\Breadcrumbs::reset();

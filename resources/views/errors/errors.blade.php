@@ -1,5 +1,7 @@
 @extends('layouts.guest')
 
+@section('title', $title ?? __('Application Error'))
+
 @section('content')
 <div class="row justify-content-center align-items-center" style="min-height: 65vh;">
     <div class="col-12">

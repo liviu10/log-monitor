@@ -1,5 +1,7 @@
 @extends('layouts.admin')
 
+@section('title', __('Dashboard'))
+
 @section('navbar-actions')
     <div class="d-flex align-items-center gap-2">
         <div class="d-none d-xl-flex align-items-center gap-2 px-3 py-2 admin-topbar-btn rounded-pill border border-secondary border-opacity-25 bg-secondary bg-opacity-10 small">

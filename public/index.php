@@ -64,6 +64,7 @@ try {
     try {
         echo view('errors.errors', [
             'code' => $code,
+            'title' => __('Error').' '.$code,
             'message' => $genericMessage,
         ]);
     } catch (Throwable $err) {
@@ -80,6 +81,8 @@ try {
         }
 
         $errorTitle = __('Error').' '.$code;
+        $rawAppName = config('app.name');
+        $fallbackAppName = is_string($rawAppName) && $rawAppName !== '' ? htmlspecialchars($rawAppName, ENT_QUOTES, 'UTF-8') : 'LogMonitor';
         $fallbackBackText = __('Back to home page');
         echo <<<HTML
 <!DOCTYPE html>
@@ -87,7 +90,7 @@ try {
 <head>
     <meta charset="UTF-8">
     <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex, notranslate, noai, noimageai">
-    <title>{$errorTitle}</title>
+    <title>{$errorTitle} - {$fallbackAppName}</title>
     <link href="/assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
     <link href="/assets/app.css" rel="stylesheet">
 </head>

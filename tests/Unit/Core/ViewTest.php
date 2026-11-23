@@ -215,4 +215,31 @@ class ViewTest extends TestCase
         self::assertEquals('<html>Clean Render</html>', $result);
         self::assertFileDoesNotExist($dummyFile);
     }
+
+    public function test_render_preserves_page_title_across_child_includes(): void
+    {
+        View::resetEngine();
+        $_SESSION['lang'] = 'en';
+
+        $logsHtml = View::render('admin.logs.index', [
+            'title' => 'Logs',
+            'logs' => [],
+            'apps' => [],
+            'levels' => [],
+            'filters' => [],
+            'page' => 1,
+            'totalLogs' => 0,
+            'totalPages' => 1,
+            'stats' => [],
+            'limit' => 10,
+            'sortBy' => 'id',
+            'sortDir' => 'DESC',
+        ]);
+        self::assertStringContainsString('<title>Logs - LogMonitor</title>', $logsHtml);
+
+        $appsHtml = View::render('admin.apps.index', [
+            'apps' => [],
+        ]);
+        self::assertStringContainsString('<title>Applications - LogMonitor</title>', $appsHtml);
+    }
 }

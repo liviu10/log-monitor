@@ -1,5 +1,7 @@
 @extends('layouts.guest')
 
+@section('title', __('Login'))
+
 @section('content')
 <div class="row justify-content-center align-items-center" style="min-height: 70vh;">
     <div class="col-12" x-data="quickFill()" x-init="setTimeout(() => { if (document.getElementById('email')) document.getElementById('email').focus(); }, 100)">

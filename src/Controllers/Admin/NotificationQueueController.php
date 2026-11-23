@@ -2,93 +2,90 @@
 
 declare(strict_types=1);
 
-namespace App\Controllers\Admin\Settings;
+namespace App\Controllers\Admin;
 
 use App\Controllers\Common\QueueController;
 use App\Core\BaseController;
 use App\Models\QueueJob;
 
 /**
- * Queue Management Controller
+ * Notification Queue Controller
  *
- * Provides administrative visibility and operational control over asynchronous queue jobs,
- * failure recovery, dead-letter re-attempts, worker executions, and housekeeping.
- *
- * @category Controllers
- *
- * @version  1.0
- *
- * @since    PHP 8.4
- *
- * @author   Voica Liviu
- * @license  Proprietary
+ * Provides administrative visibility and operational control over asynchronous notification
+ * queue jobs, failure recovery, dead-letter retries, worker execution, and housekeeping.
  */
-class QueueManagerController extends BaseController
+class NotificationQueueController extends BaseController
 {
     /**
-     * Lists queue jobs with real-time stats, filtering, sorting, and pagination.
+     * Lists notification queue jobs with real-time stats, filtering, sorting, and pagination.
      */
     public function index(): string
     {
-        $this->checkPermission('admin.settings.queuemanager.index');
+        $this->checkPermission('admin.notificationqueue.index');
 
         $rawPage = $_GET['page'] ?? 1;
         $page = is_numeric($rawPage) ? max(1, (int) $rawPage) : 1;
 
-        $rawPerPage = $_GET['per_page'] ?? 10;
-        $perPage = is_numeric($rawPerPage) ? max(5, (int) $rawPerPage) : 10;
+        $allowedLimits = [10, 25, 50, 100];
+        $rawPerPage = $_GET['limit'] ?? ($_GET['per_page'] ?? 10);
+        $limit = is_numeric($rawPerPage) ? (int) $rawPerPage : 10;
+        if (! in_array($limit, $allowedLimits, true)) {
+            $limit = 10;
+        }
 
-        $rawSort = $_GET['sort'] ?? 'id';
+        $rawSort = $_GET['sort_by'] ?? ($_GET['sort'] ?? 'id');
         $sortBy = is_string($rawSort) && $rawSort !== '' ? $rawSort : 'id';
 
-        $rawOrder = $_GET['order'] ?? 'desc';
-        $order = is_string($rawOrder) && strtolower($rawOrder) === 'asc' ? 'asc' : 'desc';
+        $rawOrder = $_GET['sort_dir'] ?? ($_GET['order'] ?? 'DESC');
+        $sortDir = is_string($rawOrder) && strtoupper($rawOrder) === 'ASC' ? 'ASC' : 'DESC';
+
+        $allowedSorts = ['id', 'queue', 'status', 'attempts', 'available_at', 'created_at'];
+        if (! in_array($sortBy, $allowedSorts, true)) {
+            $sortBy = 'id';
+        }
 
         $rawSearch = $_GET['search'] ?? '';
         $search = is_string($rawSearch) ? trim($rawSearch) : '';
 
         $rawFilterStatus = $_GET['filter_status'] ?? 'all';
-        $filterStatus = is_string($rawFilterStatus) ? trim($rawFilterStatus) : 'all';
+        $filterStatus = is_string($rawFilterStatus) && $rawFilterStatus !== '' ? trim($rawFilterStatus) : 'all';
 
         $rawFilterQueue = $_GET['filter_queue'] ?? 'all';
-        $filterQueue = is_string($rawFilterQueue) ? trim($rawFilterQueue) : 'all';
+        $filterQueue = is_string($rawFilterQueue) && $rawFilterQueue !== '' ? trim($rawFilterQueue) : 'all';
 
-        $result = QueueJob::getPaginatedFilteredJobs(
-            filters: [
-                'search' => $search,
-                'status' => $filterStatus,
-                'queue' => $filterQueue,
-            ],
-            page: $page,
-            perPage: $perPage,
-            sortBy: $sortBy,
-            sortDesc: $order === 'desc'
-        );
-
-        $totalPages = max(1, (int) ceil($result['total'] / $perPage));
-
-        $pagination = [
-            'items' => $result['items'],
-            'total_items' => $result['total'],
-            'total_pages' => $totalPages,
-            'current_page' => $page,
-            'per_page' => $perPage,
-            'sort' => $sortBy,
-            'order' => $order,
+        $filters = [
             'search' => $search,
+            'status' => $filterStatus,
+            'queue' => $filterQueue,
         ];
 
+        $result = QueueJob::getPaginatedFilteredJobs(
+            filters: $filters,
+            page: $page,
+            perPage: $limit,
+            sortBy: $sortBy,
+            sortDesc: $sortDir === 'DESC'
+        );
+
+        $totalJobs = $result['total'];
+        $totalPages = max(1, (int) ceil($totalJobs / $limit));
         $stats = QueueJob::getStats();
         $distinctQueues = QueueJob::getDistinctQueues();
         $isWorkerRunning = $this->isWorkerActive();
 
-        return $this->render('admin.settings.queue.index', [
-            'items' => $result['items'],
-            'pagination' => $pagination,
+        return $this->render('admin.notification-queue.index', [
+            'title' => __('Notification Queue'),
+            'jobs' => $result['items'],
+            'totalJobs' => $totalJobs,
+            'totalPages' => $totalPages,
+            'page' => $page,
+            'limit' => $limit,
+            'sortBy' => $sortBy,
+            'sortDir' => $sortDir,
+            'filters' => $filters,
             'stats' => $stats,
             'distinctQueues' => $distinctQueues,
             'isWorkerRunning' => $isWorkerRunning,
-            'resource' => 'queue',
         ]);
     }
 
@@ -97,7 +94,7 @@ class QueueManagerController extends BaseController
      */
     public function retry(string $id): never
     {
-        $this->checkPermission('admin.settings.queuemanager.retry');
+        $this->checkPermission('admin.notificationqueue.retry');
 
         $jobId = (int) $id;
         $count = QueueJob::retryFailed($jobId);
@@ -108,7 +105,7 @@ class QueueManagerController extends BaseController
             $this->flash('error', __('Error'), __('Failed to reset job #:id. Ensure the job exists and is in failed status.', ['id' => (string) $jobId]));
         }
 
-        $this->redirect('/admin/settings/queue');
+        $this->redirect('/admin/notification-queue');
     }
 
     /**
@@ -116,7 +113,7 @@ class QueueManagerController extends BaseController
      */
     public function retryAll(): never
     {
-        $this->checkPermission('admin.settings.queuemanager.retryall');
+        $this->checkPermission('admin.notificationqueue.retryall');
 
         $rawQueue = $_POST['queue'] ?? null;
         $queue = is_string($rawQueue) && $rawQueue !== '' && $rawQueue !== 'all' ? $rawQueue : null;
@@ -130,7 +127,7 @@ class QueueManagerController extends BaseController
             $this->flash('success', __('Success'), __(':count failed jobs reset and queued for retry.', ['count' => (string) $count]));
         }
 
-        $this->redirect('/admin/settings/queue');
+        $this->redirect('/admin/notification-queue');
     }
 
     /**
@@ -138,7 +135,7 @@ class QueueManagerController extends BaseController
      */
     public function delete(string $id): never
     {
-        $this->checkPermission('admin.settings.queuemanager.delete');
+        $this->checkPermission('admin.notificationqueue.delete');
 
         $jobId = (int) $id;
         $success = QueueJob::deleteJob($jobId);
@@ -149,7 +146,7 @@ class QueueManagerController extends BaseController
             $this->flash('error', __('Error'), __('Unable to delete job #:id.', ['id' => (string) $jobId]));
         }
 
-        $this->redirect('/admin/settings/queue');
+        $this->redirect('/admin/notification-queue');
     }
 
     /**
@@ -157,13 +154,13 @@ class QueueManagerController extends BaseController
      */
     public function runWorker(): never
     {
-        $this->checkPermission('admin.settings.queuemanager.runworker');
+        $this->checkPermission('admin.notificationqueue.runworker');
 
         $queueCtrl = new QueueController;
         $queueCtrl->processQueue();
 
         $this->flash('success', __('Success'), __('Queue worker execution cycle completed successfully.'));
-        $this->redirect('/admin/settings/queue');
+        $this->redirect('/admin/notification-queue');
     }
 
     /**
@@ -171,7 +168,7 @@ class QueueManagerController extends BaseController
      */
     public function purge(): never
     {
-        $this->checkPermission('admin.settings.queuemanager.purge');
+        $this->checkPermission('admin.notificationqueue.purge');
 
         $rawDays = $_POST['days'] ?? null;
         $purgeDaysConfig = config('app.queue.purge_days');
@@ -186,7 +183,7 @@ class QueueManagerController extends BaseController
             'days' => (string) $days,
         ]));
 
-        $this->redirect('/admin/settings/queue');
+        $this->redirect('/admin/notification-queue');
     }
 
     /**
@@ -194,7 +191,7 @@ class QueueManagerController extends BaseController
      */
     public function isWorkerActive(): bool
     {
-        $lockFile = dirname(__DIR__, 4).'/storage/views/worker.lock';
+        $lockFile = dirname(__DIR__, 3).'/storage/views/worker.lock';
 
         if (! file_exists($lockFile)) {
             return false;
@@ -214,3 +211,4 @@ class QueueManagerController extends BaseController
         return $locked;
     }
 }
+

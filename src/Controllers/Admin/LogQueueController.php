@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controllers\Admin;
 
 use App\Core\BaseController;
+use App\Core\LogQueueProcessor;
 use App\Core\LogViaStream;
 use App\Enums\LogLevel;
 use App\Models\LogQueue;
@@ -47,18 +48,32 @@ class LogQueueController extends BaseController
                 $sortDir = 'DESC';
             }
 
-            $totalJobs = LogQueue::countAll();
-            $totalPages = max(1, (int) ceil($totalJobs / $limit));
-            $jobs = LogQueue::getPaginated($limit, $offset, $sortBy, $sortDir);
+            $rawSearch = $_GET['search'] ?? '';
+            $rawAppId = $_GET['filter_app_id'] ?? ($_GET['app_id'] ?? 'all');
+            $filters = [
+                'search' => is_string($rawSearch) ? trim($rawSearch) : '',
+                'app_id' => is_string($rawAppId) && $rawAppId !== '' ? trim($rawAppId) : 'all',
+            ];
 
+            $result = LogQueue::getPaginatedFiltered($filters, $limit, $offset, $sortBy, $sortDir);
+            $totalJobs = $result['total'];
+            $totalPages = max(1, (int) ceil($totalJobs / $limit));
+            $jobs = $result['items'];
+
+            $stats = LogQueue::getStats();
+            $distinctApps = LogQueue::getDistinctApps();
             $isWorkerRunning = $this->isLogWorkerRunning();
 
             return $this->render('admin.log-queue.index', [
+                'title' => __('Log Queue'),
                 'jobs' => $jobs,
                 'totalJobs' => $totalJobs,
                 'totalPages' => $totalPages,
                 'page' => $page,
                 'limit' => $limit,
+                'filters' => $filters,
+                'stats' => $stats,
+                'distinctApps' => $distinctApps,
                 'isWorkerRunning' => $isWorkerRunning,
                 'sortBy' => $sortBy,
                 'sortDir' => $sortDir,
@@ -75,6 +90,36 @@ class LogQueueController extends BaseController
 
             throw new RuntimeException(__('Critical error loading queue data. Please try again later.'), 500, $e);
         }
+    }
+
+    /**
+     * Manually runs one log-ingestion batch cycle against `log_queue`.
+     */
+    public function runWorker(): never
+    {
+        try {
+            $appsCache = [];
+            $processed = LogQueueProcessor::processBatch($appsCache);
+
+            if ($processed > 0) {
+                $this->flash('success', __('Success'), __(':count buffered log payloads processed successfully.', ['count' => (string) $processed]));
+            } else {
+                $this->flash('info', __('Info'), __('No pending log payloads found in the queue.'));
+            }
+        } catch (Throwable $e) {
+            if (class_exists(LogViaStream::class) && class_exists(LogLevel::class)) {
+                LogViaStream::send(LogLevel::ERROR->value, 'Log queue manual worker execution failure', [
+                    'location' => __METHOD__,
+                    'line' => __LINE__,
+                    'exception_message' => $e->getMessage(),
+                    'identifier' => 'LogQueueController_RunWorker_Failure',
+                ]);
+            }
+
+            $this->flash('error', __('Error'), __('Failed to execute log ingestion worker cycle.'));
+        }
+
+        $this->redirect('/admin/log-queue');
     }
 
     public function delete(string $id): never

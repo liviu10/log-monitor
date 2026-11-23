@@ -101,7 +101,9 @@ const App = {
 
         const textToCopy = dataObject.payload_raw
             ? dataObject.payload_raw
-            : JSON.stringify(dataObject, null, 4);
+            : (typeof dataObject.payload === 'string'
+                ? dataObject.payload
+                : JSON.stringify(dataObject, null, 4));
 
         navigator.clipboard.writeText(textToCopy)
             .then(() => {
@@ -505,6 +507,95 @@ const App = {
 
             copyJobPayload() {
                 App.copyPayload(this, this.selectedJob, 'payloadCopied');
+            },
+        };
+    },
+
+    /**
+     * Alpine.js data constructor for Sent Notifications timeline & details modal.
+     */
+    notificationsPageData() {
+        return {
+            selectedNotification: null,
+            showModal: false,
+            payloadCopied: false,
+
+            openNotification(notification) {
+                this.selectedNotification = notification;
+                this.showModal = true;
+                this.payloadCopied = false;
+            },
+
+            formatJson(rawJson) {
+                if (typeof rawJson !== 'string') {
+                    return JSON.stringify(rawJson ?? {}, null, 4);
+                }
+                try {
+                    const parsed = JSON.parse(rawJson);
+                    return JSON.stringify(parsed, null, 4);
+                } catch (e) {
+                    return rawJson;
+                }
+            },
+
+            copyNotification() {
+                App.copyPayload(this, this.selectedNotification, 'payloadCopied');
+            },
+        };
+    },
+
+    /**
+     * Alpine.js data constructor for Notification Queue details, retry, delete, and purge modals.
+     */
+    notificationQueuePageData() {
+        return {
+            activeJob: null,
+            formattedPayload: '',
+            payloadCopied: false,
+
+            showPayload(job) {
+                this.activeJob = job;
+                this.payloadCopied = false;
+                try {
+                    const parsed = JSON.parse(job.payload || '');
+                    this.formattedPayload = JSON.stringify(parsed, null, 4);
+                } catch (e) {
+                    this.formattedPayload = job.payload || '';
+                }
+                const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('queuePayloadModal'));
+                modal.show();
+            },
+
+            copyJobPayload() {
+                App.copyPayload(this, this.activeJob, 'payloadCopied');
+            },
+
+            showError(job) {
+                this.activeJob = job;
+                const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('queueErrorModal'));
+                modal.show();
+            },
+
+            confirmRetrySingle(job) {
+                this.activeJob = job;
+                const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('queueRetryConfirmModal'));
+                modal.show();
+            },
+
+            confirmRetryAll() {
+                const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('queueRetryAllModal'));
+                modal.show();
+            },
+
+            confirmDelete(job) {
+                this.activeJob = job;
+                const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('queueDeleteModal'));
+                modal.show();
+            },
+
+            confirmPurge() {
+                const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('queuePurgeModal'));
+                modal.show();
             },
         };
     },

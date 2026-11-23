@@ -120,6 +120,7 @@ class UsersController extends BaseController
         SessionManager::remove('old');
 
         return $this->render('admin.settings.users.index', [
+            'title' => __('Users Management'),
             'users' => $paginatedData['items'],
             'pagination' => $paginatedData,
             'roles' => $roles,

@@ -51,6 +51,7 @@ class RolesController extends BaseController
         $paginatedData['items'] = $items;
 
         return $this->render('admin.settings.roles.index', [
+            'title' => __('Roles Management'),
             'roles' => $paginatedData['items'],
             'pagination' => $paginatedData,
         ]);
@@ -79,6 +80,7 @@ class RolesController extends BaseController
         }
 
         return $this->render('admin.settings.roles.permissions', [
+            'title' => __('Role Permissions'),
             'role' => $role,
             'permissions' => $permissions,
         ]);

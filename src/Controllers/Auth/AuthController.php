@@ -72,7 +72,10 @@ class AuthController extends BaseController
         unset($field);
         $form = FormGenerator::attachAntiBotFields($form);
 
-        return $this->render('guest.login', ['form' => $form]);
+        return $this->render('guest.login', [
+            'title' => __('Login'),
+            'form' => $form,
+        ]);
     }
 
     /**
@@ -206,6 +209,7 @@ class AuthController extends BaseController
         $form = FormGenerator::attachAntiBotFields($form);
 
         return $this->render('admin.settings.users.profile', [
+            'title' => __('Profile'),
             'user' => $user,
             'form' => $form,
         ]);
@@ -319,7 +323,10 @@ class AuthController extends BaseController
     {
         $token = $_GET['token'] ?? '';
 
-        return $this->render('guest.verify_email', ['token' => $token]);
+        return $this->render('guest.verify_email', [
+            'title' => __('Confirm Email Address'),
+            'token' => $token,
+        ]);
     }
 
     /**

@@ -59,13 +59,24 @@ return function (Router $router): void {
             // High-throughput raw log ingestion queue
             $rAdmin->get('/log-queue', 'Admin\LogQueueController@index');
 
+            // Sent notifications & async notification delivery queue
+            $rAdmin->get('/notifications', 'Admin\NotificationsController@index');
+            $rAdmin->get('/notification-queue', 'Admin\NotificationQueueController@index');
+
             // Registered applications & per-app alert settings
             $rAdmin->get('/apps', 'Admin\AppsController@index');
             $rAdmin->get('/apps/{id}/settings', 'Admin\AppSettingsController@index');
 
             $rAdmin->group(['middleware' => [CsrfMiddleware::class]], function (Router $rAdminPost): void {
+                $rAdminPost->post('/log-queue/run-worker', 'Admin\LogQueueController@runWorker');
                 $rAdminPost->post('/log-queue/{id}/delete', 'Admin\LogQueueController@delete');
                 $rAdminPost->post('/log-queue/purge', 'Admin\LogQueueController@purge');
+
+                $rAdminPost->post('/notification-queue/retry-all', 'Admin\NotificationQueueController@retryAll');
+                $rAdminPost->post('/notification-queue/{id}/retry', 'Admin\NotificationQueueController@retry');
+                $rAdminPost->post('/notification-queue/{id}/delete', 'Admin\NotificationQueueController@delete');
+                $rAdminPost->post('/notification-queue/run-worker', 'Admin\NotificationQueueController@runWorker');
+                $rAdminPost->post('/notification-queue/purge', 'Admin\NotificationQueueController@purge');
 
                 $rAdminPost->post('/apps', 'Admin\AppsController@store');
                 $rAdminPost->put('/apps/{id}', 'Admin\AppsController@update');
@@ -79,22 +90,19 @@ return function (Router $router): void {
             });
         });
 
-        // Settings: users, roles, permissions, and async notification queue
+        // Settings: users, roles, permissions
         $r->group(['prefix' => '/admin/settings', 'middleware' => [PermissionMiddleware::class]], function (Router $rSettings): void {
             $rSettings->get('/users', 'Admin\Settings\UsersController@index');
             $rSettings->get('/roles', 'Admin\Settings\RolesController@index');
             $rSettings->get('/roles/{role_id}/permissions', 'Admin\Settings\RolesController@permissions');
-            $rSettings->get('/queue', 'Admin\Settings\QueueManagerController@index');
+            $rSettings->get('/queue', static function (): never {
+                redirect('/admin/notification-queue');
+            });
 
             $rSettings->group(['middleware' => [CsrfMiddleware::class]], function (Router $rPost): void {
                 $rPost->post('/users', 'Admin\Settings\UsersController@store');
                 $rPost->put('/users/{id}', 'Admin\Settings\UsersController@update');
                 $rPost->post('/roles/{role_id}/permissions', 'Admin\Settings\RolesController@updatePermissions');
-                $rPost->post('/queue/retry-all', 'Admin\Settings\QueueManagerController@retryAll');
-                $rPost->post('/queue/{id}/retry', 'Admin\Settings\QueueManagerController@retry');
-                $rPost->post('/queue/{id}/delete', 'Admin\Settings\QueueManagerController@delete');
-                $rPost->post('/queue/run-worker', 'Admin\Settings\QueueManagerController@runWorker');
-                $rPost->post('/queue/purge', 'Admin\Settings\QueueManagerController@purge');
             });
         });
     });

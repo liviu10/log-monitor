@@ -57,6 +57,12 @@ function commandPalette() {
         @if(hasPermission('admin.logqueue.index'))
         { id: 'log-queue', label: @json(__('Log Queue')), group: @json(__('Monitoring')), icon: 'fa-solid fa-list-check', url: '/admin/log-queue' },
         @endif
+        @if(hasPermission('admin.notifications.index'))
+        { id: 'notifications', label: @json(__('Notifications')), group: @json(__('Monitoring')), icon: 'fa-solid fa-bell', url: '/admin/notifications' },
+        @endif
+        @if(hasPermission('admin.notificationqueue.index'))
+        { id: 'notification-queue', label: @json(__('Notification Queue')), group: @json(__('Monitoring')), icon: 'fa-solid fa-envelope-open-text', url: '/admin/notification-queue' },
+        @endif
         @if(hasPermission('admin.apps.index'))
         { id: 'apps', label: @json(__('Applications')), group: @json(__('Monitoring')), icon: 'fa-solid fa-cubes', url: '/admin/apps' },
         @endif
@@ -65,9 +71,6 @@ function commandPalette() {
         @endif
         @if(hasPermission('admin.settings.roles.index'))
         { id: 'roles', label: @json(__('Roles')), group: @json(__('Settings')), icon: 'fa-solid fa-shield-halved', url: '/admin/settings/roles' },
-        @endif
-        @if(hasPermission('admin.settings.queuemanager.index'))
-        { id: 'queue', label: @json(__('Notification Queue')), group: @json(__('Settings')), icon: 'fa-solid fa-envelope-open-text', url: '/admin/settings/queue' },
         @endif
         { id: 'profile', label: @json(__('Profile')), group: @json(__('Account')), icon: 'fa-solid fa-user-circle', url: '/admin/settings/users/profile' },
         { id: 'theme', label: @json(__('Toggle Theme')), group: @json(__('Preferences')), icon: 'fa-solid fa-circle-half-stroke', action: 'theme' },

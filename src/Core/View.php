@@ -92,6 +92,11 @@ final class View
     public static function render(string $view, array $data = []): string
     {
         try {
+            // Preserve controller-supplied page title before child @include calls can shadow $title.
+            if (isset($data['title']) && is_string($data['title']) && trim($data['title']) !== '' && ! isset($data['_pageTitle'])) {
+                $data['_pageTitle'] = trim($data['title']);
+            }
+
             // Transmit errors and old session inputs
             $data['errors'] = $data['errors'] ?? $_SESSION['errors'] ?? [];
             $data['old'] = $data['old'] ?? $_SESSION['old'] ?? [];

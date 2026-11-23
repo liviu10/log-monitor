@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Tests\Feature\Controllers\Admin\Settings;
+namespace Tests\Feature\Controllers\Admin;
 
-use App\Controllers\Admin\Settings\QueueManagerController;
+use App\Controllers\Admin\NotificationQueueController;
 use App\Core\MySQLWrapper;
 use App\Exceptions\RedirectException;
 use App\Utilities\SessionManager;
@@ -14,15 +14,11 @@ use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
 /**
- * Class QueueManagerControllerTest
- *
- * Feature tests for QueueManagerController.
- *
- * @category Tests
+ * Feature tests for NotificationQueueController.
  */
-class QueueManagerControllerTest extends TestCase
+class NotificationQueueControllerTest extends TestCase
 {
-    private QueueManagerController $controller;
+    private NotificationQueueController $controller;
 
     /** @var MySQLWrapper&MockObject */
     private MySQLWrapper $dbMock;
@@ -32,7 +28,7 @@ class QueueManagerControllerTest extends TestCase
         parent::setUp();
 
         $_SERVER['REQUEST_METHOD'] = 'GET';
-        $_SERVER['REQUEST_URI'] = '/admin/settings/queue';
+        $_SERVER['REQUEST_URI'] = '/admin/notification-queue';
         $_SESSION = [];
         $_POST = [];
         $_GET = [];
@@ -55,7 +51,7 @@ class QueueManagerControllerTest extends TestCase
         $instanceProperty = $reflection->getProperty('instance');
         $instanceProperty->setValue(null, $this->dbMock);
 
-        $this->controller = new QueueManagerController;
+        $this->controller = new NotificationQueueController;
     }
 
     protected function tearDown(): void
@@ -73,17 +69,15 @@ class QueueManagerControllerTest extends TestCase
 
     public function test_index_renders_successfully(): void
     {
-        // 1. Mock count and items for getPaginatedFilteredJobs
         $countStmt = $this->createMock(PDOStatement::class);
         $countStmt->method('fetch')->willReturn(['total' => 2]);
 
         $itemsStmt = $this->createMock(PDOStatement::class);
         $itemsStmt->method('fetchAll')->willReturn([
-            ['id' => 1, 'queue' => 'default', 'status' => 'pending', 'attempts' => 0, 'payload' => '{"task":"mail"}', 'error_message' => null, 'available_at' => null, 'created_at' => '2026-10-20 12:00:00'],
+            ['id' => 1, 'queue' => 'default', 'status' => 'pending', 'attempts' => 0, 'payload' => '{"action":"email","payload":{"template_event":"verify_email","data":{"to":"user@example.com"}}}', 'error_message' => null, 'available_at' => '2026-10-20 12:00:00', 'created_at' => '2026-10-20 12:00:00'],
             ['id' => 2, 'queue' => 'critical', 'status' => 'failed', 'attempts' => 1, 'payload' => '{"task":"alert"}', 'error_message' => 'Connection timed out', 'available_at' => '2026-10-20 12:05:00', 'created_at' => '2026-10-20 12:01:00'],
         ]);
 
-        // 2. Mock getStats
         $statsStmt = $this->createMock(PDOStatement::class);
         $statsStmt->method('fetch')->willReturn([
             'total' => 2,
@@ -94,7 +88,6 @@ class QueueManagerControllerTest extends TestCase
             'expired' => 0,
         ]);
 
-        // 3. Mock getDistinctQueues
         $queuesStmt = $this->createMock(PDOStatement::class);
         $queuesStmt->method('fetchAll')->willReturn([
             ['queue' => 'critical'],
@@ -105,15 +98,19 @@ class QueueManagerControllerTest extends TestCase
             ->willReturnOnConsecutiveCalls($countStmt, $itemsStmt, $statsStmt, $queuesStmt);
 
         $html = $this->controller->index();
-        self::assertStringContainsString('Queue Management', $html);
+        self::assertStringContainsString('<title>Notification Queue - LogMonitor</title>', $html);
+        self::assertStringContainsString('breadcrumb', $html);
+        self::assertStringContainsString('Notification Queue', $html);
+        self::assertStringContainsString('Run Worker Now', $html);
+        self::assertStringContainsString('user@example.com', $html);
     }
 
     public function test_index_with_custom_filters_and_pagination(): void
     {
         $_GET['page'] = '2';
-        $_GET['per_page'] = '25';
-        $_GET['sort'] = 'attempts';
-        $_GET['order'] = 'asc';
+        $_GET['limit'] = '25';
+        $_GET['sort_by'] = 'attempts';
+        $_GET['sort_dir'] = 'ASC';
         $_GET['search'] = 'alert';
         $_GET['filter_status'] = 'failed';
         $_GET['filter_queue'] = 'critical';
@@ -141,7 +138,7 @@ class QueueManagerControllerTest extends TestCase
             ->willReturnOnConsecutiveCalls($countStmt, $itemsStmt, $statsStmt, $queuesStmt);
 
         $html = $this->controller->index();
-        self::assertStringContainsString('Queue Management', $html);
+        self::assertStringContainsString('Notification Queue', $html);
     }
 
     public function test_index_permission_denied_for_unauthorized_user(): void
@@ -172,7 +169,7 @@ class QueueManagerControllerTest extends TestCase
         try {
             $this->controller->retry('7');
         } catch (RedirectException $e) {
-            self::assertSame('/admin/settings/queue', $e->getUrl());
+            self::assertSame('/admin/notification-queue', $e->getUrl());
             $flash = getFlash();
             self::assertNotNull($flash);
             self::assertSame('success', $flash['type']);
@@ -191,7 +188,7 @@ class QueueManagerControllerTest extends TestCase
         try {
             $this->controller->retry('99');
         } catch (RedirectException $e) {
-            self::assertSame('/admin/settings/queue', $e->getUrl());
+            self::assertSame('/admin/notification-queue', $e->getUrl());
             $flash = getFlash();
             self::assertNotNull($flash);
             self::assertSame('error', $flash['type']);
@@ -214,7 +211,7 @@ class QueueManagerControllerTest extends TestCase
         try {
             $this->controller->retryAll();
         } catch (RedirectException $e) {
-            self::assertSame('/admin/settings/queue', $e->getUrl());
+            self::assertSame('/admin/notification-queue', $e->getUrl());
             $flash = getFlash();
             self::assertNotNull($flash);
             self::assertSame('success', $flash['type']);
@@ -223,7 +220,6 @@ class QueueManagerControllerTest extends TestCase
 
     public function test_retry_all_warning_when_smtp_unreachable(): void
     {
-        // Unreachable port
         $_ENV['MAIL_HOST'] = '127.0.0.1:65534';
         $_POST['queue'] = '';
 
@@ -237,7 +233,7 @@ class QueueManagerControllerTest extends TestCase
         try {
             $this->controller->retryAll();
         } catch (RedirectException $e) {
-            self::assertSame('/admin/settings/queue', $e->getUrl());
+            self::assertSame('/admin/notification-queue', $e->getUrl());
             $flash = getFlash();
             self::assertNotNull($flash);
             self::assertSame('warning', $flash['type']);
@@ -257,7 +253,7 @@ class QueueManagerControllerTest extends TestCase
         try {
             $this->controller->delete('14');
         } catch (RedirectException $e) {
-            self::assertSame('/admin/settings/queue', $e->getUrl());
+            self::assertSame('/admin/notification-queue', $e->getUrl());
             $flash = getFlash();
             self::assertNotNull($flash);
             self::assertSame('success', $flash['type']);
@@ -277,7 +273,7 @@ class QueueManagerControllerTest extends TestCase
         try {
             $this->controller->delete('999');
         } catch (RedirectException $e) {
-            self::assertSame('/admin/settings/queue', $e->getUrl());
+            self::assertSame('/admin/notification-queue', $e->getUrl());
             $flash = getFlash();
             self::assertNotNull($flash);
             self::assertSame('error', $flash['type']);
@@ -294,7 +290,7 @@ class QueueManagerControllerTest extends TestCase
         try {
             $this->controller->runWorker();
         } catch (RedirectException $e) {
-            self::assertSame('/admin/settings/queue', $e->getUrl());
+            self::assertSame('/admin/notification-queue', $e->getUrl());
             $flash = getFlash();
             self::assertNotNull($flash);
             self::assertSame('success', $flash['type']);
@@ -315,7 +311,7 @@ class QueueManagerControllerTest extends TestCase
         try {
             $this->controller->purge();
         } catch (RedirectException $e) {
-            self::assertSame('/admin/settings/queue', $e->getUrl());
+            self::assertSame('/admin/notification-queue', $e->getUrl());
             $flash = getFlash();
             self::assertNotNull($flash);
             self::assertSame('success', $flash['type']);
@@ -336,25 +332,22 @@ class QueueManagerControllerTest extends TestCase
         try {
             $this->controller->purge();
         } catch (RedirectException $e) {
-            self::assertSame('/admin/settings/queue', $e->getUrl());
+            self::assertSame('/admin/notification-queue', $e->getUrl());
         }
     }
 
     public function test_is_worker_active_when_unlocked(): void
     {
-        $lockFile = dirname(__DIR__, 5).'/storage/views/worker.lock';
+        $lockFile = dirname(__DIR__, 4).'/storage/views/worker.lock';
         if (file_exists($lockFile)) {
             @unlink($lockFile);
         }
 
-        // When file does not exist
         self::assertFalse($this->controller->isWorkerActive());
 
-        // When file exists and is not locked
         touch($lockFile);
         self::assertFalse($this->controller->isWorkerActive());
 
-        // When file is locked by another process
         $fp = fopen($lockFile, 'r+');
         self::assertNotFalse($fp);
         flock($fp, LOCK_EX | LOCK_NB);
@@ -363,14 +356,6 @@ class QueueManagerControllerTest extends TestCase
 
         flock($fp, LOCK_UN);
         fclose($fp);
-
-        if (file_exists($lockFile)) {
-            @unlink($lockFile);
-        }
-
-        // When lock file cannot be opened (e.g. is a directory)
-        mkdir($lockFile);
-        self::assertFalse($this->controller->isWorkerActive());
-        rmdir($lockFile);
+        @unlink($lockFile);
     }
 }

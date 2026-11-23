@@ -54,12 +54,77 @@ class LogQueueControllerTest extends TestCase
             ['id' => 11, 'app_id' => 1, 'app_name' => 'CoreAPI', 'payload_raw' => '{"message":"Queued test"}', 'created_at' => '2026-11-20 12:00:00'],
         ]);
 
-        $this->dbMock->method('query')->willReturnOnConsecutiveCalls($stmtCount, $stmtRows);
+        $stmtStats = $this->createMock(PDOStatement::class);
+        $stmtStats->method('fetch')->willReturn([
+            'total' => 1,
+            'distinct_apps' => 1,
+            'oldest_at' => '2026-11-20 12:00:00',
+            'latest_at' => '2026-11-20 12:00:00',
+        ]);
+
+        $stmtApps = $this->createMock(PDOStatement::class);
+        $stmtApps->method('fetchAll')->willReturn([
+            ['id' => 1, 'name' => 'CoreAPI'],
+        ]);
+
+        $this->dbMock->method('query')->willReturnOnConsecutiveCalls($stmtCount, $stmtRows, $stmtStats, $stmtApps);
 
         $controller = new LogQueueController;
         $html = $controller->index();
+        self::assertStringContainsString('<title>Log Queue - LogMonitor</title>', $html);
         self::assertStringContainsString('Raw Log Ingestion Queue', $html);
+        self::assertStringContainsString('Run Worker Now', $html);
         self::assertStringContainsString('Queued test', $html);
+    }
+
+    public function test_index_with_search_and_app_filter(): void
+    {
+        $_GET['search'] = 'CoreAPI';
+        $_GET['filter_app_id'] = '1';
+
+        $stmtCount = $this->createMock(PDOStatement::class);
+        $stmtCount->method('fetchColumn')->willReturn(0);
+
+        $stmtRows = $this->createMock(PDOStatement::class);
+        $stmtRows->method('fetchAll')->willReturn([]);
+
+        $stmtStats = $this->createMock(PDOStatement::class);
+        $stmtStats->method('fetch')->willReturn([
+            'total' => 0,
+            'distinct_apps' => 0,
+            'oldest_at' => null,
+            'latest_at' => null,
+        ]);
+
+        $stmtApps = $this->createMock(PDOStatement::class);
+        $stmtApps->method('fetchAll')->willReturn([]);
+
+        $this->dbMock->method('query')->willReturnOnConsecutiveCalls($stmtCount, $stmtRows, $stmtStats, $stmtApps);
+
+        $controller = new LogQueueController;
+        $html = $controller->index();
+        self::assertStringContainsString('No jobs currently in the queue.', $html);
+    }
+
+    public function test_run_worker_processes_empty_queue_and_redirects(): void
+    {
+        $pdoMock = $this->createMock(PDO::class);
+        $pdoMock->method('beginTransaction')->willReturn(true);
+        $pdoMock->method('commit')->willReturn(true);
+        $this->dbMock->method('getConnection')->willReturn($pdoMock);
+
+        $stmtEmpty = $this->createMock(PDOStatement::class);
+        $stmtEmpty->method('fetchAll')->willReturn([]);
+        $this->dbMock->method('query')->willReturn($stmtEmpty);
+
+        $controller = new LogQueueController;
+        try {
+            $controller->runWorker();
+        } catch (RedirectException $e) {
+            self::assertSame('/admin/log-queue', $e->getUrl());
+            $flash = is_array($_SESSION['app_flash'] ?? null) ? $_SESSION['app_flash'] : [];
+            self::assertSame('info', $flash['type'] ?? '');
+        }
     }
 
     public function test_delete_redirects_with_flash(): void

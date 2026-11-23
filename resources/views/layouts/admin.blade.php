@@ -69,6 +69,22 @@
                         </a>
                     </li>
                     @endif
+                    @if(hasPermission('admin.notifications.index'))
+                    <li class="nav-item">
+                        <a href="/admin/notifications" class="nav-link sidebar-link d-flex align-items-center gap-3 {{ str_starts_with($currentPath, '/admin/notifications') ? 'active-link' : '' }}" @click="if (isMobile) sidebarOpen = false">
+                            <i class="fa-solid fa-bell fa-fw text-info"></i>
+                            <span>{{ __('Notifications') }}</span>
+                        </a>
+                    </li>
+                    @endif
+                    @if(hasPermission('admin.notificationqueue.index'))
+                    <li class="nav-item">
+                        <a href="/admin/notification-queue" class="nav-link sidebar-link d-flex align-items-center gap-3 {{ str_starts_with($currentPath, '/admin/notification-queue') ? 'active-link' : '' }}" @click="if (isMobile) sidebarOpen = false">
+                            <i class="fa-solid fa-envelope-open-text fa-fw text-info"></i>
+                            <span>{{ __('Notification Queue') }}</span>
+                        </a>
+                    </li>
+                    @endif
                     @if(hasPermission('admin.apps.index'))
                     <li class="nav-item">
                         <a href="/admin/apps" class="nav-link sidebar-link d-flex align-items-center gap-3 {{ str_starts_with($currentPath, '/admin/apps') ? 'active-link' : '' }}" @click="if (isMobile) sidebarOpen = false">
@@ -81,7 +97,7 @@
             </div>
 
             <!-- Settings -->
-            @if(hasPermission('admin.settings.users.index') || hasPermission('admin.settings.roles.index') || hasPermission('admin.settings.queuemanager.index'))
+            @if(hasPermission('admin.settings.users.index') || hasPermission('admin.settings.roles.index'))
             <div>
                 <div class="sidebar-header text-uppercase fw-bold px-3 mb-2" style="font-size: 0.72rem; letter-spacing: 0.08em;">
                     {{ __('Settings') }}
@@ -100,14 +116,6 @@
                         <a href="/admin/settings/roles" class="nav-link sidebar-link d-flex align-items-center gap-3 {{ str_starts_with($currentPath, '/admin/settings/roles') ? 'active-link' : '' }}" @click="if (isMobile) sidebarOpen = false">
                             <i class="fa-solid fa-shield-halved fa-fw text-warning"></i>
                             <span>{{ __('Roles') }}</span>
-                        </a>
-                    </li>
-                    @endif
-                    @if(hasPermission('admin.settings.queuemanager.index'))
-                    <li class="nav-item">
-                        <a href="/admin/settings/queue" class="nav-link sidebar-link d-flex align-items-center gap-3 {{ str_starts_with($currentPath, '/admin/settings/queue') ? 'active-link' : '' }}" @click="if (isMobile) sidebarOpen = false">
-                            <i class="fa-solid fa-envelope-open-text fa-fw text-info"></i>
-                            <span>{{ __('Notification Queue') }}</span>
                         </a>
                     </li>
                     @endif

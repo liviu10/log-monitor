@@ -1,6 +1,13 @@
 @php
-    $appName = config('app.name') ?? 'LogMonitor';
-    $pageTitle = isset($title) && !empty($title) ? $title . ' - ' . $appName : $appName;
+    $rawAppName = config('app.name');
+    $appName = is_string($rawAppName) && trim($rawAppName) !== '' ? trim($rawAppName) : 'LogMonitor';
+    $sectionTitle = method_exists($this, 'yieldContent') ? trim((string) $this->yieldContent('title')) : '';
+    $resolvedTitle = isset($_pageTitle) && is_string($_pageTitle) && trim($_pageTitle) !== ''
+        ? trim($_pageTitle)
+        : ($sectionTitle !== ''
+            ? $sectionTitle
+            : (isset($title) && is_string($title) && trim($title) !== '' ? trim($title) : ''));
+    $pageTitle = $resolvedTitle !== '' ? $resolvedTitle . ' - ' . $appName : $appName;
     $langFile = dirname(storage_path()) . '/lang/' . basename(getLang()) . '.json';
     $jsTranslations = [];
     if (is_file($langFile)) {

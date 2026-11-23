@@ -42,6 +42,7 @@ class DashboardController extends BaseController
             $chartData = $this->getAnalyticsData('day');
 
             return $this->render('admin.dashboard', [
+                'title' => __('Dashboard'),
                 'summaries' => $stats['summaries'],
                 'charts' => $stats['charts'],
                 'cachedAt' => $stats['cached_at'],
