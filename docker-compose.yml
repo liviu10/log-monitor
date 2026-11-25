@@ -6,7 +6,7 @@
 name: log-monitor
 
 x-hardening: &hardening
-  restart: unless-stopped
+  restart: always
   security_opt:
     - no-new-privileges:true
   logging:
