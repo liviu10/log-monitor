@@ -152,9 +152,11 @@
                         <div class="position-relative w-100 h-100">
                             <canvas id="chartSeverityBreakdown"></canvas>
                         </div>
-                        <div x-show="severityEmpty" x-cloak class="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column align-items-center justify-content-center text-center text-secondary small px-3 pe-none">
-                            <i class="fa-solid fa-circle-info mb-1 opacity-50 fs-5 d-block"></i>
-                            <span>{{ __('No log data available for this timeframe.') }}</span>
+                        <div x-show="severityEmpty" x-cloak class="position-absolute top-0 start-0 w-100 h-100 pe-none">
+                            <div class="w-100 h-100 d-flex flex-column align-items-center justify-content-center text-center text-secondary small px-3">
+                                <i class="fa-solid fa-circle-info mb-1 opacity-50 fs-5 d-block"></i>
+                                <span>{{ __('No log data available for this timeframe.') }}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -171,9 +173,11 @@
                         <div class="position-relative w-100 h-100" :class="appsEmpty ? 'invisible pe-none' : ''">
                             <canvas id="chartAppsDistribution"></canvas>
                         </div>
-                        <div x-show="appsEmpty" x-cloak class="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column align-items-center justify-content-center text-center text-secondary small p-4">
-                            <i class="fa-solid fa-inbox mb-2 opacity-50 fs-2 d-block"></i>
-                            <span>{{ __('No log data available for this timeframe.') }}</span>
+                        <div x-show="appsEmpty" x-cloak class="position-absolute top-0 start-0 w-100 h-100 pe-none">
+                            <div class="w-100 h-100 d-flex flex-column align-items-center justify-content-center text-center text-secondary small p-4">
+                                <i class="fa-solid fa-inbox mb-2 opacity-50 fs-2 d-block"></i>
+                                <span>{{ __('No log data available for this timeframe.') }}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
