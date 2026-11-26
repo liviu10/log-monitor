@@ -90,4 +90,3 @@ class LogQueueProcessorTest extends TestCase
         self::assertSame(1, $processed);
     }
 }
-
