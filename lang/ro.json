@@ -715,6 +715,7 @@
     "Purge Processed Jobs": "Curata Joburile Procesate",
     "Purge Queue": "Goleste Coada",
     "Purge completed, failed, and expired jobs older than retention period?": "Curatati joburile finalizate, esuate si expirate mai vechi decat perioada de retentie?",
+    "Purge failed and expired jobs older than retention period?": "Curatati joburile esuate si expirate mai vechi decat perioada de retentie?",
     "Purging...": "Se curata...",
     "Quarters": "Trimestre",
     "Queue": "Coada",

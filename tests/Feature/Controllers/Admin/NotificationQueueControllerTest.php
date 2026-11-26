@@ -83,7 +83,6 @@ class NotificationQueueControllerTest extends TestCase
             'total' => 2,
             'pending' => 1,
             'processing' => 0,
-            'completed' => 0,
             'failed' => 1,
             'expired' => 0,
         ]);
@@ -103,6 +102,7 @@ class NotificationQueueControllerTest extends TestCase
         self::assertStringContainsString('Notification Queue', $html);
         self::assertStringContainsString('Run Worker Now', $html);
         self::assertStringContainsString('user@example.com', $html);
+        self::assertStringNotContainsString('<option value="completed"', $html);
     }
 
     public function test_index_with_custom_filters_and_pagination(): void
@@ -126,7 +126,6 @@ class NotificationQueueControllerTest extends TestCase
             'total' => 50,
             'pending' => 0,
             'processing' => 0,
-            'completed' => 0,
             'failed' => 50,
             'expired' => 0,
         ]);

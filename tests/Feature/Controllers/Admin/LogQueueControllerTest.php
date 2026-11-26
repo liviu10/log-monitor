@@ -62,7 +62,6 @@ class LogQueueControllerTest extends TestCase
             'total' => 2,
             'pending' => 1,
             'processing' => 0,
-            'completed' => 0,
             'failed' => 1,
             'expired' => 0,
         ]);
@@ -82,6 +81,7 @@ class LogQueueControllerTest extends TestCase
         self::assertStringContainsString('Retry All Failed', $html);
         self::assertStringContainsString('Purge Processed', $html);
         self::assertStringContainsString('Queued test', $html);
+        self::assertStringNotContainsString('<option value="completed"', $html);
     }
 
     public function test_index_with_search_status_and_app_filter(): void
@@ -101,7 +101,6 @@ class LogQueueControllerTest extends TestCase
             'total' => 0,
             'pending' => 0,
             'processing' => 0,
-            'completed' => 0,
             'failed' => 0,
             'expired' => 0,
         ]);

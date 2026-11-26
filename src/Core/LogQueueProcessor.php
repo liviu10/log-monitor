@@ -9,8 +9,8 @@ use App\Models\LogQueue;
 use Throwable;
 
 /**
- * Processes buffered payloads from the `log_queue` table into `logs`, tracking completion,
- * exponential backoff retries, error reporting, and expiration.
+ * Processes buffered payloads from the `log_queue` table into `logs`, deleting completed
+ * entries immediately and tracking exponential backoff retries, error reporting, and expiration.
  */
 final class LogQueueProcessor
 {
@@ -236,9 +236,7 @@ final class LogQueueProcessor
 
             if ($idsCompleted !== []) {
                 $placeholders = implode(', ', array_fill(0, count($idsCompleted), '?'));
-                $sqlComplete = "UPDATE log_queue
-                                SET status = 'completed', attempts = attempts + 1, error_message = NULL, processed_at = NOW()
-                                WHERE id IN ({$placeholders})";
+                $sqlComplete = "DELETE FROM log_queue WHERE id IN ({$placeholders})";
                 $stmtComplete = $pdo->prepare($sqlComplete);
                 $stmtComplete->execute($idsCompleted);
             }

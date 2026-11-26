@@ -712,6 +712,7 @@
     "Purge Processed Jobs": "Purge Processed Jobs",
     "Purge Queue": "Purge Queue",
     "Purge completed, failed, and expired jobs older than retention period?": "Purge completed, failed, and expired jobs older than retention period?",
+    "Purge failed and expired jobs older than retention period?": "Purge failed and expired jobs older than retention period?",
     "Purging...": "Purging...",
     "Quarters": "Quarters",
     "Queue": "Queue",

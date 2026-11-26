@@ -31,7 +31,6 @@
                                    id="email"
                                    value="{{ htmlspecialchars((string) ($oldEmail ?? ''), ENT_QUOTES, 'UTF-8') }}"
                                    class="form-control @if(isset($errors['email'])) is-invalid @endif"
-                                   placeholder="admin@logmonitor.local"
                                    autocomplete="email"
                                    required>
                         </div>

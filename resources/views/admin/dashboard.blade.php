@@ -135,7 +135,7 @@
                             <span class="text-danger"><i class="fa-solid fa-circle me-1" style="font-size: 8px;"></i>{{ __('Errors') }}: <strong x-text="summary.errors"></strong></span>
                         </div>
                     </div>
-                    <div class="flex-grow-1 position-relative" style="min-height: 260px;">
+                    <div class="flex-grow-1 position-relative overflow-hidden" style="height: 260px;">
                         <canvas id="chartLogVolume"></canvas>
                     </div>
                 </div>
@@ -148,28 +148,30 @@
                             <i class="fa-solid fa-chart-pie text-warning"></i>{{ __('Severity Breakdown') }}
                         </span>
                     </div>
-                    <div class="flex-grow-1 position-relative d-flex align-items-center justify-content-center" style="min-height: 260px;">
-                        <canvas id="chartSeverityBreakdown"></canvas>
-                        <div x-show="severityEmpty" x-cloak class="position-absolute text-center text-secondary small px-3">
+                    <div class="flex-grow-1 position-relative overflow-hidden" style="height: 260px;">
+                        <div class="position-relative w-100 h-100">
+                            <canvas id="chartSeverityBreakdown"></canvas>
+                        </div>
+                        <div x-show="severityEmpty" x-cloak class="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column align-items-center justify-content-center text-center text-secondary small px-3 pe-none">
                             <i class="fa-solid fa-circle-info mb-1 opacity-50 fs-5 d-block"></i>
-                            {{ __('No log data available for this timeframe.') }}
+                            <span>{{ __('No log data available for this timeframe.') }}</span>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div class="col-12">
-                <div class="p-3 rounded-3 bg-body-tertiary border border-secondary border-opacity-10">
+                <div class="p-3 rounded-3 bg-body-tertiary border border-secondary border-opacity-10 overflow-hidden">
                     <div class="d-flex align-items-center justify-content-between mb-3">
                         <span class="text-secondary small fw-bold text-uppercase d-flex align-items-center gap-2">
                             <i class="fa-solid fa-chart-bar text-primary"></i>{{ __('Logs by Application') }}
                         </span>
                     </div>
-                    <div class="position-relative d-flex align-items-center justify-content-center" style="min-height: 220px; max-height: 320px;">
-                        <div x-show="!appsEmpty" class="w-100 h-100">
+                    <div class="position-relative overflow-hidden" style="height: 220px;" :style="{ height: appsChartHeight + 'px' }">
+                        <div class="position-relative w-100 h-100" :class="appsEmpty ? 'invisible pe-none' : ''">
                             <canvas id="chartAppsDistribution"></canvas>
                         </div>
-                        <div x-show="appsEmpty" x-cloak class="position-absolute text-center text-secondary small p-4">
+                        <div x-show="appsEmpty" x-cloak class="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column align-items-center justify-content-center text-center text-secondary small p-4">
                             <i class="fa-solid fa-inbox mb-2 opacity-50 fs-2 d-block"></i>
                             <span>{{ __('No log data available for this timeframe.') }}</span>
                         </div>

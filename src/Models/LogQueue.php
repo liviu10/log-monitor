@@ -14,6 +14,8 @@ use PDO;
  */
 class LogQueue
 {
+    private const ACTIVE_STATUSES_SQL = "('pending', 'processing', 'failed', 'expired')";
+
     public static function countAll(): int
     {
         $db = MySQLWrapper::getInstance();
@@ -71,6 +73,7 @@ class LogQueue
         $sql = "SELECT q.id, q.app_id, q.payload_raw, q.created_at, a.name as app_name
                 FROM log_queue q
                 LEFT JOIN apps a ON q.app_id = a.id
+                WHERE q.status IN ('pending', 'processing')
                 {$orderClause}
                 LIMIT ".max(1, $limit).' OFFSET '.max(0, $offset);
 
@@ -92,7 +95,7 @@ class LogQueue
         string $sortDir = 'DESC'
     ): array {
         $db = MySQLWrapper::getInstance();
-        $where = [];
+        $where = ['q.status IN '.self::ACTIVE_STATUSES_SQL];
         $params = [];
 
         if (isset($filters['search']) && is_string($filters['search']) && trim($filters['search']) !== '') {
@@ -115,7 +118,7 @@ class LogQueue
             $params[] = (is_int($rawAppId) || is_string($rawAppId)) ? (int) $rawAppId : 0;
         }
 
-        $whereClause = $where !== [] ? 'WHERE '.implode(' AND ', $where) : '';
+        $whereClause = 'WHERE '.implode(' AND ', $where);
 
         $countSql = "SELECT COUNT(*) FROM log_queue q LEFT JOIN apps a ON q.app_id = a.id {$whereClause}";
         $countVal = $db->query($countSql, $params)->fetchColumn();
@@ -152,17 +155,16 @@ class LogQueue
     /**
      * Retrieves aggregated status counts for the Log Queue stats grid.
      *
-     * @return array{total: int, pending: int, processing: int, completed: int, failed: int, expired: int}
+     * @return array{total: int, pending: int, processing: int, failed: int, expired: int}
      */
     public static function getStats(): array
     {
         $db = MySQLWrapper::getInstance();
         $row = $db->query(
-            "SELECT
-                COUNT(*) as total,
+            'SELECT
+                SUM(CASE WHEN status IN '.self::ACTIVE_STATUSES_SQL." THEN 1 ELSE 0 END) as total,
                 SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
                 SUM(CASE WHEN status = 'processing' THEN 1 ELSE 0 END) as processing,
-                SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
                 SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed,
                 SUM(CASE WHEN status = 'expired' THEN 1 ELSE 0 END) as expired
              FROM log_queue"
@@ -173,7 +175,6 @@ class LogQueue
                 'total' => 0,
                 'pending' => 0,
                 'processing' => 0,
-                'completed' => 0,
                 'failed' => 0,
                 'expired' => 0,
             ];
@@ -183,14 +184,13 @@ class LogQueue
             'total' => isset($row['total']) && is_numeric($row['total']) ? (int) $row['total'] : 0,
             'pending' => isset($row['pending']) && is_numeric($row['pending']) ? (int) $row['pending'] : 0,
             'processing' => isset($row['processing']) && is_numeric($row['processing']) ? (int) $row['processing'] : 0,
-            'completed' => isset($row['completed']) && is_numeric($row['completed']) ? (int) $row['completed'] : 0,
             'failed' => isset($row['failed']) && is_numeric($row['failed']) ? (int) $row['failed'] : 0,
             'expired' => isset($row['expired']) && is_numeric($row['expired']) ? (int) $row['expired'] : 0,
         ];
     }
 
     /**
-     * Retrieves distinct applications present in the log queue.
+     * Retrieves distinct applications present in the active log queue.
      *
      * @return array<int, array{id: int, name: string}>
      */
@@ -198,7 +198,11 @@ class LogQueue
     {
         $db = MySQLWrapper::getInstance();
         $rows = $db->query(
-            'SELECT DISTINCT a.id, a.name FROM log_queue q JOIN apps a ON q.app_id = a.id ORDER BY a.name ASC'
+            'SELECT DISTINCT a.id, a.name
+             FROM log_queue q
+             JOIN apps a ON q.app_id = a.id
+             WHERE q.status IN '.self::ACTIVE_STATUSES_SQL.'
+             ORDER BY a.name ASC'
         )->fetchAll(PDO::FETCH_ASSOC);
 
         $apps = [];

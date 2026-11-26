@@ -54,7 +54,8 @@ class LogQueueTest extends TestCase
         $this->dbMock->expects($this->once())
             ->method('query')
             ->with(self::callback(function (string $sql): bool {
-                return str_contains($sql, 'ORDER BY q.id DESC')
+                return str_contains($sql, "WHERE q.status IN ('pending', 'processing')")
+                    && str_contains($sql, 'ORDER BY q.id DESC')
                     && str_contains($sql, 'LIMIT 10 OFFSET 0');
             }))
             ->willReturn($stmt);
@@ -105,5 +106,45 @@ class LogQueueTest extends TestCase
         $summary = LogQueue::dashboardSummaryLogQueue();
         self::assertSame(7, $summary['value']);
         self::assertSame('/admin/log-queue', $summary['url']);
+    }
+
+    public function test_get_stats_excludes_completed_jobs(): void
+    {
+        $stmt = $this->createMock(PDOStatement::class);
+        $stmt->method('fetch')->willReturn([
+            'total' => 6,
+            'pending' => 2,
+            'processing' => 1,
+            'failed' => 2,
+            'expired' => 1,
+        ]);
+
+        $this->dbMock->expects($this->once())
+            ->method('query')
+            ->with(self::callback(static fn (string $sql): bool => str_contains($sql, "status IN ('pending', 'processing', 'failed', 'expired')") && ! str_contains($sql, "status = 'completed'")))
+            ->willReturn($stmt);
+
+        $stats = LogQueue::getStats();
+        self::assertSame(['total' => 6, 'pending' => 2, 'processing' => 1, 'failed' => 2, 'expired' => 1], $stats);
+    }
+
+    public function test_get_paginated_filtered_restricts_to_active_statuses(): void
+    {
+        $countStmt = $this->createMock(PDOStatement::class);
+        $countStmt->method('fetchColumn')->willReturn(1);
+
+        $rowsStmt = $this->createMock(PDOStatement::class);
+        $rowsStmt->method('fetchAll')->willReturn([
+            ['id' => 5, 'status' => 'pending'],
+        ]);
+
+        $this->dbMock->expects($this->exactly(2))
+            ->method('query')
+            ->with(self::stringContains("q.status IN ('pending', 'processing', 'failed', 'expired')"))
+            ->willReturnOnConsecutiveCalls($countStmt, $rowsStmt);
+
+        $result = LogQueue::getPaginatedFiltered(['status' => 'all']);
+        self::assertSame(1, $result['total']);
+        self::assertCount(1, $result['items']);
     }
 }

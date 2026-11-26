@@ -606,6 +606,11 @@ window.dashboardAnalytics = function(initialData) {
 
     const rawInitial = toRaw(initialData);
 
+    const calcAppsHeight = (appsBar) => {
+        const count = appsBar && Array.isArray(appsBar.labels) ? appsBar.labels.length : 0;
+        return Math.min(320, Math.max(220, count * 34 + 60));
+    };
+
     const chartTheme = () => {
         const isLight = document.documentElement.getAttribute('data-bs-theme') === 'light';
         return {
@@ -626,6 +631,7 @@ window.dashboardAnalytics = function(initialData) {
         loading: false,
         severityEmpty: !rawInitial.severityPie || !rawInitial.severityPie.data || rawInitial.severityPie.data.length === 0,
         appsEmpty: !rawInitial.appsBar || !rawInitial.appsBar.data || rawInitial.appsBar.data.length === 0,
+        appsChartHeight: calcAppsHeight(rawInitial.appsBar),
 
         initCharts() {
             this.$nextTick(() => {
@@ -909,15 +915,18 @@ window.dashboardAnalytics = function(initialData) {
 
         updateAppsChart(raw) {
             const data = toRaw(raw);
+            this.appsChartHeight = calcAppsHeight(data);
             if (!appsChart) {
-                this.buildAppsChart(data);
+                this.$nextTick(() => this.buildAppsChart(data));
                 return;
             }
             appsChart.data.labels = data.labels || [];
             appsChart.data.datasets[0].data = data.data || [];
-            appsChart.update();
             this.$nextTick(() => {
-                if (appsChart) appsChart.resize();
+                if (appsChart) {
+                    appsChart.resize();
+                    appsChart.update();
+                }
             });
         },
     };

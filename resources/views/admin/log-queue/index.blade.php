@@ -33,15 +33,15 @@
 
 <div x-data="App.logQueuePageData()">
     <!-- Stats Cards Grid -->
-    <div class="row g-3 mb-4">
-        <div class="col-6 col-lg-2">
+    <div class="row row-cols-2 row-cols-md-3 row-cols-lg-5 g-3 mb-4">
+        <div class="col">
             <div class="card card-custom p-3 border-0 shadow-sm h-100 rounded-4">
                 <div class="text-secondary small fw-medium mb-1">{{ __('Total Jobs') }}</div>
                 <div class="h4 fw-bold text-body-emphasis mb-0">{{ number_format($stats['total'] ?? ($totalJobs ?? 0)) }}</div>
             </div>
         </div>
 
-        <div class="col-6 col-lg-2">
+        <div class="col">
             <div class="card card-custom p-3 border-0 shadow-sm h-100 rounded-4 border-start border-warning border-3">
                 <div class="text-secondary small fw-medium mb-1 d-flex align-items-center gap-1">
                     <i class="fa-solid fa-clock text-warning"></i>
@@ -51,7 +51,7 @@
             </div>
         </div>
 
-        <div class="col-6 col-lg-2">
+        <div class="col">
             <div class="card card-custom p-3 border-0 shadow-sm h-100 rounded-4 border-start border-info border-3">
                 <div class="text-secondary small fw-medium mb-1 d-flex align-items-center gap-1">
                     <i class="fa-solid fa-spinner fa-spin text-info"></i>
@@ -61,17 +61,7 @@
             </div>
         </div>
 
-        <div class="col-6 col-lg-2">
-            <div class="card card-custom p-3 border-0 shadow-sm h-100 rounded-4 border-start border-success border-3">
-                <div class="text-secondary small fw-medium mb-1 d-flex align-items-center gap-1">
-                    <i class="fa-solid fa-circle-check text-success"></i>
-                    <span>{{ __('Completed') }}</span>
-                </div>
-                <div class="h4 fw-bold text-success mb-0">{{ number_format($stats['completed'] ?? 0) }}</div>
-            </div>
-        </div>
-
-        <div class="col-6 col-lg-2">
+        <div class="col">
             <div class="card card-custom p-3 border-0 shadow-sm h-100 rounded-4 border-start border-danger border-3">
                 <div class="text-secondary small fw-medium mb-1 d-flex align-items-center gap-1">
                     <i class="fa-solid fa-triangle-exclamation text-danger"></i>
@@ -81,7 +71,7 @@
             </div>
         </div>
 
-        <div class="col-6 col-lg-2">
+        <div class="col">
             <div class="card card-custom p-3 border-0 shadow-sm h-100 rounded-4 border-start border-secondary border-3">
                 <div class="text-secondary small fw-medium mb-1 d-flex align-items-center gap-1">
                     <i class="fa-solid fa-calendar-xmark text-secondary"></i>
@@ -163,7 +153,6 @@
                         <option value="all" @if($currentStatus === 'all') selected @endif>{{ __('All Statuses') }}</option>
                         <option value="pending" @if($currentStatus === 'pending') selected @endif>{{ __('Pending') }}</option>
                         <option value="processing" @if($currentStatus === 'processing') selected @endif>{{ __('Processing') }}</option>
-                        <option value="completed" @if($currentStatus === 'completed') selected @endif>{{ __('Completed') }}</option>
                         <option value="failed" @if($currentStatus === 'failed') selected @endif>{{ __('Failed') }}</option>
                         <option value="expired" @if($currentStatus === 'expired') selected @endif>{{ __('Expired') }}</option>
                     </select>
@@ -572,7 +561,7 @@
                 <div class="modal-body text-center py-4">
                     <i class="fa-solid fa-broom fa-3x text-danger mb-3"></i>
                     <p class="fs-6 fw-medium text-body-emphasis mb-1">
-                        {{ __('Purge completed, failed, and expired jobs older than retention period?') }}
+                        {{ __('Purge failed and expired jobs older than retention period?') }}
                     </p>
                     <p class="text-secondary small mb-3">{{ __('Select retention threshold in days:') }}</p>
                     <form id="purge-log-queue-form" action="/admin/log-queue/purge" method="POST">

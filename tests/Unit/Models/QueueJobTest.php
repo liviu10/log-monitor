@@ -307,25 +307,25 @@ class QueueJobTest extends TestCase
         $stmt->expects(self::once())
             ->method('fetch')
             ->willReturn([
-                'total' => 100,
+                'total' => 20,
                 'pending' => 10,
                 'processing' => 2,
-                'completed' => 80,
                 'failed' => 5,
                 'expired' => 3,
             ]);
 
         $this->dbMock->expects(self::once())
             ->method('query')
+            ->with(self::callback(static fn (string $sql): bool => str_contains($sql, "status IN ('pending', 'processing', 'failed', 'expired')") && ! str_contains($sql, "status = 'completed'")))
             ->willReturn($stmt);
 
         $stats = QueueJob::getStats();
-        self::assertSame(100, $stats['total']);
+        self::assertSame(20, $stats['total']);
         self::assertSame(10, $stats['pending']);
         self::assertSame(2, $stats['processing']);
-        self::assertSame(80, $stats['completed']);
         self::assertSame(5, $stats['failed']);
         self::assertSame(3, $stats['expired']);
+        self::assertArrayNotHasKey('completed', $stats);
     }
 
     public function test_get_stats_empty_defaults(): void
@@ -343,9 +343,9 @@ class QueueJobTest extends TestCase
         self::assertSame(0, $stats['total']);
         self::assertSame(0, $stats['pending']);
         self::assertSame(0, $stats['processing']);
-        self::assertSame(0, $stats['completed']);
         self::assertSame(0, $stats['failed']);
         self::assertSame(0, $stats['expired']);
+        self::assertArrayNotHasKey('completed', $stats);
     }
 
     public function test_get_distinct_queues(): void
@@ -358,7 +358,7 @@ class QueueJobTest extends TestCase
 
         $this->dbMock->expects(self::once())
             ->method('query')
-            ->with('SELECT DISTINCT queue FROM queue_jobs ORDER BY queue ASC')
+            ->with("SELECT DISTINCT queue FROM queue_jobs WHERE status IN ('pending', 'processing', 'failed', 'expired') ORDER BY queue ASC")
             ->willReturn($stmt);
 
         $queues = QueueJob::getDistinctQueues();
@@ -377,6 +377,7 @@ class QueueJobTest extends TestCase
 
         $this->dbMock->expects(self::exactly(2))
             ->method('query')
+            ->with(self::stringContains("status IN ('pending', 'processing', 'failed', 'expired')"))
             ->willReturnOnConsecutiveCalls($countStmt, $queryStmt);
 
         $result = QueueJob::getPaginatedFilteredJobs(

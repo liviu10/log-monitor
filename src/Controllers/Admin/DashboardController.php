@@ -117,13 +117,14 @@ class DashboardController extends BaseController
                 break;
 
             case 'year':
-                $startSql = date('Y-m-01 00:00:00', strtotime('-11 months'));
+                $startTs = strtotime('first day of -11 months');
+                $startSql = date('Y-m-01 00:00:00', $startTs);
                 $endSql = date('Y-m-t 23:59:59');
                 $sqlSlotFormat = '%Y-%m';
-                $rangeLabel = date('M Y', strtotime('-11 months')).' - '.date('M Y');
+                $rangeLabel = date('M Y', $startTs).' - '.date('M Y');
 
                 for ($i = 11; $i >= 0; $i--) {
-                    $ts = strtotime("-$i months");
+                    $ts = $i === 0 ? strtotime('first day of this month') : strtotime("first day of -$i months");
                     $key = date('Y-m', $ts);
                     $slots[$key] = ['total' => 0, 'errors' => 0];
                     $labels[$key] = date('M Y', $ts);
